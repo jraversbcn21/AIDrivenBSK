@@ -3,7 +3,7 @@ import type { PageExtraction, Session } from '../types';
 import type { CrawlBounds } from '../config';
 import { Frontier, type FrontierItem } from './frontier';
 import { extractFromPage } from '../extract/fromPage';
-import { normalizePath, type RouteRules } from '../url';
+import { normalizePath, isSameOrigin, type RouteRules } from '../url';
 import { acceptConsent } from '../../src/support/consent';
 
 export interface CrawlDeps {
@@ -32,7 +32,7 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
       for (const href of extraction.links) {
         const path = normalizePath(href, deps.baseURL);
         // stay on-site: only enqueue same-origin paths
-        if (href.startsWith('http') && !href.includes(new URL(deps.baseURL).host)) continue;
+        if (!isSameOrigin(href, deps.baseURL)) continue;
         frontier.add({ path, session, depth: item.depth + 1, discoveredVia: item.path } satisfies FrontierItem);
       }
     } catch (err) {

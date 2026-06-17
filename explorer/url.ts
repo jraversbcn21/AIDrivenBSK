@@ -36,3 +36,11 @@ export function isAllowed(path: string, rules: RouteRules): boolean {
   if (isDenied(path, rules)) return false;
   return rules.allow.length === 0 || rules.allow.some((r) => r.test(path));
 }
+
+export function isSameOrigin(href: string, baseURL: string): boolean {
+  try {
+    return new URL(href, baseURL).host === new URL(baseURL).host;
+  } catch {
+    return false;
+  }
+}
