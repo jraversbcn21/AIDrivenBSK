@@ -1,0 +1,66 @@
+import { parseHTML } from 'linkedom';
+import type {
+  PageExtraction, PageMeta, ExtractedElement, ExtractedForm, ElementType, ComponentKind,
+} from '../types';
+import { isDestructive } from './destructive';
+import { hintsFor, roleOf } from './hints';
+
+function text(el: Element): string {
+  return (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function inferFormPurpose(form: Element): string {
+  const aria = (form.getAttribute('aria-label') ?? '').toLowerCase();
+  const names = Array.from(form.querySelectorAll('input')).map((i) => (i.getAttribute('name') ?? '').toLowerCase());
+  if (aria.includes('login') || (names.includes('email') && names.includes('password'))) return 'login';
+  if (aria.includes('register') || names.includes('confirm-password')) return 'register';
+  if (names.some((n) => n.includes('search')) || form.querySelector('input[type=search]')) return 'search';
+  if (names.some((n) => n.includes('newsletter'))) return 'newsletter';
+  return 'other';
+}
+
+function detectComponents(document: Document): ComponentKind[] {
+  const kinds: ComponentKind[] = [];
+  if (document.querySelector('header, [role=banner]')) kinds.push('Header');
+  if (document.querySelector('footer, [role=contentinfo]')) kinds.push('Footer');
+  if (document.querySelector('input[type=search], [role=search], [role=searchbox]')) kinds.push('SearchBar');
+  if (document.querySelector('[data-testid*=filter i], [aria-label*=filtr i]')) kinds.push('FiltersPanel');
+  if (document.querySelector('[aria-label*=cesta i], [aria-label*=cart i], [data-testid*=cart i]')) kinds.push('MiniCart');
+  return kinds;
+}
+
+export function analyzePage(html: string, meta: PageMeta): PageExtraction {
+  const { document } = parseHTML(html);
+
+  const links = Array.from(document.querySelectorAll('a[href]'))
+    .map((a) => a.getAttribute('href') ?? '')
+    .filter((h) => h && !h.startsWith('#') && !h.startsWith('javascript:'));
+
+  const elements: ExtractedElement[] = [];
+
+  const pushEl = (el: Element, type: ElementType): void => {
+    const label = text(el);
+    elements.push({ type, label, role: roleOf(el), selectorHints: hintsFor(el), destructive: isDestructive(label) });
+  };
+
+  document.querySelectorAll('button, [role=button], input[type=submit], input[type=button]').forEach((el) => pushEl(el, 'button'));
+  document.querySelectorAll('[role=dialog], dialog').forEach((el) => pushEl(el, 'modal'));
+  document.querySelectorAll('[data-testid*=filter i], [aria-label*=filtr i], [role=checkbox]').forEach((el) => pushEl(el, 'filter'));
+  document.querySelectorAll('[aria-label*=orden i], [aria-label*=sort i], select[name*=sort i]').forEach((el) => pushEl(el, 'sort'));
+
+  const forms: ExtractedForm[] = Array.from(document.querySelectorAll('form')).map((form) => ({
+    purposeHint: inferFormPurpose(form),
+    fields: Array.from(form.querySelectorAll('input, select, textarea')).map((f) => ({
+      name: f.getAttribute('name') ?? '',
+      type: f.getAttribute('type') ?? f.tagName.toLowerCase(),
+      required: f.hasAttribute('required'),
+    })),
+  }));
+
+  const landmarkRoles = Array.from(document.querySelectorAll('header, footer, nav, main, [role]'))
+    .map((el) => roleOf(el));
+
+  const textSummary = (document.body?.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 500);
+
+  return { meta, landmarkRoles, textSummary, links, elements, forms, componentKinds: detectComponents(document) };
+}
