@@ -12,5 +12,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tests", "global-setup.ts", "playwright.config.ts", "vitest.config.ts"]
+  "include": ["src", "tests", "playwright.config.ts", "vitest.config.ts"]
 }

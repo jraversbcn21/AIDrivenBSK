@@ -11,5 +11,5 @@ test('adding a product updates the mini cart', async ({ homePage, searchResultsP
   await productPage.header.openMiniCart();
   const miniCart = productPage.header.miniCart();
   await expect.poll(() => miniCart.isVisible()).toBe(true);
-  expect(await miniCart.itemCount()).toBeGreaterThan(0);
+  await expect.poll(() => miniCart.itemCount()).toBeGreaterThan(0);
 });
