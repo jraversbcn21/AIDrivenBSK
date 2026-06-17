@@ -14,8 +14,12 @@ export class Header extends BaseComponent {
   }
 
   async isUserLoggedIn(): Promise<boolean> {
-    // CONFIRM: a logged-in header typically exposes an account/logout affordance.
-    return this.root.getByRole('link', { name: /mi cuenta|account|logout|cerrar sesión/i }).isVisible();
+    // Positive signal: a successful login lands on the MMBRS member hub / account area.
+    if (/member-hub|\/account/i.test(this.page.url())) return true;
+    // Otherwise: no *visible* "Iniciar sesión" affordance in the header. Use visibility,
+    // not count() — the SPA keeps a hidden store header in the DOM after navigation.
+    const login = this.root.getByRole('button', { name: /iniciar sesión/i });
+    return !(await login.first().isVisible().catch(() => false));
   }
 
   async openMiniCart(): Promise<void> {
