@@ -8,6 +8,6 @@ test('search, filter, and open a product detail page', async ({ homePage, search
   await searchResultsPage.filters.applyFirstAvailable();
 
   await searchResultsPage.firstProduct().open();
-  await expect(productPage.page).toHaveURL(/product|\/p\//i); // CONFIRM PDP URL pattern on DES
-  await expect(page.getByRole('button', { name: /añadir|add to/i })).toBeVisible();
+  await expect(productPage.page).toHaveURL(/-c0p\d+\.html/);
+  await expect(page.getByRole('button', { name: 'Añadir a cesta' })).toBeVisible();
 });

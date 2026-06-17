@@ -35,3 +35,15 @@ export async function acceptConsent(page: Page): Promise<void> {
     await page.waitForLoadState('domcontentloaded').catch(() => undefined);
   }
 }
+
+/**
+ * Dismiss the driver.js onboarding coach-mark (e.g. "TU ESPACIO MMBRS, TU CUENTA") if it is
+ * covering the page. It re-appears on fresh sessions across different pages (home, PDP) and its
+ * only button navigates away ("ACCEDE Y DESCÚBRELO"), so Escape is the safe dismissal — confirmed
+ * live to close the `.driver-overlay` mask without affecting other open dialogs (e.g. size picker).
+ */
+export async function dismissOnboardingTour(page: Page): Promise<void> {
+  if (await page.locator('.driver-overlay').count() > 0) {
+    await page.keyboard.press('Escape').catch(() => undefined);
+  }
+}

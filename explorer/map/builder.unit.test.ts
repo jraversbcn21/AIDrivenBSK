@@ -3,7 +3,7 @@ import { buildMap, type ClassifiedPage } from './builder';
 import type { PageExtraction } from '../types';
 
 const pdp: PageExtraction = {
-  meta: { path: '/es/product/abc-p123.html', url: 'u', title: 'Camiseta', session: 'anon', discoveredVia: '/es/search' },
+  meta: { path: '/es/abc-c0p123.html', url: 'u', title: 'Camiseta', session: 'anon', discoveredVia: '/es/search' },
   landmarkRoles: ['banner', 'main'], textSummary: 'talla',
   links: [], componentKinds: ['Header'],
   elements: [{ type: 'button', label: 'Añadir a la cesta', role: 'button', selectorHints: { testId: 'add' }, destructive: false }],
@@ -18,7 +18,7 @@ describe('buildMap', () => {
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     expect(a.schemaVersion).toBe('1.0');
     expect(a.pages[0].pageType).toBe('PDP');
-    expect(a.pages[0].routePattern).toBe('/es/product/abc-p{id}.html');
+    expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic
   });
   it('assigns high priority to PDP flows and maps elements/forms/components to the page', () => {

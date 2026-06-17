@@ -2,13 +2,16 @@ import type { Page } from '@playwright/test';
 import { BaseComponent } from './BaseComponent';
 import { SearchBar } from './SearchBar';
 import { MiniCart } from './MiniCart';
+import { dismissOnboardingTour } from '../support/consent';
 
 export class Header extends BaseComponent {
   readonly searchBar: SearchBar;
   private readonly page: Page;
 
   constructor(page: Page) {
-    super(page.getByRole('banner'));
+    // Scoped by name: the driver.js onboarding tour renders its own <header> (also role=banner),
+    // so an unscoped getByRole('banner') resolves to multiple elements while the tour is active.
+    super(page.getByRole('banner', { name: 'Cabecera de página' }));
     this.page = page;
     this.searchBar = new SearchBar(this.root);
   }
@@ -22,11 +25,13 @@ export class Header extends BaseComponent {
     return !(await login.first().isVisible().catch(() => false));
   }
 
+  /** There is no mini-cart drawer on this site: "Ir a la cesta" navigates to the full cart page. */
   async openMiniCart(): Promise<void> {
-    await this.root.getByRole('link', { name: /cesta|cart|bag/i }).click();
+    await dismissOnboardingTour(this.page); // the tour can (re)appear asynchronously and block this click
+    await this.root.getByRole('link', { name: 'Ir a la cesta', exact: true }).click();
   }
 
   miniCart(): MiniCart {
-    return new MiniCart(this.page.getByRole('dialog', { name: /cesta|cart|bag/i }));
+    return new MiniCart(this.page.getByRole('tab', { name: /^cesta/i }));
   }
 }

@@ -7,11 +7,14 @@ export class SearchResultsPage extends BasePage {
   readonly filters: FiltersPanel;
   constructor(page: Page) {
     super(page);
-    this.filters = new FiltersPanel(page.getByRole('complementary')); // CONFIRM filters container
+    this.filters = new FiltersPanel(page.getByRole('main'));
   }
 
   firstProduct(): ProductCard {
-    // CONFIRM: product grid items. Prefer a testid on the card if present.
-    return new ProductCard(this.page.getByRole('listitem').first());
+    // Scoped to <main>: the header's hidden mobile-nav dialog also has listitem/link entries
+    // (e.g. "Ir a la cesta"), so an unscoped getByRole('listitem') can resolve to the wrong node.
+    return new ProductCard(
+      this.page.getByRole('main').getByRole('listitem').filter({ has: this.page.getByRole('link') }).first(),
+    );
   }
 }

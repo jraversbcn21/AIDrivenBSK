@@ -5,10 +5,10 @@ export function normalizePath(rawUrl: string, baseURL: string): string {
   return p.toLowerCase();
 }
 
-// CONFIRM product/category id patterns against the live DES site during the live crawl.
+// Confirmed live against DES: PDP URLs end in `-c0p<numericId>.html` (e.g. `-c0p229723098.html`).
 export function routePattern(path: string): string {
   return path
-    .replace(/-p\d+\.html$/i, '-p{id}.html')   // product detail pattern (placeholder)
+    .replace(/-c0p\d+\.html$/i, '-c0p{id}.html') // product detail pattern
     .replace(/\/\d+(?=\/|$)/g, '/{id}');          // generic numeric id segments
 }
 

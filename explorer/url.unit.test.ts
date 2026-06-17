@@ -19,6 +19,9 @@ describe('routePattern', () => {
   it('collapses numeric id segments', () => {
     expect(routePattern('/es/category/1234/list')).toBe('/es/category/{id}/list');
   });
+  it('collapses the real DES product-detail id pattern (-c0p{id}.html)', () => {
+    expect(routePattern('/es/camiseta-manga-corta-fruncido-c0p229723098.html')).toBe('/es/camiseta-manga-corta-fruncido-c0p{id}.html');
+  });
 });
 
 describe('route rules', () => {

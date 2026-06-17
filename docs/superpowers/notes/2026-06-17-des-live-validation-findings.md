@@ -61,21 +61,22 @@ Confirmed header selectors (store, role-based — Playwright pierces shadow DOM)
 
 ---
 
-## 5. Search/Cart — open blockers (the follow-up work)
+## 5. Search/Cart — selectors confirmed live (2026-06-17, second pass)
 
-`SearchBar`, `SearchResultsPage`, `ProductCard`, `ProductPage`, `MiniCart` still carry `CONFIRM` placeholder selectors. Live probing surfaced these obstacles:
+All real selectors below were confirmed live against DES (accessibility-tree probing + screenshots) and are now implemented in `SearchBar`, `Header`, `FiltersPanel`, `ProductCard`, `ProductPage`, `MiniCart`, `SearchResultsPage`. Unit suite (76 tests), `typecheck`, and `lint` all pass; `login.spec` and the search/cart specs each pass **in isolation**.
 
-1. **driver.js onboarding overlay** (`.driver-overlay`, animated SVG mask) intercepts clicks on the store. Needs an auto-dismiss/skip (e.g. a "Saltar"/"Cerrar" affordance, or `addLocatorHandler` on the overlay's close control) before the search icon is clickable.
-2. **Search icon starts hidden** (`top-bar-search-icon--hidden`) and reveals on interaction/scroll.
-3. **Search input is a `bds-` web component in shadow DOM with no standard ARIA role** — `getByRole('searchbox'|'textbox'|'combobox')` all return 0. Once the overlay is reliably open, identify the input via a shadow-piercing CSS/text selector (Playwright CSS pierces open shadow roots) and confirm it.
-4. **No direct search-results URL** — `searchResult.html?q=`, `search?q=`, `buscar?q=` all redirect to `/es/`. Search must go through the UI overlay (no `logon.html`-style shortcut).
-5. PLP/PDP/cart selectors are then unverified: product grid items, filters panel, size selector, add-to-cart button, and whether the cart is a mini-cart drawer or the `/es/shop-cart.html` page.
+**Confirmed flow:**
+1. Search trigger is `getByRole('button', { name: 'Buscar', exact: true })` (not the icon-only "Buscar en tienda" — that one stayed `--hidden` the whole time and wasn't needed). It's CSS hover-revealed, so Playwright needs `force: true`, retried against a wall-clock deadline (Vue hydration lag observed anywhere from ~1s to >20s).
+2. The opened input has no role (`bds-input` shadow-DOM component) — use `getByPlaceholder('Escribe aquí')`.
+3. Submitting lands on `/es/q/{term}` (no `searchResult.html?q=`-style shortcut exists).
+4. PDP URL pattern is **`-c0p<digits>.html`** (not `-p<digits>.html` — the original placeholder regex was wrong; fixed in `explorer/url.ts` too).
+5. Filters: "Filtrar" opens a `role=dialog` drawer (heading "Filtrar", no accessible dialog name) with a "Con descuento" checkbox + "Ver resultados" button to apply.
+6. Add-to-cart is a **two-step dialog**, not a single click: clicking "Añadir a cesta" opens a `dialog` named "Tallas…" with `button "Talla {size}"` options; clicking a size both selects it **and** completes the add (no separate confirm step).
+7. There is **no mini-cart drawer** — "Ir a la cesta" navigates to the full `/es/shop-cart.html` page. Item count is read from the `tab "Cesta (N)"` label (cart-page content itself renders as a slow skeleton — the tab count is the fast, reliable signal).
 
-### Suggested approach for the follow-up
-- Add a `dismissOnboardingTour(page)` helper (auto-dismiss `.driver-overlay`) alongside `installCookieAutoDismiss`, and call it in `HomePage.open()`.
-- Probe the search overlay with a screenshot + shadow-piercing selector to pin the input; update `SearchBar.search` to: dismiss tour → click "Buscar en tienda" → fill the (shadow-DOM) input → submit.
-- Then probe PLP→PDP→add-to-cart and update the respective Page/Component Objects, decoupling search→PLP→PDP to run **anonymously** (login is only needed for account/checkout flows).
-- Keep the no-`networkidle` rule and the 60s DES timeout.
+**driver.js onboarding popover** ("TU ESPACIO MMBRS, TU CUENTA") is the main remaining blocker: it appears asynchronously (observed ~5s after load) and intercepts clicks at fixed screen coordinates even with `force: true`. `dismissOnboardingTour(page)` (Escape if `.driver-overlay` is present) was added to `consent.ts` and is called defensively before every click in `SearchBar`, `FiltersPanel`, `ProductCard`, `Header.openMiniCart`, and `ProductPage.addToCart`.
+
+**Known flakiness (unresolved):** `search-plp-pdp.spec` and `add-to-cart.spec` pass reliably alone but fail intermittently in the full `pnpm exec playwright test` run (search never leaves the home page). Confirmed via failure screenshots that the onboarding popover is still covering the page at the moment of failure, despite the defensive dismissal calls. Isolated repro scripts using the exact same browser config (`devices['Desktop Chrome']` + `storageState`) could **not** reproduce the failure — dismissal worked every time there. The one untested lead: the real `setup` project re-authenticates fresh before every suite run (rewriting `.auth/state.json`), while repro scripts reused an older session; a brand-new login session may trigger more persistent/repeating tour behavior than a reused one. Next step: test that hypothesis directly (run `--project=setup` immediately before probing, or instrument the real `auth.setup.ts` → first-test handoff) before trying further timeout/retry tuning — 3 timeout-budget fixes were already tried (5×1s → 15×1.5s → 40s deadline, plus bumping `defaultTimeoutMs` to 90s) without resolving it, which points at a different root cause than raw hydration speed.
 
 ---
 
