@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - **Language:** TypeScript only. `tsc --noEmit` must pass with `strict: true`.
-- **Node:** 20 LTS (matches the `mcr.microsoft.com/playwright` CI image).
+- **Node:** 18+ locally (current dev machine runs Node 18; Playwright 1.48 + Vitest 2 support it). The `mcr.microsoft.com/playwright` CI image bundles Node 20.
 - **Package manager:** pnpm.
 - **No hardcoded URLs anywhere.** `BASE_URL` from the environment is the single source of truth; specs navigate with relative paths.
 - **`ENVIRONMENT`** ∈ `prod | des | local`. Checkout/payment tests are gated by `checkoutAllowed` (false for `prod`).
@@ -44,7 +44,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=18" },
   "scripts": {
     "test": "playwright test",
     "test:unit": "vitest run",
@@ -544,7 +544,7 @@ git commit -m "feat: framework primitives (BasePage, BaseComponent, consent, use
 - Produces (method signatures relied on by Tasks 7–12):
   - `SearchBar.search(term: string): Promise<void>`
   - `Header`: `readonly searchBar: SearchBar`; `isUserLoggedIn(): Promise<boolean>`; `openMiniCart(): Promise<void>`
-  - `ProductCard.open(): Promise<void>`
+  - `ProductCard.open(): Promise<void>`; `isVisible(): Promise<boolean>`
   - `FiltersPanel.applyFirstAvailable(): Promise<void>`
   - `MiniCart`: `itemCount(): Promise<number>`; `isVisible(): Promise<boolean>`
 
@@ -620,6 +620,10 @@ export class Header extends BaseComponent {
 import { BaseComponent } from './BaseComponent';
 
 export class ProductCard extends BaseComponent {
+  async isVisible(): Promise<boolean> {
+    return this.root.isVisible();
+  }
+
   async open(): Promise<void> {
     await this.root.getByRole('link').first().click();
   }
@@ -929,7 +933,7 @@ test('search, filter, and open a product detail page', async ({ homePage, search
   await homePage.open();
   await homePage.header.searchBar.search('camiseta');
 
-  await expect(searchResultsPage.firstProduct()['root']).toBeVisible();
+  await expect.poll(() => searchResultsPage.firstProduct().isVisible()).toBe(true);
   await searchResultsPage.filters.applyFirstAvailable();
 
   await searchResultsPage.firstProduct().open();
