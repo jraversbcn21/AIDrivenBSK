@@ -18,6 +18,14 @@ verify:
     - pnpm lint
     - pnpm test:unit
 
+# Masked/Protected CI Variables
+# BASE_URL, BERSHKA_USER, and BERSHKA_PASS are configured as masked/protected
+# GitLab CI/CD variables (Settings → CI/CD → Variables) and are intentionally
+# NOT committed to this file for security.
+# Note: GitLab runners must be able to reach the DES host (*.inditex.grp).
+# If shared runners cannot, attach a self-hosted runner on the corp network
+# by adding a 'tags:' entry to the job.
+
 e2e:
   stage: test
   variables:
