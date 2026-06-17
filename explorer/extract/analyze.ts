@@ -43,10 +43,22 @@ export function analyzePage(html: string, meta: PageMeta): PageExtraction {
     elements.push({ type, label, role: roleOf(el), selectorHints: hintsFor(el), destructive: isDestructive(label) });
   };
 
-  document.querySelectorAll('button, [role=button], input[type=submit], input[type=button]').forEach((el) => pushEl(el, 'button'));
-  document.querySelectorAll('[role=dialog], dialog').forEach((el) => pushEl(el, 'modal'));
-  document.querySelectorAll('[data-testid*=filter i], [aria-label*=filtr i], [role=checkbox]').forEach((el) => pushEl(el, 'filter'));
-  document.querySelectorAll('[aria-label*=orden i], [aria-label*=sort i], select[name*=sort i]').forEach((el) => pushEl(el, 'sort'));
+  // Ordered highest-priority-first: an element matching multiple passes is
+  // recorded once, under the type of the earliest (highest-priority) match.
+  const elementPasses: Array<[ElementType, string]> = [
+    ['modal', '[role=dialog], dialog'],
+    ['filter', '[data-testid*=filter i], [aria-label*=filtr i], [role=checkbox]'],
+    ['sort', '[aria-label*=orden i], [aria-label*=sort i], select[name*=sort i]'],
+    ['button', 'button, [role=button], input[type=submit], input[type=button]'],
+  ];
+  const claimed = new Set<Element>();
+  elementPasses.forEach(([type, selector]) => {
+    document.querySelectorAll(selector).forEach((el) => {
+      if (claimed.has(el)) return;
+      claimed.add(el);
+      pushEl(el, type);
+    });
+  });
 
   const forms: ExtractedForm[] = Array.from(document.querySelectorAll('form')).map((form) => ({
     purposeHint: inferFormPurpose(form),

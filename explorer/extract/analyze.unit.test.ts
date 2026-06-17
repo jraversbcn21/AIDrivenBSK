@@ -43,4 +43,16 @@ describe('analyzePage', () => {
     expect(r.elements.some((e) => e.type === 'modal')).toBe(true);
     expect(r.componentKinds).toEqual(expect.arrayContaining(['Header', 'Footer', 'SearchBar']));
   });
+  it('records an element matching multiple passes once, under the higher-priority type', () => {
+    const html = `
+<html><body>
+  <main>
+    <button aria-label="ordenar">Ordenar</button>
+  </main>
+</body></html>`;
+    const r = analyzePage(html, meta);
+    const matches = r.elements.filter((e) => e.label === 'ordenar');
+    expect(matches).toHaveLength(1);
+    expect(matches[0].type).toBe('sort');
+  });
 });
