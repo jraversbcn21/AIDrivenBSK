@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { chromium } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import { loadEnv } from '../src/config/env';
-import { loadExplorerConfig } from './config';
+import { assertCrawlableEnv, loadExplorerConfig } from './config';
 import { parseArgs } from './args';
 import { DEFAULT_ROUTE_RULES } from './url';
 import { crawlSession } from './crawl/crawler';
@@ -19,6 +19,7 @@ const SEEDS = ['/', '/es/', '/es/search'];
 async function main(): Promise<void> {
   dotenv.config();
   const env = loadEnv();
+  assertCrawlableEnv(env.name);
   const cfg = loadExplorerConfig();
   const args = parseArgs(process.argv.slice(2));
 

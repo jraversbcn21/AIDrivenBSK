@@ -36,8 +36,24 @@ function envMode(): ClassifierMode | undefined {
   return m as ClassifierMode;
 }
 
+export function assertCrawlableEnv(
+  envName: string,
+  allowProd: boolean = process.env.EXPLORER_ALLOW_PROD === 'true',
+): void {
+  if (envName === 'prod' && !allowProd) {
+    throw new Error('Explorer refuses to crawl prod by default. Set EXPLORER_ALLOW_PROD=true to override.');
+  }
+}
+
 export function loadExplorerConfig(overrides: Partial<ExplorerConfig> = {}): ExplorerConfig {
-  const maxPages = process.env.EXPLORER_MAX_PAGES ? Number(process.env.EXPLORER_MAX_PAGES) : DEFAULTS.bounds.maxPages;
+  let maxPages = DEFAULTS.bounds.maxPages;
+  if (process.env.EXPLORER_MAX_PAGES !== undefined) {
+    const n = Number(process.env.EXPLORER_MAX_PAGES);
+    if (!Number.isFinite(n) || n <= 0) {
+      throw new Error('EXPLORER_MAX_PAGES must be a positive number');
+    }
+    maxPages = n;
+  }
   const base: ExplorerConfig = {
     ...DEFAULTS,
     mode: envMode() ?? DEFAULTS.mode,
