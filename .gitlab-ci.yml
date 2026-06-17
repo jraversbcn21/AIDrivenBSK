@@ -1,0 +1,40 @@
+stages: [verify, test]
+
+default:
+  image: mcr.microsoft.com/playwright:v1.61.0-jammy
+  cache:
+    key:
+      files: [pnpm-lock.yaml]
+    paths: [.pnpm-store]
+  before_script:
+    - corepack enable
+    - pnpm config set store-dir .pnpm-store
+    - pnpm install --frozen-lockfile
+
+verify:
+  stage: verify
+  script:
+    - pnpm typecheck
+    - pnpm lint
+    - pnpm test:unit
+
+# Masked/Protected CI Variables
+# BASE_URL, BERSHKA_USER, and BERSHKA_PASS are configured as masked/protected
+# GitLab CI/CD variables (Settings → CI/CD → Variables) and are intentionally
+# NOT committed to this file for security.
+# Note: GitLab runners must be able to reach the DES host (*.inditex.grp).
+# If shared runners cannot, attach a self-hosted runner on the corp network
+# by adding a 'tags:' entry to the job.
+
+e2e:
+  stage: test
+  variables:
+    ENVIRONMENT: des
+  script:
+    - pnpm exec playwright test
+  artifacts:
+    when: on_failure
+    expire_in: 7 days
+    paths:
+      - reports/
+      - test-results/

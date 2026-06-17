@@ -4,3 +4,5 @@ node_modules/
 reports/
 test-results/
 playwright-report/
+.pnpm-store/
+pnpm-debug.log*
