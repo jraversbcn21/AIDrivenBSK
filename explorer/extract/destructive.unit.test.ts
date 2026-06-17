@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isDestructive } from './destructive';
 
 describe('isDestructive', () => {
-  it.each(['Pagar', 'Pay now', 'Realizar pedido', 'Eliminar', 'Delete', 'Confirmar compra', 'Buy now'])(
+  it.each(['Pagar', 'Pay now', 'Realizar pedido', 'Eliminar', 'Delete', 'Confirmar compra', 'Buy now', 'Place an order', 'Realizar el pedido', 'Realizar tu pedido'])(
     'flags "%s" as destructive', (label) => { expect(isDestructive(label)).toBe(true); },
   );
   it.each(['Añadir a la cesta', 'Buscar', 'Ver producto', 'Filtrar', ''])(
