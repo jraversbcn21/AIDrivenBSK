@@ -27,3 +27,23 @@ Checkout/payment tests are gated by `checkoutAllowed` (disabled for `prod`).
 - `src/components` — Component Objects (rooted at a Locator)
 - `src/fixtures/test.ts` — injects env + page objects
 - `tests/` — reference specs
+
+## Explorer Agent
+
+Crawls the site and emits a versioned functional map.
+
+```bash
+# Build the map (both sessions) and write the canonical file
+ENVIRONMENT=des BASE_URL=... pnpm explore --update
+
+# Re-run and show what changed vs the committed map
+ENVIRONMENT=des BASE_URL=... pnpm explore --diff
+
+# CI gate: fail if new uncovered flows appear
+ENVIRONMENT=des BASE_URL=... pnpm explore --diff --fail-on-new
+```
+
+Classifier mode via `EXPLORER_MODE=rules|llm|auto` (default `rules`). The `llm`/`auto`
+modes use `ANTHROPIC_API_KEY` and are optional. The canonical map lives at
+`coverage/functional-map.json`; per-run artifacts go to `reports/explorer/`.
+The live crawl needs corp VPN access to DES + browser binaries.
