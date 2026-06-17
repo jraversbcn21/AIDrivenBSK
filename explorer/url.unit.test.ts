@@ -29,4 +29,9 @@ describe('route rules', () => {
   it('allows ordinary paths when allowlist is empty', () => {
     expect(isAllowed('/es/search', DEFAULT_ROUTE_RULES)).toBe(true);
   });
+  it('does not over-match legitimate paths containing a denied word as a substring', () => {
+    expect(isDenied('/es/marketing-jobs', DEFAULT_ROUTE_RULES)).toBe(false);
+    expect(isAllowed('/es/marketing-jobs', DEFAULT_ROUTE_RULES)).toBe(true);
+    expect(isDenied('/es/campaign/summer', DEFAULT_ROUTE_RULES)).toBe(true);
+  });
 });

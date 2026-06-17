@@ -19,7 +19,13 @@ export interface RouteRules {
 
 export const DEFAULT_ROUTE_RULES: RouteRules = {
   allow: [],
-  deny: [/\/campaign/i, /\/landing/i, /\/promo/i, /\/marketing/i, /\/newsletter/i],
+  deny: [
+    /(?:^|\/)campaign(?:\/|$)/i,
+    /(?:^|\/)landing(?:\/|$)/i,
+    /(?:^|\/)promo(?:\/|$)/i,
+    /(?:^|\/)marketing(?:\/|$)/i,
+    /(?:^|\/)newsletter(?:\/|$)/i,
+  ],
 };
 
 export function isDenied(path: string, rules: RouteRules): boolean {
