@@ -13,8 +13,11 @@ export class SearchResultsPage extends BasePage {
   firstProduct(): ProductCard {
     // Scoped to <main>: the header's hidden mobile-nav dialog also has listitem/link entries
     // (e.g. "Ir a la cesta"), so an unscoped getByRole('listitem') can resolve to the wrong node.
+    // The grid's first listitem is consistently a promo/sale banner tile with no PDP link
+    // (confirmed live on /es/q/{term} results) — filter on the PDP URL pattern, not "any link",
+    // so .first() lands on a real product instead of the banner.
     return new ProductCard(
-      this.page.getByRole('main').getByRole('listitem').filter({ has: this.page.getByRole('link') }).first(),
+      this.page.getByRole('main').getByRole('listitem').filter({ has: this.page.locator('a[href*="-c0p"]') }).first(),
     );
   }
 }
