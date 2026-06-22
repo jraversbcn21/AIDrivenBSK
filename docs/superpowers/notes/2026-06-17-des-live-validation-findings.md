@@ -80,6 +80,28 @@ All real selectors below were confirmed live against DES (accessibility-tree pro
 
 ---
 
-## 6. Structural finding for the Explorer Agent (important)
+## 7. Onboarding-tour root cause found & fixed; search/cart flakiness re-diagnosed (2026-06-22)
+
+The §5 hypothesis ("fresh `auth.setup` session triggers the tour more persistently") was **wrong**. Live investigation found the real mechanism and two further, distinct bugs underneath it.
+
+**driver.js tour — root cause confirmed and fixed:**
+The tour is gated by a `bsk_onboarding` cookie (JSON array of tour ids already seen). Confirmed live: pre-setting it **before any navigation** suppresses the tour everywhere — home, logon, member-hub, search, PLP/PDP, cart — with no new ids appearing anywhere in the flow:
+```
+bsk_onboarding = ["mmbrs","mmbrs_hub_mobile"]
+```
+(`mmbrs` covers home/logon/search/PDP/cart; `mmbrs_hub_mobile` covers `/es/member-hub.html` specifically.) Implemented as `suppressOnboardingTour(page)` in `src/support/consent.ts`, called from the single navigation chokepoint `BasePage.goto()` — every page object gets it for free, including `LoginPage`/`auth.setup`. This replaces reactive Escape-key dismissal as the primary defense; `dismissOnboardingTour` stays in call sites as a fallback in case a new tour id ships. Verified live across the full home→login→member-hub→search→PDP→cart flow: `.driver-overlay` never appeared in any of several repeat runs.
+
+**Real, deterministic bug found in `firstProduct()` — fixed:**
+On `/es/q/{term}` results, the grid's first `listitem` is **always** a promo/sale banner tile (e.g. `href=/es/mujer/sale/bershka-...html`, no PDP link) — confirmed reproducible 100% of the time, not flaky. `SearchResultsPage.firstProduct()` filtered on "any listitem containing a link," which matches this banner. Fixed by filtering on the confirmed PDP href pattern instead: `a[href*="-c0p"]`.
+
+**Residual flakiness — NOT fixed, root cause now narrowed (open follow-up):**
+Even with both fixes above, `search-plp-pdp.spec`/`add-to-cart.spec` still failed in repeat live runs, but with new, different symptoms each time (not the tour):
+- The results grid measurably takes ~5s to hydrate after `/es/q/{term}` loads (`listitem` count: 0 at +2s/+3s → 66 at +5s). Several `expect.poll(...)` calls in the specs rely on Playwright's **default 5000ms** expect-timeout, which races against this — explains the "passes alone, fails under load" pattern from §5 (timing varies with machine/network load, not with session freshness).
+- One repeat run hit a genuine DES error page ("OH NO... ESTO ES UN ERROR — La página no está disponible temporalmente") after a card click — likely pre-prod backend/stock instability, not a selector bug.
+- **Next step (not yet done):** give the relevant `expect.poll`/`expect(...).toHaveURL(...)` calls an explicit timeout sized to the measured ~5s+ hydration (e.g. 15-20s), matching the existing deadline-retry pattern already used in `SearchBar.search()`. Treat occasional real DES error pages as expected pre-prod noise (consider a retry-on-navigation-failure wrapper), not something to chase with more timeout tuning.
+
+---
+
+## 8. Structural finding for the Explorer Agent (important)
 
 DES is built with **`bds-` web components (Shadow DOM)**. Playwright locators pierce shadow DOM (so the foundation works), **but the Explorer's analyzer uses `page.content()` (light DOM only)** — it will miss most interactive content on this site. Before running the Explorer live against DES, revisit its extraction strategy (e.g. drive extraction from the accessibility tree / `ariaSnapshot`, or Playwright-locator-based enumeration, instead of `page.content()`). Tracked as a follow-up to the Explorer sub-project.
