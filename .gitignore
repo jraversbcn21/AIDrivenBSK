@@ -6,3 +6,5 @@ test-results/
 playwright-report/
 .pnpm-store/
 pnpm-debug.log*
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
