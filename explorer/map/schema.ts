@@ -2,7 +2,7 @@ import type {
   Session, SelectorHints, ElementType, ComponentKind, ExtractedFormField,
 } from '../types';
 
-export const SCHEMA_VERSION = '1.0';
+export const SCHEMA_VERSION = '1.1';
 
 export type PageType =
   | 'Home' | 'PLP' | 'PDP' | 'Cart' | 'Checkout' | 'Account' | 'Wishlist' | 'Search' | 'Other';
