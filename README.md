@@ -47,3 +47,9 @@ Classifier mode via `EXPLORER_MODE=rules|llm|auto` (default `rules`). The `llm`/
 modes use `ANTHROPIC_API_KEY` and are optional. The canonical map lives at
 `coverage/functional-map.json`; per-run artifacts go to `reports/explorer/`.
 The live crawl needs corp VPN access to DES + browser binaries.
+
+Extraction is accessibility-tree-driven by default (`EXPLORER_EXTRACTION=aria`) because DES
+renders through `bds-` shadow-DOM components that light-DOM parsing cannot see; `dom` keeps the
+offline linkedom path. Crawls are bounded by `EXPLORER_MAX_PAGES` and `EXPLORER_TIME_BUDGET_MS`.
+Per-run artifacts in `reports/explorer/` have the shape `{ map, errors }`; the committed
+canonical map stays a plain functional map.
