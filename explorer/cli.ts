@@ -67,6 +67,14 @@ async function main(): Promise<void> {
   }
 
   if (args.update) {
+    // Never clobber the canonical map with an empty crawl: a dropped VPN / unreachable DES
+    // yields 0 pages + per-seed errors, and silently writing that over a good committed map
+    // destroys the diff baseline (happened live 2026-07-02 — VPN dropped mid-session).
+    if (map.pages.length === 0) {
+      console.error(`Refusing to update ${args.out}: crawl produced 0 pages (${errors.length} errors — is DES reachable?).`);
+      process.exitCode = 1;
+      return;
+    }
     await writeJson(args.out, map);
     console.log(`Wrote canonical map to ${args.out}`);
   } else if (!args.diff) {
