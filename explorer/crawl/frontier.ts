@@ -13,8 +13,15 @@ export class Frontier {
   private readonly seen = new Set<string>();
   private readonly queue: FrontierItem[] = [];
   private handedOut = 0;
+  private readonly start: number;
 
-  constructor(private readonly rules: RouteRules, private readonly bounds: CrawlBounds) {}
+  constructor(
+    private readonly rules: RouteRules,
+    private readonly bounds: CrawlBounds,
+    private readonly now: () => number = Date.now,
+  ) {
+    this.start = now();
+  }
 
   private key(item: FrontierItem): string {
     return `${item.session}:${routePattern(item.path)}`;
@@ -32,6 +39,7 @@ export class Frontier {
 
   next(): FrontierItem | undefined {
     if (this.handedOut >= this.bounds.maxPages) return undefined;
+    if (this.now() - this.start > this.bounds.timeBudgetMs) return undefined;
     const item = this.queue.shift();
     if (item) this.handedOut++;
     return item;

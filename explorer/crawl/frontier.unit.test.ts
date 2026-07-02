@@ -23,4 +23,18 @@ describe('Frontier', () => {
     while (f.next()) count++;
     expect(count).toBe(3); // maxPages
   });
+  it('stops handing out items once the time budget is exhausted', () => {
+    let t = 0;
+    const clock = () => t;
+    const f = new Frontier(
+      { allow: [], deny: [] },
+      { maxPages: 10, maxDepth: 4, politenessMs: 0, timeBudgetMs: 1_000 },
+      clock,
+    );
+    f.add({ path: '/a', session: 'anon', depth: 0, discoveredVia: 'seed' });
+    f.add({ path: '/b', session: 'anon', depth: 0, discoveredVia: 'seed' });
+    expect(f.next()?.path).toBe('/a');
+    t = 1_500; // budget exceeded
+    expect(f.next()).toBeUndefined();
+  });
 });

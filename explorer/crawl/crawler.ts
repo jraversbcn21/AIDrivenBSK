@@ -1,53 +1,69 @@
 import type { BrowserContext } from '@playwright/test';
 import type { PageExtraction, Session } from '../types';
-import type { CrawlBounds } from '../config';
+import type { CrawlBounds, ExtractionMode } from '../config';
 import { Frontier, type FrontierItem } from './frontier';
-import { extractFromPage } from '../extract/fromPage';
+import { extractorFor } from '../extract/fromPage';
 import { normalizePath, isSameOrigin, type RouteRules } from '../url';
-import { acceptConsent } from '../../src/support/consent';
+import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
 
 export interface CrawlDeps {
   context: BrowserContext;
   baseURL: string;
   rules: RouteRules;
   bounds: CrawlBounds;
+  extraction: ExtractionMode;
 }
 
-export async function crawlSession(deps: CrawlDeps, session: Session, seeds: string[]): Promise<PageExtraction[]> {
+export interface CrawlError {
+  path: string;
+  session: Session;
+  depth: number;
+  discoveredVia: string;
+  message: string;
+}
+
+export interface CrawlResult {
+  extractions: PageExtraction[];
+  errors: CrawlError[];
+}
+
+export async function crawlSession(deps: CrawlDeps, session: Session, seeds: string[]): Promise<CrawlResult> {
   const frontier = new Frontier(deps.rules, deps.bounds);
   for (const seed of seeds) {
     frontier.add({ path: normalizePath(seed, deps.baseURL), session, depth: 0, discoveredVia: 'seed' });
   }
 
-  const results: PageExtraction[] = [];
+  const extract = extractorFor(deps.extraction);
+  const extractions: PageExtraction[] = [];
+  const errors: CrawlError[] = [];
   const page = await deps.context.newPage();
+  // Pre-seed the bsk_onboarding cookie BEFORE the first navigation: the driver.js tour
+  // otherwise intercepts clicks/overlays on a fresh session (findings §7). The crawler
+  // bypasses BasePage.goto(), so it must do this itself.
+  await suppressOnboardingTour(page);
 
   for (let item = frontier.next(); item; item = frontier.next()) {
     try {
       await page.goto(item.path, { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
-      const extraction = await extractFromPage(page, session, item.discoveredVia, deps.baseURL);
-      results.push(extraction);
+      const extraction = await extract(page, session, item.discoveredVia, deps.baseURL);
+      extractions.push(extraction);
 
       for (const href of extraction.links) {
-        const path = normalizePath(href, deps.baseURL);
-        // stay on-site: only enqueue same-origin paths
         if (!isSameOrigin(href, deps.baseURL)) continue;
-        frontier.add({ path, session, depth: item.depth + 1, discoveredVia: item.path } satisfies FrontierItem);
+        frontier.add({
+          path: normalizePath(href, deps.baseURL),
+          session,
+          depth: item.depth + 1,
+          discoveredVia: item.path,
+        } satisfies FrontierItem);
       }
     } catch (err) {
-      results.push(errorExtraction(item, session, String(err)));
+      errors.push({ ...item, message: String(err) });
     }
     if (deps.bounds.politenessMs > 0) await page.waitForTimeout(deps.bounds.politenessMs);
   }
 
   await page.close();
-  return results;
-}
-
-function errorExtraction(item: FrontierItem, session: Session, message: string): PageExtraction {
-  return {
-    meta: { path: item.path, url: item.path, title: `ERROR: ${message}`, session, discoveredVia: item.discoveredVia },
-    landmarkRoles: [], textSummary: '', links: [], elements: [], forms: [], componentKinds: [],
-  };
+  return { extractions, errors };
 }

@@ -6,7 +6,7 @@ import { loadEnv } from '../src/config/env';
 import { assertCrawlableEnv, loadExplorerConfig } from './config';
 import { parseArgs } from './args';
 import { DEFAULT_ROUTE_RULES } from './url';
-import { crawlSession } from './crawl/crawler';
+import { crawlSession, type CrawlError } from './crawl/crawler';
 import { buildPageContext } from './classify/context';
 import { makeClassifier } from './classify/factory';
 import { buildMap, type ClassifiedPage } from './map/builder';
@@ -28,11 +28,17 @@ async function main(): Promise<void> {
 
   const browser = await chromium.launch();
   const classified: ClassifiedPage[] = [];
+  const errors: CrawlError[] = [];
   try {
     for (const session of sessions) {
       const context = await browser.newContext(session === 'auth' ? { storageState: '.auth/state.json' } : {});
-      const extractions = await crawlSession({ context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds }, session, SEEDS);
-      for (const ex of extractions) {
+      const result = await crawlSession(
+        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction },
+        session,
+        SEEDS,
+      );
+      errors.push(...result.errors);
+      for (const ex of result.extractions) {
         classified.push({ extraction: ex, classification: await classifier.classifyPage(buildPageContext(ex)) });
       }
       await context.close();
@@ -44,7 +50,7 @@ async function main(): Promise<void> {
   const map = buildMap({ classified, environment: env.name });
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await writeArtifact(`reports/explorer/${stamp}.json`, map);
+  await writeJson(`reports/explorer/${stamp}.json`, { map, errors });
 
   if (args.diff || args.failOnNew) {
     const prev = await readMap(args.out);
@@ -58,16 +64,16 @@ async function main(): Promise<void> {
   }
 
   if (args.update) {
-    await writeArtifact(args.out, map);
+    await writeJson(args.out, map);
     console.log(`Wrote canonical map to ${args.out}`);
   } else if (!args.diff) {
-    console.log(`Explored ${map.pages.length} pages (run with --update to write ${args.out}).`);
+    console.log(`Explored ${map.pages.length} pages, ${errors.length} errors (run with --update to write ${args.out}).`);
   }
 }
 
-async function writeArtifact(path: string, map: FunctionalMap): Promise<void> {
+async function writeJson(path: string, data: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, `${JSON.stringify(map, null, 2)}\n`, 'utf8');
+  await writeFile(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
 async function readMap(path: string): Promise<FunctionalMap | null> {
