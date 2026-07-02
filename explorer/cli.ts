@@ -31,7 +31,10 @@ async function main(): Promise<void> {
   const errors: CrawlError[] = [];
   try {
     for (const session of sessions) {
-      const context = await browser.newContext(session === 'auth' ? { storageState: '.auth/state.json' } : {});
+      const context = await browser.newContext({
+        baseURL: env.baseURL,
+        ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
+      });
       const result = await crawlSession(
         { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction },
         session,

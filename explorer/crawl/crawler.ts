@@ -47,6 +47,14 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
       await page.goto(item.path, { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
       const extraction = await extract(page, session, item.discoveredVia, deps.baseURL);
+
+      // DES server-side redirects (e.g. the gender gate) can land two different queued
+      // paths on the same destination. The requested path was already deduped by add();
+      // only re-check when the resolved path differs, so a plain single-visit page isn't
+      // rejected against its own dedup entry.
+      if (extraction.meta.path !== item.path && !frontier.markSeen(session, extraction.meta.path)) {
+        continue;
+      }
       extractions.push(extraction);
 
       for (const href of extraction.links) {

@@ -23,16 +23,28 @@ export class Frontier {
     this.start = now();
   }
 
-  private key(item: FrontierItem): string {
-    return `${item.session}:${routePattern(item.path)}`;
+  private key(session: Session, path: string): string {
+    return `${session}:${routePattern(path)}`;
+  }
+
+  /**
+   * Registers a path as seen for a session; returns false if it was already registered.
+   * Exposed so the crawler can also dedupe on the *resolved* URL after a navigation (DES
+   * server-side redirects, e.g. the gender gate, can land two different queued paths on the
+   * same destination — dedup on the requested path alone lets both through and duplicates
+   * that page in the map; confirmed live during the first crawl).
+   */
+  markSeen(session: Session, path: string): boolean {
+    const k = this.key(session, path);
+    if (this.seen.has(k)) return false;
+    this.seen.add(k);
+    return true;
   }
 
   add(item: FrontierItem): boolean {
     if (item.depth > this.bounds.maxDepth) return false;
     if (!isAllowed(item.path, this.rules)) return false;
-    const k = this.key(item);
-    if (this.seen.has(k)) return false;
-    this.seen.add(k);
+    if (!this.markSeen(item.session, item.path)) return false;
     this.queue.push(item);
     return true;
   }

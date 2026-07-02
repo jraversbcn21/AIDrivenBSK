@@ -37,4 +37,15 @@ describe('Frontier', () => {
     t = 1_500; // budget exceeded
     expect(f.next()).toBeUndefined();
   });
+  it('markSeen registers a resolved path and reports whether it was already seen', () => {
+    const f = new Frontier(DEFAULT_ROUTE_RULES, bounds);
+    expect(f.markSeen('anon', '/es/h-woman.html')).toBe(true);
+    expect(f.markSeen('anon', '/es/h-woman.html')).toBe(false); // already seen
+    expect(f.markSeen('auth', '/es/h-woman.html')).toBe(true); // different session, not seen yet
+  });
+  it('add() reuses markSeen so a path seen via redirect is not re-enqueued', () => {
+    const f = new Frontier(DEFAULT_ROUTE_RULES, bounds);
+    f.markSeen('anon', '/es/h-woman.html'); // simulates a prior redirect landing here
+    expect(f.add(item('/es/h-woman.html'))).toBe(false);
+  });
 });
