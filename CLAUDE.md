@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Playwright + TypeScript QA framework (Page Object / Component Object model) for Bershka's DES e-commerce site, plus an `explorer/` CLI sub-project that crawls the site and builds a versioned "functional map". Both are Phase 0 foundations for a later agentic QA platform.
 
+## Roadmap & backlog
+
+The platform-level roadmap (10-phase evolution toward the Agentic QA Platform, module evolution, milestone sequence M0–M6) lives at `docs/roadmap/2026-07-02-platform-roadmap.md`; the complete pending-work backlog at `docs/roadmap/2026-07-02-backlog.md`. Read them before starting any new sub-project — every commit must serve one of the four North Star capabilities (Knowledge, Reasoning, Autonomy, Engineering Excellence).
+
 ## Commands
 
 - `pnpm test` — Playwright e2e tests (`tests/`)
