@@ -56,4 +56,4 @@ The driver.js onboarding tour is suppressed **preventively**, not reactively: `B
 
 ## Repo etiquette
 
-Commit messages follow Conventional Commits: `type(scope): description` (e.g. `fix(search/cart): ...`, `feat(explorer): ...`). Common scopes: `explorer`, `foundation`, `search/cart`.
+Commit messages follow Conventional Commits: `type(scope): description` (e.g. `fix(search/cart): ...`, `feat(explorer): ...`). Common scopes: `explorer`, `planner`, `foundation`, `search/cart`.
