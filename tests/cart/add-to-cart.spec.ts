@@ -1,14 +1,14 @@
 import { test, expect } from '../../src/fixtures/test';
 
-// Same measured waits as search-plp-pdp.spec: the search results grid hydrates in ~5s+
-// (findings doc §7), and the cart page renders from a slow skeleton — both race the
-// default 5s expect timeout under load.
+// Stuck /q/ loads are handled by waitForResults() (poll + reload-retry, findings doc §7).
+// The cart page renders from a slow skeleton: the "Cesta (N)" tab count settles ~6-10s after
+// navigation (measured live), racing the default 5s expect timeout under load.
 const HYDRATION_TIMEOUT_MS = 20_000;
 
 test('adding a product updates the mini cart', async ({ homePage, searchResultsPage, productPage }) => {
   await homePage.open();
   await homePage.header.searchBar.search('camiseta');
-  await expect.poll(() => searchResultsPage.firstProduct().isVisible(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
+  await searchResultsPage.waitForResults();
   await searchResultsPage.firstProduct().open();
 
   await productPage.selectFirstSize();

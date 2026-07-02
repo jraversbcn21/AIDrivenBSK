@@ -1,16 +1,16 @@
 import { test, expect } from '../../src/fixtures/test';
 
-// The /es/q/{term} results grid takes ~5s+ to hydrate after the URL loads (0 listitems at
-// +3s -> 66 at +5s, measured live — findings doc §7), which races Playwright's default 5s
-// expect timeout under load. Size the specific waits to the measured hydration instead of
-// inflating global timeouts.
+// The /es/q/{term} results grid typically hydrates in ~5s, but some DES pre-prod loads never
+// leave their pre-results state at all — waitForResults() handles both (poll + reload-retry,
+// findings doc §7). PDP navigation gets the same measured headroom.
 const HYDRATION_TIMEOUT_MS = 20_000;
 
 test('search, filter, and open a product detail page', async ({ homePage, searchResultsPage, productPage, page }) => {
   await homePage.open();
   await homePage.header.searchBar.search('camiseta');
 
-  await expect.poll(() => searchResultsPage.firstProduct().isVisible(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
+  await searchResultsPage.waitForResults();
+  await expect.poll(() => searchResultsPage.firstProduct().isVisible()).toBe(true);
   await searchResultsPage.filters.applyFirstAvailable();
 
   await searchResultsPage.firstProduct().open();

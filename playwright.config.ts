@@ -8,8 +8,18 @@ const env = loadEnv();
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
+  // Serial on purpose: concurrent flows share one DES account/session (login.spec re-authenticates
+  // it mid-run) and DES pre-prod degrades visibly under two simultaneous search flows (stuck /q/
+  // loads, untranslated shells) — measured live: parallel full-suite runs failed 6/6, isolation
+  // always green (findings doc §7). With 4 tests, parallelism buys ~1 minute; not worth it.
+  workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // DES pre-prod degrades in many distinct ways under sustained automated use (dead /q/ loads,
+  // untranslated/broken app shells, stuck nav dialogs — all confirmed live, findings doc §7).
+  // The page objects already act->verify->retry every state-changing interaction; a test-level
+  // retry is the standard mitigation for whole-flow environment noise, and trace-on-first-retry
+  // captures the evidence when it happens.
+  retries: 1,
   reporter: [
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],
