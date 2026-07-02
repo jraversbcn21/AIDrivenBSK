@@ -3,7 +3,13 @@ import { assertCrawlableEnv, loadExplorerConfig } from './config';
 
 describe('loadExplorerConfig', () => {
   const saved = { ...process.env };
-  beforeEach(() => { delete process.env.EXPLORER_MODE; delete process.env.EXPLORER_MAX_PAGES; delete process.env.EXPLORER_ALLOW_PROD; });
+  beforeEach(() => {
+    delete process.env.EXPLORER_MODE;
+    delete process.env.EXPLORER_MAX_PAGES;
+    delete process.env.EXPLORER_ALLOW_PROD;
+    delete process.env.EXPLORER_EXTRACTION;
+    delete process.env.EXPLORER_TIME_BUDGET_MS;
+  });
   afterEach(() => { process.env = { ...saved }; });
 
   it('provides sensible defaults', () => {
@@ -41,6 +47,30 @@ describe('loadExplorerConfig', () => {
     process.env.EXPLORER_MAX_PAGES = '50';
     const c = loadExplorerConfig();
     expect(c.bounds.maxPages).toBe(50);
+  });
+
+  it('defaults extraction to aria and time budget to 10 minutes', () => {
+    const c = loadExplorerConfig();
+    expect(c.extraction).toBe('aria');
+    expect(c.bounds.timeBudgetMs).toBe(600_000);
+  });
+
+  it('reads extraction mode and time budget from env', () => {
+    process.env.EXPLORER_EXTRACTION = 'dom';
+    process.env.EXPLORER_TIME_BUDGET_MS = '120000';
+    const c = loadExplorerConfig();
+    expect(c.extraction).toBe('dom');
+    expect(c.bounds.timeBudgetMs).toBe(120_000);
+  });
+
+  it('rejects an invalid extraction mode', () => {
+    process.env.EXPLORER_EXTRACTION = 'bogus';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_EXTRACTION/);
+  });
+
+  it('rejects a non-positive time budget', () => {
+    process.env.EXPLORER_TIME_BUDGET_MS = '0';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_TIME_BUDGET_MS/);
   });
 });
 

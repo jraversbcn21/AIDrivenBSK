@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Frontier, type FrontierItem } from './frontier';
 import { DEFAULT_ROUTE_RULES } from '../url';
 
-const bounds = { maxPages: 3, maxDepth: 2, politenessMs: 0 };
+const bounds = { maxPages: 3, maxDepth: 2, politenessMs: 0, timeBudgetMs: 600_000 };
 const item = (path: string, depth = 0): FrontierItem => ({ path, session: 'anon', depth, discoveredVia: 'seed' });
 
 describe('Frontier', () => {
