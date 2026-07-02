@@ -1,0 +1,499 @@
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- status
+- banner "Cabecera de página":
+  - menu "Menú BERSHKA"
+  - link "Volver a la página de inicio":
+    - /url: /es/h-woman.html
+  - list:
+    - listitem:
+      - button "Buscar en tienda"
+    - listitem:
+      - button "Acceder"
+    - listitem:
+      - link "Ir a la cesta":
+        - /url: /es/shop-cart.html
+- main "Contenido principal":
+  - article:
+    - img "REBAJAS"
+    - link "Ir a REBAJAS":
+      - /url: /es/mujer/ropa/rebajas-n5303.html
+    - heading "REBAJAS" [level=2]
+    - paragraph: HASTA -50%
+    - link "Comprar":
+      - /url: /es/mujer/ropa/rebajas-n5303.html
+  - article
+  - article:
+    - list:
+      - listitem:
+        - link "Tops y bodies":
+          - /url: /es/mujer/sale/tops-y-bodies-c1010850199.html
+          - figure "Tops y bodies"
+      - listitem:
+        - link "Vestidos y monos":
+          - /url: /es/mujer/sale/vestidos-y-monos-c1010850201.html
+          - figure "Vestidos y monos"
+      - listitem:
+        - link "Zapatos":
+          - /url: /es/mujer/sale/zapatos-c1010850195.html
+          - figure "Zapatos"
+      - listitem:
+        - link "Pantalones y jeans":
+          - /url: /es/mujer/sale/pantalones-y-jeans-c1010850196.html
+          - figure "Pantalones y jeans"
+  - article:
+    - 'link "Slide 1 de 8. Ir a: New"':
+      - /url: /es/mujer/novedades-n3283.html
+    - heading "New" [level=2]
+  - article
+  - heading "Get the look" [level=2]
+  - figure:
+    - link "Chicas-Summer Summer Vibes":
+      - /url: /es/pag/bershkastyle.html?style=66292673
+      - img "Chicas-Summer"
+      - text: Summer Vibes
+  - figure:
+    - link "Chicas-Casual Casual":
+      - /url: /es/pag/bershkastyle.html?style=66206336
+      - img "Chicas-Casual"
+      - text: Casual
+  - figure:
+    - link "Chicas-Viral Viral":
+      - /url: /es/pag/bershkastyle.html?style=73376429
+      - img "Chicas-Viral"
+      - text: Viral
+  - figure:
+    - link "Chicas-Trendy Trendy":
+      - /url: /es/pag/bershkastyle.html?style=66206357
+      - img "Chicas-Trendy"
+      - text: Trendy
+  - link "Ver todos los estilos":
+    - /url: /es/pag/bershkastyle.html
+  - article
+  - heading "TE PUEDE INTERESAR" [level=2]
+  - article:
+    - link:
+      - /url: /es/pag/bershka-music.html
+  - button "Buscar"
+  - link "Ir a moda Hombre":
+    - /url: /es/h-man.html
+    - paragraph: Ir a moda
+    - text: Hombre
+  - heading "Consigue un 10% de descuento" [level=3]
+  - paragraph: Suscríbete a nuestra newsletter y tendrás un 10% de descuento en tu próxima compra, acceso a promociones exclusivas y ¡mucho más!
+  - link "Suscríbete":
+    - /url: /es/newsletter.html?origin=footer_web
+- dialog "Categorías y productos":
+  - button "Cerrar el menú"
+  - link "Volver a la página de inicio":
+    - /url: /es/h-woman.html
+  - list:
+    - listitem:
+      - button "Iniciar sesión"
+    - listitem:
+      - link "Ir a la cesta":
+        - /url: /es/shop-cart.html
+  - list:
+    - listitem:
+      - link "Mujer" [expanded]:
+        - /url: /es/h-woman.html
+    - listitem:
+      - link "Hombre":
+        - /url: /es/h-man.html
+    - listitem:
+      - button "By influencers"
+  - menu:
+    - listitem:
+      - button "REBAJAS HASTA -50% NEW" [expanded]
+      - list "REBAJAS HASTA -50%":
+        - listitem:
+          - link "Ver todo":
+            - /url: /es/mujer/ropa/rebajas-n5303.html
+        - listitem:
+          - link "Vestidos y monos":
+            - /url: /es/mujer/sale/vestidos-y-monos-c1010850201.html
+        - listitem:
+          - link "Pantalones y jeans":
+            - /url: /es/mujer/sale/pantalones-y-jeans-c1010850196.html
+        - listitem:
+          - link "Faldas y shorts":
+            - /url: /es/mujer/sale/faldas-y-shorts-c1010850202.html
+        - listitem:
+          - link "Camisetas":
+            - /url: /es/mujer/sale/camisetas-c1010850191.html
+        - listitem:
+          - link "Tops y bodies":
+            - /url: /es/mujer/sale/tops-y-bodies-c1010850199.html
+        - listitem:
+          - link "Camisas":
+            - /url: /es/mujer/sale/camisas-c1010850200.html
+        - listitem:
+          - link "Cazadoras y abrigos":
+            - /url: /es/mujer/sale/cazadoras-y-abrigos-c1010850197.html
+        - listitem:
+          - link "Jerséis y sudaderas":
+            - /url: /es/mujer/sale/jers%C3%A9is-y-sudaderas-c1010850198.html
+        - listitem:
+          - link "Lencería":
+            - /url: /es/mujer/sale/lencer%C3%ADa-c1010850221.html
+        - listitem:
+          - link "Zapatos":
+            - /url: /es/mujer/sale/zapatos-c1010850195.html
+        - listitem:
+          - link "Accesorios":
+            - /url: /es/mujer/sale/accesorios-c1010850194.html
+    - listitem:
+      - button "PROMOCIONES"
+    - listitem:
+      - button "NUEVA COLECCIÓN" [expanded]
+      - list "NUEVA COLECCIÓN":
+        - listitem:
+          - link "New":
+            - /url: /es/mujer/novedades-n3283.html
+        - listitem:
+          - link "Fifa world cup 2026™":
+            - /url: /es/mujer/ropa/fifa-world-cup-2026%E2%84%A2-c1010890232.html
+        - listitem:
+          - link "Baño":
+            - /url: /es/bikinis-bañadores-n4369.html?celement=1010361506
+        - listitem:
+          - link "Vestidos y monos":
+            - /url: /es/mujer/ropa/vestidos-n3802.html
+        - listitem:
+          - link "Tops y bodies":
+            - /url: /es/mujer/ropa/tops-y-bodies-n3881.html
+        - listitem:
+          - link "Camisetas":
+            - /url: /es/mujer/ropa/camisetas-n4365.html
+        - listitem:
+          - link "Camisas y blusas":
+            - /url: /es/mujer/ropa/camisas-y-blusas-n3860.html
+        - listitem:
+          - link "Pantalones":
+            - /url: /es/mujer/ropa/pantalones-n3888.html
+        - listitem:
+          - link "Jeans":
+            - /url: /es/mujer/ropa/jeans-n3821.html
+        - listitem:
+          - link "Shorts y bermudas":
+            - /url: /es/mujer/ropa/shorts-y-bermudas-n3861.html
+        - listitem:
+          - link "Faldas":
+            - /url: /es/mujer/ropa/faldas-n3864.html?celement=1010280023
+        - listitem:
+          - link "Cazadoras y trench":
+            - /url: /es/mujer/ropa/cazadoras-n4364.html?celement=1010193212
+        - listitem:
+          - link "Sudaderas":
+            - /url: /es/mujer/ropa/sudaderas-n3873.html
+        - listitem:
+          - link "Jerséis y cárdigans":
+            - /url: /es/mujer/ropa/sueteres-y-cardigans-n3870.html
+        - listitem:
+          - link "Bsk teen":
+            - /url: /es/mujer/ropa/bsk-teen-n3792.html?celement=1010833579
+        - listitem:
+          - link "Zapatos":
+            - /url: /es/mujer/zapatos-n3432.html?celement=1010193192
+        - listitem:
+          - link "Bolsos y monederos":
+            - /url: /es/mujer/accesorios/bolsos-n3765.html?celement=1010193138
+        - listitem:
+          - link "Accesorios":
+            - /url: /es/mujer/accesorios-n3764.html?celement=1010193134
+    - listitem:
+      - text: PROYECTOS ESPECIALES
+      - list "PROYECTOS ESPECIALES":
+        - listitem:
+          - link "Bershka music":
+            - /url: /es/pag/bershka-music.html
+        - listitem:
+          - 'link "Personalización: your fan era"':
+            - /url: /es/mujer/your-fan-era-c1010552560.html
+  - list:
+    - listitem:
+      - link "Tarjeta regalo":
+        - /url: /es/gift-card.html
+    - listitem:
+      - link "Mmbrs":
+        - /url: /es/bsk-mmbrs.html
+    - listitem:
+      - link "Newsletter":
+        - /url: /es/newsletter.html?origin=footer
+    - listitem:
+      - link "Ayuda":
+        - /url: /es/shopping-guide.html?section=general-info
+  - menu:
+    - listitem:
+      - button "REBAJAS HASTA -50% NEW" [expanded]
+      - list "REBAJAS HASTA -50%":
+        - listitem:
+          - link "Ver todo":
+            - /url: /es/hombre/sale/bershka-c1010747948.html
+        - listitem:
+          - link "Camisetas y polos":
+            - /url: /es/hombre/sale/camisetas-y-polos-c1010747937.html
+        - listitem:
+          - link "Pantalones y bermudas":
+            - /url: /es/hombre/sale/pantalones-y-bermudas-c1010856119.html
+        - listitem:
+          - link "Camisas":
+            - /url: /es/hombre/sale/camisas-c1010747933.html
+        - listitem:
+          - link "Sudaderas y jerséis":
+            - /url: /es/hombre/sale/sudaderas-y-jers%C3%A9is-c1010747929.html
+        - listitem:
+          - link "Cazadoras":
+            - /url: /es/hombre/sale/cazadoras-c1010747925.html
+        - listitem:
+          - link "Zapatos":
+            - /url: /es/hombre/sale/zapatos-c1010747941.html
+        - listitem:
+          - link "Accesorios":
+            - /url: /es/hombre/sale/accesorios-c1010747961.html
+    - listitem:
+      - button "PROMOCIONES"
+    - listitem:
+      - button "NUEVA COLECCIÓN" [expanded]
+      - list "NUEVA COLECCIÓN":
+        - listitem:
+          - link "New":
+            - /url: /es/hombre/novedades-n3745.html?celement=1010378021
+        - listitem:
+          - link "Ver todo":
+            - /url: /es/hombre/ropa/ver-todo-n5863.html?celement=1010834564
+        - listitem:
+          - link "Camisetas y polos":
+            - /url: /es/hombre/ropa/camisetas-n3294.html?celement=1010193239
+        - listitem:
+          - link "Bermudas":
+            - /url: /es/hombre/ropa/shorts-y-bermudas-n3705.html?celement=1010193242
+        - listitem:
+          - link "Pantalones":
+            - /url: /es/hombre/ropa/pantalones-n3288.html?celement=1010193241
+        - listitem:
+          - link "Jeans":
+            - /url: /es/hombre/ropa/jeans-n3676.html?celement=1010193238
+        - listitem:
+          - link "Camisas":
+            - /url: /es/hombre/ropa/camisas-n3700.html?celement=1010193240
+        - listitem:
+          - link "Cazadoras":
+            - /url: /es/hombre/ropa/cazadoras-y-abrigos-n3668.html?celement=1010193546
+        - listitem:
+          - link "Sudaderas":
+            - /url: /es/hombre/ropa/sudaderas-n3714.html?celement=1010193244
+        - listitem:
+          - link "Jerséis y cárdigans":
+            - /url: /es/hombre/ropa/jerseis-y-chaquetas-n3710.html?celement=1010193243
+        - listitem:
+          - link "Twin sets":
+            - /url: /es/hombre/ropa/twin-sets-n4406.html?celement=1010454001
+        - listitem:
+          - link "Bañadores":
+            - /url: /es/hombre/ropa/bano-n5950.html?celement=1010874128
+        - listitem:
+          - link "Zapatos":
+            - /url: /es/hombre/zapatos-n3315.html?celement=1010193202
+        - listitem:
+          - link "Accesorios":
+            - /url: /es/hombre/accesorios-n3653.html?celement=1010193172
+    - listitem:
+      - text: RECOMENDADOS
+      - list "RECOMENDADOS":
+        - listitem:
+          - link "Colaboraciones®":
+            - /url: /es/hombre/colaboraciones-n3306.html?celement=1010321007
+        - listitem:
+          - link "Lo más vendido":
+            - /url: /es/hombre/ropa/lo-mas-vendido-n3663.html?celement=1010242587
+        - listitem:
+          - link "Ed hardy x bershka":
+            - /url: /es/hombre/ropa/ed-hardy-x-bershka-c1010888669.html
+        - listitem:
+          - 'link "Personalización: your fan era"':
+            - /url: /es/hombre/your-fan-era-c1010553064.html
+    - listitem:
+      - text: PROYECTOS ESPECIALES
+      - list "PROYECTOS ESPECIALES":
+        - listitem:
+          - link "Bershka music":
+            - /url: /es/pag/bershka-music.html
+  - list:
+    - listitem:
+      - link "Tarjeta regalo":
+        - /url: /es/gift-card.html
+    - listitem:
+      - link "Mmbrs":
+        - /url: /es/bsk-mmbrs.html
+    - listitem:
+      - link "Newsletter":
+        - /url: /es/newsletter.html?origin=footer
+    - listitem:
+      - link "Ayuda":
+        - /url: /es/shopping-guide.html?section=general-info
+  - menu:
+    - listitem:
+      - text: GET THE LOOK MUJER
+      - list:
+        - listitem:
+          - link "Ver todo":
+            - /url: /es/pag/bershkastyle.html?gender=66486574
+      - list:
+        - listitem:
+          - link "Football":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=75456461
+        - listitem:
+          - link "Trendy":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66206357
+        - listitem:
+          - link "Casual":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66206336
+        - listitem:
+          - link "Summer vibe":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66292673
+        - listitem:
+          - link "Festival season":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66206365
+        - listitem:
+          - link "Denim":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66206369
+        - listitem:
+          - link "Bershka active":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=73715200
+        - listitem:
+          - link "Party":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66292672
+        - listitem:
+          - link "Viral":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=73376429
+        - listitem:
+          - link "Cozy":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=66785076
+        - listitem:
+          - link "Tailoring":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=67697852
+        - listitem:
+          - link "Leather-look":
+            - /url: /es/pag/bershkastyle.html?gender=66486574&style=67723315
+    - listitem:
+      - text: GET THE LOOK HOMBRE
+      - list:
+        - listitem:
+          - link "Ver todo":
+            - /url: /es/pag/bershkastyle.html?gender=66486573
+      - list:
+        - listitem:
+          - link "Football":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=75456460
+        - listitem:
+          - link "Streetwear":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=66206392
+        - listitem:
+          - link "Casual":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=66206380
+        - listitem:
+          - link "Tailoring":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=74463051
+        - listitem:
+          - link "Summer vibes":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=73029776
+        - listitem:
+          - link "Basic":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=69934301
+        - listitem:
+          - link "Denim":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=72999258
+        - listitem:
+          - link "Tracksuit":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=73921877
+        - listitem:
+          - link "Party":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=66338556
+        - listitem:
+          - link "Leather-look":
+            - /url: /es/pag/bershkastyle.html?gender=66486573&style=72999260
+  - button "Buscar"
+- contentinfo "Pie de página":
+  - heading "Contacto" [level=3]
+  - list:
+    - listitem:
+      - paragraph:
+        - button "WhatsApp":
+          - img
+          - text: WhatsApp
+    - listitem:
+      - paragraph:
+        - button "Llamar 900 456 003 Fuera de servicio De lunes a viernes de 10:00 a 15:00.":
+          - img
+          - text: Llamar 900 456 003 Fuera de servicio De lunes a viernes de 10:00 a 15:00.
+  - button "Ayuda "
+  - button "We are BERSHKA "
+  - button "Te puede interesar "
+  - list:
+    - listitem:
+      - link "Ir al perfil de BERSHKA en instagram - se abre en una nueva pestaña":
+        - /url: https://www.instagram.com/bershka/
+        - img "instagram"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en facebook - se abre en una nueva pestaña":
+        - /url: https://www.facebook.com/bershka
+        - img "facebook"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en twitter - se abre en una nueva pestaña":
+        - /url: https://www.twitter.com/bershka
+        - img "twitter"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en tiktok - se abre en una nueva pestaña":
+        - /url: https://www.tiktok.com/@bershka
+        - img "tiktok"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en snapchat - se abre en una nueva pestaña":
+        - /url: https://www.snapchat.com/add/bershkaofficial
+        - img "snapchat"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en youtube - se abre en una nueva pestaña":
+        - /url: https://www.youtube.com/@bershka
+        - img "youtube"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en pinterest - se abre en una nueva pestaña":
+        - /url: https://pinterest.com/bershka/
+        - img "pinterest"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en spotify - se abre en una nueva pestaña":
+        - /url: https://play.spotify.com/user/bershka
+        - img "spotify"
+  - list:
+    - listitem:
+      - link "Ir al perfil de BERSHKA en Términos y condiciones de compra - se abre en una nueva pestaña":
+        - /url: https://static.bershka.net/4/static/itxwebstandard/docs/termsandconditions/terms_and_conditions_es_ES.pdf?ts=20260702015704
+        - text: Términos y condiciones de compra
+    - listitem:
+      - link "Ir al perfil de BERSHKA en Política de privacidad - se abre en una nueva pestaña":
+        - /url: https://static.bershka.net/4/static/itxwebstandard/docs/privacypolicy/privacy_policy_es_ES.pdf?ts=20260702015704
+        - text: Política de privacidad
+    - listitem:
+      - link "Ir al perfil de BERSHKA en Gestión de Privacidad - se abre en una nueva pestaña":
+        - /url: https://bershka.com/integration/privacy/right-request/44009500/es-ES/
+        - text: Gestión de Privacidad
+    - listitem:
+      - link "Ir al perfil de BERSHKA en Política de cookies - se abre en una nueva pestaña":
+        - /url: https://static.bershka.net/4/static/itxwebstandard/docs/cookiespolicy/cookies_policy_es_ES.pdf?ts=20260702015704
+        - text: Política de cookies
+    - listitem:
+      - button "Configurar cookies"
+    - listitem:
+      - link "Ir al perfil de BERSHKA en SiteMap":
+        - /url: /es/sitemap.html
+        - text: SiteMap
+  - paragraph: Cambiar mercado e idioma
+  - button "España | Español"
+  - text: © 2026 BERSHKA
+- text: ¿Quieres guardar tu ubicación?
+- button ""
+- button "España "
+- button "Guardar"
+- paragraph:
+  - text: Si nos visitas desde las Islas Canarias,
+  - link "entra aquí":
+    - /url: /ic

@@ -1,0 +1,16 @@
+- link "Skip to main content":
+  - /url: "#main-content"
+- status
+- banner:
+  - heading "Bershka Select country" [level=1]:
+    - img "Bershka"
+    - text: Select country
+- main:
+  - link "Go to fashion Women":
+    - /url: /es/h-woman.html
+    - paragraph: Go to fashion
+    - text: Women
+  - link "Go to fashion Men":
+    - /url: /es/h-man.html
+    - paragraph: Go to fashion
+    - text: Men
