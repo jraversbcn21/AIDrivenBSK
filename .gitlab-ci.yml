@@ -1,4 +1,4 @@
-stages: [verify, test]
+stages: [verify, test, explore]
 
 default:
   image: mcr.microsoft.com/playwright:v1.61.0-jammy
@@ -38,3 +38,31 @@ e2e:
     paths:
       - reports/
       - test-results/
+
+# Explorer diff gate: detects new/changed/removed pages, elements, forms, and flows against the
+# committed coverage/functional-map.json. Scheduled-only (needs a GitLab CI/CD Schedule created
+# under Settings -> CI/CD -> Schedules; `rules` below means it never runs on an ordinary push/MR
+# pipeline) and non-blocking (allow_failure: true) on purpose: the committed map is a bounded
+# crawl (EXPLORER_MAX_PAGES=80, matched here so diffs compare like-for-like) with known gaps
+# (PLP/category grids aren't detected yet - see the DES live-validation findings doc), so
+# --fail-on-new is expected to surface real drift for review, not to gate every merge on a map
+# that is itself still maturing. Promote to blocking once the map's coverage is trustworthy.
+explore:
+  stage: explore
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  allow_failure: true
+  variables:
+    ENVIRONMENT: des
+    EXPLORER_MAX_PAGES: "80"
+  script:
+    # The auth-session crawl reads .auth/state.json directly (explorer/cli.ts), which pnpm
+    # explore does not generate itself - a fresh job checkout needs the Playwright setup
+    # project run first, the same way the e2e job's chromium project depends on it.
+    - pnpm exec playwright test --project=setup
+    - pnpm explore --diff --fail-on-new
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - reports/explorer/

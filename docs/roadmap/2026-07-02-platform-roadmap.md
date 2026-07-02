@@ -28,12 +28,12 @@ The foundation spec (§11) states the intended sequence explicitly:
 
 That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is needed; this document continues the existing plan.
 
-| Phase | Capability | Original sub-project | Status (2026-07-02) |
+| Phase | Capability | Original sub-project | Status (2026-07-02, updated) |
 |---|---|---|---|
-| 0 | Professional automation framework | Phase 0 foundation (POM/COM, fixtures, multi-env config, CI) | ✅ Done, live-validated against DES (one stabilization item, backlog A1) |
-| 1 | Application discovery | Explorer Agent | 🔶 Built + unit-tested (76 tests); **live discovery blocked** — extraction is light-DOM only and DES is shadow-DOM (`bds-`) (backlog B5) |
-| 2 | Persistent functional knowledge | Versioned `coverage/functional-map.json` + differ | 🔶 Machinery complete; **no canonical map has ever been produced** (backlog B7); flows are single-page (B8) |
-| 3 | Knowledge Graph | Evolution of the map schema — pages/components/elements/flows are already relational via stable IDs | ⬜ Multi-step flow synthesis, coverage annotations, run-result linkage. Plain JSON + stable IDs suffices through Phase 4; no graph DB before it earns its keep |
+| 0 | Professional automation framework | Phase 0 foundation (POM/COM, fixtures, multi-env config, CI) | ✅ Done, live-validated against DES; interaction reliability hardened (act→verify→retry, M1) |
+| 1 | Application discovery | Explorer Agent | ✅ **Closed.** Aria-tree extraction (M2) + first live crawl (M2c): 150 unique pages, 2414 real elements, 0 errors |
+| 2 | Persistent functional knowledge | Versioned `coverage/functional-map.json` + differ | 🔶 Canonical map committed and diffable; CI diff gate wired (M3, scheduled/non-blocking). Flows are still single-page (B8) |
+| 3 | Knowledge Graph | Evolution of the map schema — pages/components/elements/flows are already relational via stable IDs | ⬜ **Next up (M4).** Multi-step flow synthesis, coverage annotations, run-result linkage. Plain JSON + stable IDs suffices through Phase 4; no graph DB before it earns its keep |
 | 4 | Planning Agent | Coverage + Test Generator agents | ⬜ Consumes flows + priorities from the map; proposes what to validate |
 | 5 | Execution Agent | Builder Engine | ⬜ Generates specs that imitate the POM/COM contracts exactly — the contracts' regularity was designed for this |
 | 6 | Risk Analysis Agent | Failure Analyzer (+ risk-scoring of map diffs) | ⬜ Traces/videos/JSON results are already captured by default as its inputs |
@@ -41,7 +41,7 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | 8 | Continuous Learning | Feed run results and diffs back into the functional map | ⬜ |
 | 9 | Autonomous Quality Engineering | Orchestration of phases 4–8 | ⬜ |
 
-**Current position: end of Phase 0 / mid-Phase 1.** The single most valuable next step is making the Explorer actually *see* DES (shadow-DOM-aware extraction) and committing the first canonical map — the moment the platform first has persistent knowledge.
+**Current position: end of Phase 1 / start of Phase 2.** Phase 1 (Application discovery) is closed — the Explorer has real, verified knowledge of DES. The single most valuable next step is flow synthesis (M4): turning 150 isolated pages into real multi-step user journeys, which is what the Coverage/Planning agent (Phase 4) will need to consume.
 
 ---
 
@@ -62,10 +62,10 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 
 | Milestone | Content | Phase gate | North Star |
 |---|---|---|---|
-| **M0** ✅ (this commit) | Platform roadmap + backlog committed as versioned docs | — | Knowledge, Engineering Excellence |
-| **M1** | Stabilize `search-plp-pdp.spec` / `add-to-cart.spec`: explicit expect timeouts sized to the measured ~5s results-grid hydration (findings §7); verify with repeated full live runs | Reliably green suite = precondition for everything agentic | Engineering Excellence |
-| **M2** | Explorer DES-readiness (own spec→plan cycle): a11y-tree/ariaSnapshot extraction alongside the linkedom analyzer, `suppressOnboardingTour` in the crawler, `errors[]` artifact; then the **first live crawl** → commit `coverage/functional-map.json` | Completes Phase 1, opens Phase 2 | Knowledge |
-| **M3** | CI Explorer gate: `pnpm explore --diff --fail-on-new` stage; verify runner reachability to `*.inditex.grp` | New-flow detection runs without a human | Autonomy |
+| **M0** ✅ | Platform roadmap + backlog committed as versioned docs | — | Knowledge, Engineering Excellence |
+| **M1** ✅ | Stabilized `search-plp-pdp.spec` / `add-to-cart.spec`: act→verify→retry on every state-changing DES interaction, `workers: 1`, `retries: 1` | Reliably green suite = precondition for everything agentic | Engineering Excellence |
+| **M2** ✅ | Explorer DES-readiness: aria-tree extraction, crawler tour suppression + time budget, `errors[]` artifact; **first live crawl** → committed `coverage/functional-map.json` (150 pages, 2414 elements) | Closed Phase 1, opened Phase 2 | Knowledge |
+| **M3** ✅ | CI Explorer gate: `explore` stage in `.gitlab-ci.yml` running `pnpm explore --diff --fail-on-new` — **scheduled-only, non-blocking** (`allow_failure: true`) by deliberate choice, since the map is still bounded/incomplete (B8 flow synthesis, PLP-grid gap). **Manual step outstanding:** a GitLab CI/CD Schedule must be created in the project (Settings → CI/CD → Schedules) for the job to ever run — not doable from this environment. Runner reachability to `*.inditex.grp` still unverified (C11) | New-flow detection runs without a human, once scheduled | Autonomy |
 | **M4** | Flow synthesis + map enrichment: multi-step journeys, coverage annotations | Phase 2 → 3 | Knowledge |
 | **M5** | Coverage + Test Generator spec (Planning Agent): consumes flows/priorities; coverage measured by user journeys | Phase 4 | Reasoning |
 | **M6** | Builder Engine spec (Execution Agent): generates specs imitating the POM/COM contracts | Phase 5 | Autonomy |
