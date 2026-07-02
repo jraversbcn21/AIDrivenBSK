@@ -100,6 +100,17 @@ Even with both fixes above, `search-plp-pdp.spec`/`add-to-cart.spec` still faile
 - One repeat run hit a genuine DES error page ("OH NO... ESTO ES UN ERROR — La página no está disponible temporalmente") after a card click — likely pre-prod backend/stock instability, not a selector bug.
 - **Next step (not yet done):** give the relevant `expect.poll`/`expect(...).toHaveURL(...)` calls an explicit timeout sized to the measured ~5s+ hydration (e.g. 15-20s), matching the existing deadline-retry pattern already used in `SearchBar.search()`. Treat occasional real DES error pages as expected pre-prod noise (consider a retry-on-navigation-failure wrapper), not something to chase with more timeout tuning.
 
+**2026-07-02 — explicit-timeout fix applied; narrowed further, not fully eliminated:**
+Applied the next step above: `search-plp-pdp.spec.ts` and `add-to-cart.spec.ts` now give `expect.poll`/`toHaveURL`/`toBeVisible` an explicit 20s timeout (`HYDRATION_TIMEOUT_MS`) instead of relying on Playwright's default 5s. Verified live:
+- `pnpm typecheck && pnpm lint && pnpm test:unit` — all green (76 unit tests).
+- Both specs run **in isolation** (each 2×, including a rerun after a full-suite failure) — **100% pass**, confirming the fix resolves the original race (default-5s-vs-~5s-hydration) it targeted.
+- A live probe of `/es/shop-cart.html` (direct nav, authenticated session) measured the `tab` role ("Cesta (N)") appearing between +4s and +6s and stable afterward — comfortably inside the new 20s budget.
+- **Full-suite repeat runs (3×) still showed one intermittent failure per run, each a *different* symptom** — exactly the "residual flakiness, new symptom each time" pattern this section already documented, not a regression from this change:
+  1. `login.spec.ts` hit the real DES maintenance page ("We're making some improvements right now / We'll be back soon!") — unrelated to any code touched here; did not reproduce on retry. Confirms this doc's existing "genuine DES error page" category.
+  2. `add-to-cart.spec.ts`: cart tab was visible but `itemCount()` read 0 for the full 20s window, even though the live probe (above) shows the same tab settling on a real count within ~6s outside the full-suite run. Did not reproduce running the spec alone. Root cause not yet isolated — candidate is full-suite resource contention (4 tests sharing one DES session/runner), not the hydration timing this fix targeted.
+  3. `add-to-cart.spec.ts` (separate run): landed on a `Buscador`-titled URL after `SearchBar.search()`, but the rendered body was still home/category carousel content — the results grid never populated within the 20s budget. This points at `SearchBar.search()`'s own hover-reveal/retry-click mechanism occasionally not actually submitting the search under full-suite load, rather than the results-grid hydration speed measured above.
+- **Conclusion:** the explicit-timeout fix is a real, verified improvement (eliminates the exact race it targeted; both specs are now reliably green in isolation) but does **not** fully eliminate intermittent failures when the full suite runs under contention — consistent with, not worse than, the pre-existing documented pattern. Further work here is `SearchBar.search()`'s submission reliability and/or full-suite contention, not more `expect` timeout tuning (four separate timeout-focused fixes — three global, one now targeted — have each narrowed but not closed this).
+
 ---
 
 ## 8. Structural finding for the Explorer Agent (important)

@@ -52,7 +52,7 @@ Before touching any selector or flow against the live DES site (search, PLP/PDP,
 
 The driver.js onboarding tour is suppressed **preventively**, not reactively: `BasePage.goto()` pre-seeds a `bsk_onboarding` cookie (`suppressOnboardingTour` in `consent.ts`) before every navigation, so the tour never fires. `dismissOnboardingTour` (Escape key) still exists as a fallback in call sites — don't remove it, but don't rely on it as the primary defense either.
 
-**Known open issue:** `search-plp-pdp.spec` / `add-to-cart.spec` can still fail intermittently — root cause is the `/es/q/{term}` results grid taking ~5s to hydrate, racing Playwright's default 5s `expect`/`expect.poll` timeout (not the onboarding tour, and not session freshness — both ruled out live). See findings doc §7 before attempting another timeout tweak blind.
+**Known open issue (narrowed, not closed):** `search-plp-pdp.spec` / `add-to-cart.spec` both give the relevant `expect.poll`/`toHaveURL`/`toBeVisible` calls an explicit 20s timeout (`HYDRATION_TIMEOUT_MS`) sized to the measured ~5s+ `/es/q/{term}` grid hydration — this fix is verified and both specs are now reliably green **in isolation**. Full-suite runs under load can still show one intermittent failure per run, but with a *different* symptom each time (a genuine DES maintenance-mode page; a cart-tab count anomaly; a search that never populates the grid) — none reproduce in isolation, and the current lead points at `SearchBar.search()`'s own hover-reveal/retry-click reliability under contention, not `expect` timeout sizing. See findings doc §7 (2026-07-02 update) before attempting another timeout tweak.
 
 ## Repo etiquette
 
