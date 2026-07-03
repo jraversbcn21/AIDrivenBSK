@@ -1,7 +1,7 @@
 # DES Live-Validation Findings
 
-**Date:** 2026-06-17 (created), last updated 2026-07-03 (later: PLP-grid extraction gap closed; Builder Engine M6b live-validated).
-**Status:** Foundation fully validated live — login, search, PLP/PDP, filters, and cart all pass reliably (in isolation and as a serialized full suite). All known interaction-reliability bugs found live have been fixed (§7). The Explorer Agent is DES-ready with a first live crawl committed (§8). The Coverage Planner is live-validated with a first evidence-annotated map committed (§9). The Builder Engine (M6b) generates navigation specs that pass live against DES (§11), surfacing a real testId/`locate()` gap (backlog B15) worked around for now. Residual, non-blocking environment noise and forward-looking leads remain open — see the "Open leads" callouts in §7/§8 and the map-completeness consequence in §9.
+**Date:** 2026-06-17 (created), last updated 2026-07-03 (later: PLP-grid extraction gap closed; Builder Engine M6b live-validated; testId attribute-provenance fix M7 closes B15).
+**Status:** Foundation fully validated live — login, search, PLP/PDP, filters, and cart all pass reliably (in isolation and as a serialized full suite). All known interaction-reliability bugs found live have been fixed (§7). The Explorer Agent is DES-ready with a first live crawl committed (§8). The Coverage Planner is live-validated with a first evidence-annotated map committed (§9). The Builder Engine (M6b) generates navigation specs that pass live against DES (§11); the testId/`locate()` gap it surfaced is now closed (§12, M7) — generated specs assert on real, page-specific testIds again. Residual, non-blocking environment noise and forward-looking leads remain open — see the "Open leads" callouts in §7/§8 and the map-completeness consequence in §9.
 **Environment:** DES (`https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/`)
 **Test account:** `jorge@esqa.com` (in local `.env`, gitignored).
 
@@ -206,3 +206,23 @@ This is exactly the gap CLAUDE.md's foundation spec had already earmarked ("rele
 **New weakness surfaced, not blocking, worth tracking:** with testId excluded, all three regenerated page objects picked the **same generic header element** as their loaded-signal — `{ role: { type: 'button', name: 'Buscar en tienda' } }` (the "search in store" button present in the header of every DES page, not specific to the leaf page). It's a *true* signal (genuinely visible once the leaf page renders) but a *weak* one: `loadedSignalFor` returns the first non-destructive element with a role/label hint in map-element order, and the header search button is typically the very first such element captured on any page (it's at the top of the DOM/aria tree), so it wins over more page-specific candidates (e.g. "Añadir a la lista de deseos", "Añadir a cesta") purely by extraction order, not by relevance. Tracked in the backlog (B14) as a future refinement — e.g. deprioritizing elements known to be shared across many pages (Header/Footer component members) in favor of page-body-specific ones.
 
 **Not touched, left for a dedicated fix:** reconciling `enrichTestIds`/`locate()` so testId hints are trustworthy again (recording which attribute matched, and either configuring a custom `testIdAttribute` per-hint or having `locate()` resolve via a raw attribute selector when the hint didn't come from `data-testid`). Tracked in the backlog (B15).
+
+---
+
+## 12. TestId attribute-provenance fix (M7) — closes B15, live-validated (2026-07-03)
+
+Closed the gap left open at the end of §11. `TestIdHint { attr, value }` now lives in `src/support/locators.ts` (the base layer); `enrichTestIds.ts` and `hints.ts` record which of `data-testid`/`data-qa-anchor`/`data-qa` actually matched; `locate()` resolves `data-testid` via Playwright's `getByTestId()` and the other two via a raw CSS attribute locator. Schema bumped `1.2 → 1.3` (no migration code — the map is regenerated live as part of this milestone). `builder/select.ts`'s M6b workaround (excluding testId from its own loaded-signal priority) is reverted; a single legacy-shape guard tolerates stale schema-1.2 string testIds (and, after a task-review finding, `null`-shaped hints too) by falling through to role/label instead of crashing.
+
+**Live probe confirmed the root cause exactly as suspected:** on a real PDP, "Añadir a cesta"'s test-id-like value (`addToCartSizeBtn`) comes from `data-qa-anchor` — not `data-testid` — exactly the mismatch §11 diagnosed. "Añadir a la lista de deseos" carries no test-id-like attribute at all under any of the three names (legitimate absence, not a bug).
+
+**Full re-crawl (schema 1.3, 152 pages, both sessions):** 2,508 elements now carry a `{ attr, value }` testId hint (previously all provenance-less strings). `pnpm plan --update` re-annotated coverage: 8/152 flows covered (up from 3/152 pre-M7 — the map itself changed shape between crawls, as already documented as expected variability in §7/§9, not a planner regression).
+
+**Builder regeneration — the concrete payoff:** `pnpm build-tests --top 3` against the fresh map produced three PDP journeys whose `isLoaded()` now asserts `locate(this.page, { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } })` — a real, page-specific, product-level signal — instead of §11's generic `{ role: { type: 'button', name: 'Buscar en tienda' } }` header button. This is B14's partial closure: pages whose leaf element carries a testId attribute now get a strong signal; pages with no testId-bearing element at all still fall back to role/label and can still pick a generic one (B14 stays open for that narrower subset).
+
+**Live validation: 3/3 generated specs pass, no retries** (4/4 with setup, 1.6m total) — the exact three journeys above, running with the restored testId-first priority.
+
+**No-regression check:** the full manual reference suite (`pnpm test` — login, search→PLP→PDP, add-to-cart) still passes 4/4 live against DES, confirming the shared `locate()`/`Strategy` type change didn't disturb any hand-written page object (none of them construct a testId `Strategy` today, as verified during design).
+
+**Task-review finding, fixed:** the legacy-shape guard as originally specified (`typeof hints.testId === 'object'`) didn't exclude JavaScript's `typeof null === 'object'` quirk — a hand-edited or corrupted map with `testId: null` would have passed the guard and crashed downstream in `locate()`. Fixed to `typeof hints.testId === 'object' && hints.testId !== null`, with a regression test.
+
+**B15: closed.** **B14: partially closed** — tracked further only for leaf pages with no testId-bearing element.
