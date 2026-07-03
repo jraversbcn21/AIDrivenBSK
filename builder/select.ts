@@ -19,6 +19,13 @@ export interface Selection {
 }
 
 function toStrategy(hints: SelectorHints): Strategy | null {
+  // Legacy tolerance (the only one in the codebase, per the M7 design spec §4): schema-1.2
+  // maps carried provenance-less string testIds — the untrustworthy data M7 replaced.
+  // A string-shaped hint is ignored so it can never surface as an unresolvable Strategy
+  // (M6b's live failure mode, findings §11); the element's role/label still apply.
+  if (hints.testId !== undefined && typeof hints.testId === 'object') {
+    return { testId: hints.testId };
+  }
   if (hints.role !== undefined && hints.role.name !== '') {
     return { role: { type: hints.role.type as NonNullable<Strategy['role']>['type'], name: hints.role.name } };
   }
@@ -26,24 +33,13 @@ function toStrategy(hints: SelectorHints): Strategy | null {
   return null;
 }
 
-/**
- * First non-destructive element with a usable role/label hint; null means the template
- * falls back to the main landmark. Deterministic: map element order.
- *
- * Deviation from the framework's stated testId -> role -> label -> placeholder priority,
- * live-confirmed 2026-07-03 (M6b Task 6): explorer/extract/enrichTestIds.ts records a
- * selectorHints.testId from whichever of data-testid, data-qa-anchor, or data-qa it finds
- * first, without recording which attribute matched. locate()'s testId branch always calls
- * Playwright's getByTestId(), which by default resolves only data-testid — so a hint sourced
- * from data-qa-anchor/data-qa silently never matches. Three generated specs timed out waiting
- * on exactly this (isLoaded() via a testId that never resolved, even though the real page had
- * loaded correctly — findings doc §11). Until enrichTestIds/locate() reconcile which attribute
- * was actually used (tracked in the backlog), testId hints are excluded here; role/label are
- * both genuinely resolvable today.
- */
+/** First non-destructive element whose best hint matches the framework's selector
+ *  priority (testId -> role -> label); null means the template falls back to the
+ *  main landmark. Deterministic: map element order. testId is trustworthy again
+ *  since M7 (attribute provenance — design spec 2026-07-03-testid-attribute-fix-design.md). */
 function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
   const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive);
-  for (const key of ['role', 'label'] as const) {
+  for (const key of ['testId', 'role', 'label'] as const) {
     for (const el of candidates) {
       const s = toStrategy(el.selectorHints);
       if (s !== null && key in s) return s;

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { selectJourneys } from './select';
 import type { FunctionalMap, MapPage } from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
+import type { TestIdHint } from '../src/support/locators';
 
 const page = (id: string, path: string): MapPage => ({
   id, path, routePattern: path, pageType: 'Other', session: 'anon', title: path, discoveredVia: '/',
@@ -42,19 +43,22 @@ describe('selectJourneys', () => {
     expect(r.journeys[0].chain.map((s) => s.path)).toEqual(['/', '/es/h-woman.html', '/es/mujer/ropa/camisetas-n4365.html']);
     expect(r.journeys[0].mapGeneratedAt).toBe('2026-07-03T06:00:00Z');
   });
-  it('picks the loaded signal by role/label priority, skipping destructive elements', () => {
+  it('picks the loaded signal by framework priority (testId first), skipping destructive elements', () => {
     const r = selectJourneys(report([['pRoot', 'pPlp']]), map, 5);
-    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
+    expect(r.journeys[0].loadedSignal).toEqual({ testId: { attr: 'data-qa-anchor', value: 'quick-add' } });
   });
-  it('never picks a testId hint (excluded: live-confirmed data-qa-anchor/data-testid mismatch, findings §11)', () => {
-    // pPlp's e3 has ONLY a testId hint (no role/label) — with role/label absent it must
-    // fall through to null rather than ever surfacing a testId-based Strategy.
-    const testIdOnlyMap: FunctionalMap = {
+  it('ignores legacy string-shaped testIds (schema-1.2 maps) and falls through to role/label', () => {
+    // A stale 1.2 map carries provenance-less string testIds — exactly the untrustworthy
+    // data M7 replaced. They must never surface as a Strategy (M6b's live failure mode).
+    const legacyMap: FunctionalMap = {
       ...map,
-      elements: [{ id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'quick-add' } }, destructive: false }],
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: 'legacy-string' as unknown as TestIdHint }, destructive: false },
+        { id: 'e2', pageId: 'pPlp', type: 'filter', label: 'Filtrar', role: 'button', selectorHints: { role: { type: 'button', name: 'Filtrar' } }, destructive: false },
+      ],
     };
-    const r = selectJourneys(report([['pRoot', 'pPlp']]), testIdOnlyMap, 5);
-    expect(r.journeys[0].loadedSignal).toBeNull();
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), legacyMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
   });
   it('falls back to a null signal when the leaf has no usable element', () => {
     const r = selectJourneys(report([['pRoot', 'pBare']]), map, 5);
