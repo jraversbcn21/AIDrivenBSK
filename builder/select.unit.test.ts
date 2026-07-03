@@ -85,4 +85,18 @@ describe('selectJourneys', () => {
     expect(r.skipped[0].flowId).toBe('flow_000000000000');
     expect(r.skipped[0].reason).toMatch(/empty/i);
   });
+  it('excludes null from legacy testId guard, falls through to role when testId is null', () => {
+    // A malformed map (loaded without schema validation) could have testId: null.
+    // typeof null === 'object' is true in JS, so the guard must explicitly check !== null
+    // to avoid accepting null as a valid TestIdHint and producing { testId: null } as Strategy.
+    // With testId: null but role valid, the loader should skip null and use role instead.
+    const nullTestIdMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: null as unknown as TestIdHint, role: { type: 'button', name: 'Seleccionar' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), nullTestIdMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Seleccionar' } });
+  });
 });

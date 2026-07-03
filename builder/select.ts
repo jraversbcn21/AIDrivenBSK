@@ -23,7 +23,7 @@ function toStrategy(hints: SelectorHints): Strategy | null {
   // maps carried provenance-less string testIds — the untrustworthy data M7 replaced.
   // A string-shaped hint is ignored so it can never surface as an unresolvable Strategy
   // (M6b's live failure mode, findings §11); the element's role/label still apply.
-  if (hints.testId !== undefined && typeof hints.testId === 'object') {
+  if (hints.testId !== undefined && typeof hints.testId === 'object' && hints.testId !== null) {
     return { testId: hints.testId };
   }
   if (hints.role !== undefined && hints.role.name !== '') {
