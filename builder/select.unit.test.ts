@@ -42,9 +42,19 @@ describe('selectJourneys', () => {
     expect(r.journeys[0].chain.map((s) => s.path)).toEqual(['/', '/es/h-woman.html', '/es/mujer/ropa/camisetas-n4365.html']);
     expect(r.journeys[0].mapGeneratedAt).toBe('2026-07-03T06:00:00Z');
   });
-  it('picks the loaded signal by framework priority (testId first), skipping destructive elements', () => {
+  it('picks the loaded signal by role/label priority, skipping destructive elements', () => {
     const r = selectJourneys(report([['pRoot', 'pPlp']]), map, 5);
-    expect(r.journeys[0].loadedSignal).toEqual({ testId: 'quick-add' });
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
+  });
+  it('never picks a testId hint (excluded: live-confirmed data-qa-anchor/data-testid mismatch, findings §11)', () => {
+    // pPlp's e3 has ONLY a testId hint (no role/label) — with role/label absent it must
+    // fall through to null rather than ever surfacing a testId-based Strategy.
+    const testIdOnlyMap: FunctionalMap = {
+      ...map,
+      elements: [{ id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: 'quick-add' }, destructive: false }],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), testIdOnlyMap, 5);
+    expect(r.journeys[0].loadedSignal).toBeNull();
   });
   it('falls back to a null signal when the leaf has no usable element', () => {
     const r = selectJourneys(report([['pRoot', 'pBare']]), map, 5);
