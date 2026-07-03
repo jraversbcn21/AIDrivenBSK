@@ -20,11 +20,11 @@ If a task does not improve at least one of these capabilities, question whether 
 
 ---
 
-## Where a fresh session resumes (2026-07-03)
+## Where a fresh session resumes (2026-07-04)
 
-**M7 is done** — the testId attribute-provenance fix closes B15: `TestIdHint { attr, value }` now records which of `data-testid`/`data-qa-anchor`/`data-qa` actually matched, `locate()` resolves each correctly, and the Builder Engine's M6b workaround (excluding testId from its own signal priority) is reverted. Live-validated: 3/3 regenerated specs pass against DES using real, page-specific testIds (e.g. `addToCartSizeBtn` via `data-qa-anchor`) instead of M6b's generic header-button fallback — a concrete partial closure of B14 too (findings doc §12).
+**M7b is done** — the Checkout/PDP classifier fix closes B13: `RuleClassifier` now evaluates deterministic path rules (`-c0p{id}.html` → PDP, `shop-cart.html`/`/cart`/`/cesta` → Cart) before text-signal rules, and the Checkout text rule additionally requires a path hint. Live-validated 2026-07-04: full re-crawl (151 pages, both sessions) — all 17 `-c0p` pages → PDP, zero fake `Checkout` labels, `shop-cart.html` → Cart in both sessions, no label regressions vs. the previous map; `pnpm test` 4/4, `pnpm plan --update` re-annotated cleanly (schema 1.3, 0 `Checkout` flows) — findings doc §13.
 
-**Next: decide the next milestone** — candidates in rough priority order: B13 (PDP/Checkout classifier gap from M6's PLP-grid work), B14 (Builder's loaded-signal quality, now narrower — only pages with no testId-bearing element at all), or M8 (interaction-aware map knowledge, needed before the Builder can generate anything beyond navigation specs). Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
+**Next: decide the next milestone** — candidates in rough priority order: B14 (Builder's loaded-signal quality, now narrower — only pages with no testId-bearing element at all), or M8 (interaction-aware map knowledge, needed before the Builder can generate anything beyond navigation specs). Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
 
 See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items.
 
@@ -80,6 +80,7 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | **M5** ✅ | Coverage Planner (Planning Agent): `pnpm plan` annotates flows with evidence-based `coveredBy` (schema 1.2) and ranks uncovered flows into proposals. Live-validated 2026-07-03: 3/152 flows covered by the 3-spec suite; first annotated map committed. Coverage usefulness bounded by map completeness (findings §9) | Phase 4 | Reasoning |
 | **M6/M6b** ✅ | Builder Engine (Execution Agent) v1: `pnpm build-tests` generates navigation specs + minimal page objects from the planner's proposals, imitating the POM/COM contracts. Live-validated 2026-07-03: 3/3 generated specs pass against DES. Surfaced and worked around a real testId/`locate()` gap (backlog B15) | Phase 5 | Autonomy |
 | **M7** ✅ | TestId attribute-provenance fix (closes B15): `TestIdHint { attr, value }` records which of `data-testid`/`data-qa-anchor`/`data-qa` matched; `locate()` resolves each correctly; Builder's testId priority restored. Live-validated 2026-07-03: 2,508 elements now carry provenance, 3/3 regenerated specs pass using real page-specific testIds, full manual suite unaffected (no regression). Partially closes B14 | Phase 5, Phase 7 seam | Engineering Excellence |
+| **M7b** ✅ | B13 classifier fix: deterministic path rules (PDP `-c0p{id}.html`, Cart `shop-cart.html`) before text signals; Checkout requires a path hint. Live-validated 2026-07-04: full re-crawl, all `-c0p` → PDP, zero fake Checkout labels, planner ranking decontaminated | Phase 2 knowledge quality | Knowledge |
 
 Rules of engagement (unchanged from the repo's working method):
 
