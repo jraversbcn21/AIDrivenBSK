@@ -10,6 +10,8 @@ Playwright + TypeScript QA framework (Page Object / Component Object model) for 
 
 The platform-level roadmap (10-phase evolution toward the Agentic QA Platform, module evolution, milestone sequence) lives at `docs/roadmap/2026-07-02-platform-roadmap.md`; the complete pending-work backlog at `docs/roadmap/2026-07-02-backlog.md`. Read both before starting any new sub-project — every commit must serve one of the four North Star capabilities (Knowledge, Reasoning, Autonomy, Engineering Excellence), and the roadmap's "Where a fresh session resumes" section names the next candidate milestone.
 
+**Current state (2026-07-04):** M7b just closed — B13's Checkout/PDP classifier fix (`RuleClassifier` path rules before text signals) is live-validated, the canonical map and coverage annotations are freshly regenerated and committed, `master` is pushed. No milestone is in flight. Next candidates, not yet started — **confirm with Jorge before picking one**: **B14** (Builder's loaded-signal quality, narrow scope — only leaf pages with no testId-bearing element still pick a generic header signal) or **M8** (interaction-aware map knowledge — open nav menus/overlays during crawl, needed before the Builder can generate anything beyond navigation specs). This line is meant to be replaced wholesale by the next session, not appended to — the roadmap doc is the source of truth for history.
+
 ## Commands
 
 - `pnpm test` — Playwright e2e tests (`tests/`); also writes `reports/route-evidence.json` for the planner
