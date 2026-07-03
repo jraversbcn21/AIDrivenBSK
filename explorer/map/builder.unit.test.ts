@@ -21,7 +21,7 @@ describe('buildMap', () => {
   it('produces a schema-versioned map with stable, deterministic ids', () => {
     const a = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
-    expect(a.schemaVersion).toBe('1.1');
+    expect(a.schemaVersion).toBe('1.2');
     expect(a.pages[0].pageType).toBe('PDP');
     expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic

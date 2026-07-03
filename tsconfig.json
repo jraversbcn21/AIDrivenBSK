@@ -12,5 +12,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "explorer", "tests", "playwright.config.ts", "vitest.config.ts"]
+  "include": ["src", "explorer", "planner", "tests", "playwright.config.ts", "vitest.config.ts"]
 }

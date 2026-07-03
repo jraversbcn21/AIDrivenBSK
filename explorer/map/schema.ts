@@ -2,7 +2,7 @@ import type {
   Session, SelectorHints, ElementType, ComponentKind, ExtractedFormField,
 } from '../types';
 
-export const SCHEMA_VERSION = '1.1';
+export const SCHEMA_VERSION = '1.2';
 
 export type PageType =
   | 'Home' | 'PLP' | 'PDP' | 'Cart' | 'Checkout' | 'Account' | 'Wishlist' | 'Search' | 'Other';
@@ -49,6 +49,7 @@ export interface MapFlow {
   session: Session;
   priority: Priority;
   steps: string[]; // page ids
+  coveredBy?: string[]; // spec file paths; present after plan --update (empty = evaluated, uncovered)
 }
 
 export interface FunctionalMap {
