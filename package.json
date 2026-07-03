@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts",
     "explore": "tsx explorer/cli.ts",
-    "plan": "tsx planner/cli.ts"
+    "plan": "tsx planner/cli.ts",
+    "build-tests": "tsx builder/cli.ts",
+    "test:generated": "playwright test --config playwright.generated.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

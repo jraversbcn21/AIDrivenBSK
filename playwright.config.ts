@@ -20,6 +20,9 @@ export default defineConfig({
   // retry is the standard mitigation for whole-flow environment noise, and trace-on-first-retry
   // captures the evidence when it happens.
   retries: 1,
+  // Generated drafts (pnpm build-tests) never run in the default suite — they are reviewed
+  // and promoted by a human first; run them explicitly with pnpm test:generated.
+  testIgnore: ['**/tests/generated/**'],
   reporter: [
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],

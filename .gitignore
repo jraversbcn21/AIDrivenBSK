@@ -3,6 +3,7 @@ node_modules/
 .auth/
 reports/
 test-results/
+tests/generated/
 playwright-report/
 .pnpm-store/
 pnpm-debug.log*
