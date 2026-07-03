@@ -32,4 +32,42 @@ describe('RuleClassifier', () => {
     expect(r.pageType).toBe('Other');
     expect(r.confidence).toBeLessThan(0.5);
   });
+  it('classifies PDP from the -c0p path pattern even when checkout-ish text fires and no size signal exists', async () => {
+    // Live-confirmed B13 (2026-07-03): every DES PDP carries an "Envíos y devoluciones"
+    // accordion (hasCheckoutSteps fires), while the real size selector lives inside the
+    // "Tallas" dialog the crawler never opens (hasSizeSelector is a hydration-timing
+    // accident). 16/18 -c0p pages in the canonical map were mislabeled Checkout this way.
+    const r = await c.classifyPage(ctx(
+      { hasAddToCart: true, hasCheckoutSteps: true },
+      '/es/top-bandeau-fruncido-c0p229723039.html',
+    ));
+    expect(r.pageType).toBe('PDP');
+    expect(r.confidence).toBeGreaterThanOrEqual(0.95);
+  });
+  it('PDP path pattern beats the PLP grid signal (recommendations carousel on a PDP)', async () => {
+    expect((await c.classifyPage(ctx(
+      { hasProductGrid: true, hasFilters: true, hasAddToCart: true },
+      '/es/camiseta-manga-corta-c0p207356814.html',
+    ))).pageType).toBe('PDP');
+  });
+  it('classifies the real DES cart path shop-cart.html as Cart even with checkout-ish text', async () => {
+    // The old Cart rule regex (/\/cart|\/cesta/) never matched shop-cart.html, and the
+    // Checkout text rule fired first — the map's auth cart page was labeled Checkout.
+    expect((await c.classifyPage(ctx(
+      { hasCheckoutSteps: true, hasAddToCart: true },
+      '/es/shop-cart.html',
+    ))).pageType).toBe('Cart');
+  });
+  it('does not classify Checkout from text alone (shopping-guide shape)', async () => {
+    expect((await c.classifyPage(ctx(
+      { hasCheckoutSteps: true },
+      '/es/shopping-guide.html',
+    ))).pageType).toBe('Other');
+  });
+  it('still classifies Checkout when the text signal and a checkout-like path agree', async () => {
+    expect((await c.classifyPage(ctx(
+      { hasCheckoutSteps: true },
+      '/es/checkout/payment',
+    ))).pageType).toBe('Checkout');
+  });
 });
