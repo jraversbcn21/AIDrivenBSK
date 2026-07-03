@@ -15,10 +15,14 @@ function nonLocaleSegments(routePattern: string): string[] {
     .map((seg) => seg.replace(/\.html?$/i, '').replace(/\{id\}/g, ''));
 }
 
-export function classNameFor(routePattern: string): string {
+function flowSuffix(flowId: string): string {
+  return flowId.replace(/^flow_/, '').slice(0, 8).toUpperCase();
+}
+
+export function classNameFor(routePattern: string, flowId: string): string {
   const ws = words(nonLocaleSegments(routePattern).join('-'));
   const base = ws.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
-  return `${base || 'Home'}Page`;
+  return `${base || 'Home'}Page${flowSuffix(flowId)}`;
 }
 
 export function specFileNameFor(routePattern: string, flowId: string): string {
@@ -27,6 +31,6 @@ export function specFileNameFor(routePattern: string, flowId: string): string {
   return `${slug}-${flowId.replace(/^flow_/, '').slice(0, 8)}.spec.ts`;
 }
 
-export function pageFileNameFor(routePattern: string): string {
-  return `${classNameFor(routePattern)}.ts`;
+export function pageFileNameFor(routePattern: string, flowId: string): string {
+  return `${classNameFor(routePattern, flowId)}.ts`;
 }

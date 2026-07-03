@@ -17,7 +17,7 @@ const header = (i: JourneyInput): string =>
 const leafOf = (i: JourneyInput) => i.chain[i.chain.length - 1];
 
 function pageObjectFile(input: JourneyInput): GeneratedFile {
-  const className = classNameFor(leafOf(input).routePattern);
+  const className = classNameFor(leafOf(input).routePattern, input.flowId);
   const gotos = input.chain.map((s) => `    await this.goto(${sq(s.path)});`).join('\n');
   const usesLocate = input.loadedSignal !== null;
   const isLoadedBody = usesLocate
@@ -40,11 +40,11 @@ ${isLoadedBody}
   }
 }
 `;
-  return { relPath: `pages/${pageFileNameFor(leafOf(input).routePattern)}`, content };
+  return { relPath: `pages/${pageFileNameFor(leafOf(input).routePattern, input.flowId)}`, content };
 }
 
 function specFile(input: JourneyInput): GeneratedFile {
-  const className = classNameFor(leafOf(input).routePattern);
+  const className = classNameFor(leafOf(input).routePattern, input.flowId);
   const content = `${header(input)}import { test, expect } from '../../src/fixtures/test';
 import { ${className} } from './pages/${className}';
 

@@ -20,8 +20,8 @@ describe('TemplateGenerator', () => {
   const [pageFile, specFile] = g.generate(input);
 
   it('emits the page object at pages/<ClassName>.ts extending BasePage with the chain walk', () => {
-    expect(pageFile.relPath).toBe('pages/MujerRopaCamisetasN4365Page.ts');
-    expect(pageFile.content).toContain('export class MujerRopaCamisetasN4365Page extends BasePage {');
+    expect(pageFile.relPath).toBe('pages/MujerRopaCamisetasN4365PageA1B2C3D4.ts');
+    expect(pageFile.content).toContain('export class MujerRopaCamisetasN4365PageA1B2C3D4 extends BasePage {');
     expect(pageFile.content).toContain("await this.goto('/');");
     expect(pageFile.content).toContain("await this.goto('/es/h-woman.html');");
     expect(pageFile.content).toContain("await this.goto('/es/mujer/ropa/camisetas-n4365.html');");
@@ -31,7 +31,7 @@ describe('TemplateGenerator', () => {
   it('emits the spec importing the shared fixture and polling isLoaded', () => {
     expect(specFile.relPath).toBe('camisetas-n4365-a1b2c3d4.spec.ts');
     expect(specFile.content).toContain("import { test, expect } from '../../src/fixtures/test';");
-    expect(specFile.content).toContain("import { MujerRopaCamisetasN4365Page } from './pages/MujerRopaCamisetasN4365Page';");
+    expect(specFile.content).toContain("import { MujerRopaCamisetasN4365PageA1B2C3D4 } from './pages/MujerRopaCamisetasN4365PageA1B2C3D4';");
     expect(specFile.content).toContain('journey: / -> /es/h-woman.html -> /es/mujer/ropa/camisetas-n4365.html');
     expect(specFile.content).toContain('await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);');
   });
