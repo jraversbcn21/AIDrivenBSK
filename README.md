@@ -67,3 +67,18 @@ pnpm plan --update        # additionally writes coveredBy into coverage/function
 
 A flow counts as covered when a passing test's visited routes contain the flow's steps as
 an ordered subsequence. Only passed tests count; `--update` refuses empty evidence.
+
+## Builder Engine
+
+Generates runnable Playwright navigation specs (+ minimal page objects imitating the
+POM/COM contracts) from the planner's top-ranked uncovered journeys.
+
+```bash
+pnpm plan                  # produces reports/planner/proposals.json
+pnpm build-tests --top 3   # writes drafts into tests/generated/ (gitignored)
+pnpm test:generated        # runs ONLY the drafts (excluded from pnpm test)
+```
+
+Drafts are deterministic (same inputs → identical files) and never join the suite
+automatically: review, run, then promote by moving into `tests/<domain>/` and committing.
+Checkout-looking routes are skipped by path.
