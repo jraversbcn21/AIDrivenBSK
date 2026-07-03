@@ -11,7 +11,11 @@ export class RuleClassifier implements Classifier {
     // detection). A -c0p page is a PDP even when it shows a recommendations carousel with
     // per-card quick-add buttons, so this wins over the PLP signal rule too.
     if (/-c0p\d+\.html$/i.test(p)) return { pageType: 'PDP', confidence: 0.95 };
-    if (/\/shop-cart\.html$|\/cart|\/cesta/.test(p)) return { pageType: 'Cart', confidence: 0.9 };
+    // Anchored to a full path segment (preceded by start-of-string or "/", followed by "/",
+    // end-of-string, or "."), not a free substring — task-review finding on 425e491: the
+    // previous unanchored /\/cart|\/cesta/ matched "carteras" (bags, a real Bershka category)
+    // and "cartagena" (a city name) by substring, misclassifying them as Cart.
+    if (/\/shop-cart\.html$|(^|\/)(cart|cesta)(\/|$|\.)/.test(p)) return { pageType: 'Cart', confidence: 0.9 };
     if (/\/wishlist|\/favoritos/.test(p)) return { pageType: 'Wishlist', confidence: 0.8 };
 
     // PLP checked first among signal rules: DES's grid cards each carry their own "Añadir
@@ -24,8 +28,10 @@ export class RuleClassifier implements Classifier {
     // Checkout needs a path hint besides the text signal: the text regex alone matches
     // ordinary PDP/help boilerplate ("Envíos y devoluciones" — B13). The hint list is a
     // best guess to confirm against the real DES checkout URL when one is first reached
-    // (backlog D15).
-    if (s.hasCheckoutSteps && /checkout|order|pago|payment/i.test(p)) {
+    // (backlog D15). Anchored to a full path segment (same task-review finding as the Cart
+    // regex above): the previous unanchored /order/ matched "cordero" and similar words by
+    // substring.
+    if (s.hasCheckoutSteps && /(^|\/)(checkout|order|pago|payment)(\/|$|\.)/i.test(p)) {
       return { pageType: 'Checkout', confidence: 0.8 };
     }
     if (s.hasLoginForm) return { pageType: 'Account', confidence: 0.75 };

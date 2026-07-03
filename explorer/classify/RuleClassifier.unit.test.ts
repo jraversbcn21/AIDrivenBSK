@@ -70,4 +70,29 @@ describe('RuleClassifier', () => {
       '/es/checkout/payment',
     ))).pageType).toBe('Checkout');
   });
+  it('does not classify Cart from a "carteras" (handbags) category that only contains "cart" as a substring', async () => {
+    // Task-review finding on 425e491: /\/cart|\/cesta/ is unanchored and matches any path
+    // containing "cart" as a substring, not just the "cart" path segment. "carteras" (bags)
+    // is a plausible real Bershka category and must not be masked as Cart.
+    expect((await c.classifyPage(ctx(
+      { hasProductGrid: true, hasFilters: true },
+      '/es/mujer/carteras-n4365.html',
+    ))).pageType).toBe('PLP');
+  });
+  it('does not classify Cart from a city name ("cartagena") that only contains "cart" as a substring', async () => {
+    expect((await c.classifyPage(ctx(
+      {},
+      '/es/tiendas/cartagena-viajero.html',
+    ))).pageType).not.toBe('Cart');
+  });
+  it('still classifies Cart from a real "cesta" path segment', async () => {
+    expect((await c.classifyPage(ctx({}, '/es/cesta'))).pageType).toBe('Cart');
+  });
+  it('does not classify Checkout from "order" embedded as a substring inside another word ("cordero")', async () => {
+    // Same class of bug as the Cart regex: /checkout|order|pago|payment/ is unanchored.
+    expect((await c.classifyPage(ctx(
+      { hasCheckoutSteps: true },
+      '/es/mujer/jersey-lana-cordero.html',
+    ))).pageType).not.toBe('Checkout');
+  });
 });
