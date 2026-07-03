@@ -1,6 +1,6 @@
 # DES Live-Validation Findings
 
-**Date:** 2026-06-17 (created), last updated 2026-07-03.
+**Date:** 2026-06-17 (created), last updated 2026-07-03 (later: PLP-grid extraction gap closed).
 **Status:** Foundation fully validated live — login, search, PLP/PDP, filters, and cart all pass reliably (in isolation and as a serialized full suite). All known interaction-reliability bugs found live have been fixed (§7). The Explorer Agent is DES-ready with a first live crawl committed (§8). The Coverage Planner is live-validated with a first evidence-annotated map committed (§9). Residual, non-blocking environment noise and forward-looking leads remain open — see the "Open leads" callouts in §7/§8 and the map-completeness consequence in §9.
 **Environment:** DES (`https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/`)
 **Test account:** `jorge@esqa.com` (in local `.env`, gitignored).
@@ -157,3 +157,27 @@ First live run of the full evidence→annotation pipeline (`pnpm test` → `pnpm
 **Verified on the annotated map:** `schemaVersion: "1.2"`, all 152 flows carry `coveredBy` (149 empty = evaluated, uncovered), covered flows reference real spec paths. The empty-evidence guard and the missing-file fail-fast were both exercised (the latter before the first `pnpm test` run).
 
 **Consequence for the roadmap:** the planner's proposals currently rank low-priority sitemap/category chains at the top simply because the high-value journeys (search→PDP→cart) aren't in the map to be proposed. Closing the Explorer's PLP-grid gap (§8) — and eventually interaction-based discovery for `/q/` — is now what most improves the *usefulness* of coverage numbers and proposals, and should be weighed accordingly when scoping M6+.
+
+---
+
+## 10. PLP-grid extraction gap — root cause found and fixed (2026-07-03)
+
+Followed up directly on §8's open lead ("PLP grid hydration slower than search results; not yet isolated whether the aria tree exposes it once hydrated"). Root cause investigation (systematic-debugging skill) found **two distinct, compounding bugs**, both now fixed and live-validated.
+
+**Bug 1 — extraction ran before the grid hydrated, with no settle wait.** `crawlSession` extracted immediately after `page.goto(..., {waitUntil:'domcontentloaded'})` + `acceptConsent()` — confirmed live via direct probing (`page.locator('body').ariaSnapshot()` at +0/+3/+6/+10/+15s) that a fresh single-navigation page renders its product grid (`-c0p` links inside `listitem` nodes) within ~1-2s, cleanly and reproducibly — **resolving §8's open question**: yes, the aria tree does faithfully expose the hydrated grid.
+
+**A second, sneakier layer surfaced when reproducing the crawler's real conditions** (same `page`/context reused across several prior navigations, matching `crawlSession`'s loop exactly, not a fresh single-navigation probe): the aria snapshot holds a **false-stable plateau** — unchanged for ~2-3s in a "shell rendered, grid not yet fetched" state — before transitioning and settling with real content by ~4-6s. Reproduced deterministically twice, identical timing both times. A naive "stop as soon as two consecutive reads are identical" poll locks onto that shell plateau and declares victory before the grid ever arrives — this is why an initial `waitForSettle` implementation using pure stability-diffing still measured 0 PLP pages / 0 `-c0p` routes at crawl scale, despite working perfectly on the isolated fresh-page probe.
+
+**Fix:** `explorer/crawl/settle.ts`'s `waitForSettle` gained a `minWaitMs` floor (`DEFAULT_SETTLE = { minWaitMs: 3500, pollIntervalMs: 500, maxWaitMs: 10000 }`) — wait out the floor *before* taking the first snapshot, skipping past the known plateau, then do the same 2-consecutive-identical-reads check. Wired into `crawlSession` right after `acceptConsent()`, gated to `extraction === 'aria'` (the `dom` mode is offline-only, doesn't use `ariaSnapshot()`). Unit-tested with an injectable clock (mirrors `Frontier`'s existing `now: () => number` pattern) covering: stabilizes-after-plateau, never-stabilizes/gives-up-at-ceiling, already-stable, and the specific floor-skips-a-false-plateau case reproducing the live shape.
+
+**Bug 2 — classifier priority bug, discovered as a direct consequence of Bug 1's fix working.** Once grids were actually visible to extraction, `RuleClassifier` started mislabeling real PLP/category pages as **PDP**: DES's grid cards each carry their own per-card "Añadir a la cesta {product}" quick-add button, and category pages often mention "talla" somewhere incidental (e.g. a size-guide link) — together these satisfied the PDP rule (`hasAddToCart && hasSizeSelector`), which was checked *before* the PLP rule (`hasProductGrid && hasFilters`). This bug was latent and undetectable before Bug 1's fix, since PLP pages were previously extracted as empty `Other` pages with no elements at all. **Fix:** reordered `RuleClassifier` to check the more specific PLP signal first (`explorer/classify/RuleClassifier.ts`); added a regression test with all four signals true simultaneously, asserting PLP wins.
+
+**Live validation (bounded 40-pages/session crawls, both fixes):**
+- Before either fix: 72 pages crawled, 70 classified `Other`, 0 PLP, 0 `-c0p` routes.
+- After Bug 1's fix alone: 46 PLP, but 15 real category pages misclassified `PDP` (Bug 2 exposed).
+- After both fixes: **59 PLP**, 1 residual `Other` (a single page where the best-effort settle wait didn't catch up in time — accepted as environment noise, not chased further per "don't blindly increase timeouts"), 1 pre-existing unrelated edge case (`/es/shop-cart.html` auth session occasionally classifies `PDP` instead of `Other`/`Cart` — not caused by either fix, not investigated further, noted as a small open lead below).
+- The specific page probed by hand throughout this investigation (`/es/mujer/ropa/camisetas-n4365.html`) now consistently classifies `PLP` with `FiltersPanel`+`ProductCard` components and 10 real product elements.
+
+**Cost:** the `minWaitMs` floor adds real, uniform per-page latency (measured: ~10 min wall-clock for a 72-page/both-sessions bounded crawl, ~8.3s/page average including navigation, consent, and the floor+poll). `EXPLORER_TIME_BUDGET_MS`'s default (600_000ms/10min per session) no longer comfortably covers an 80-page/session crawl at this cost (≈664s bare minimum, no margin) — bumped to `1200_000` (20 min) in `.gitlab-ci.yml`'s `explore` job and used explicitly for the live full re-crawl in this session. This is a deliberate, evidence-based trade-off (better knowledge per page, slower crawl), not a blind timeout increase — consistent with the project's existing precedent (`HYDRATION_TIMEOUT_MS`, `retries: 1`, the 150s DES test budget).
+
+**Open lead (low priority, not investigated further):** `/es/shop-cart.html` (auth session) occasionally classifies as `PDP` instead of `Other`/a dedicated `Cart` type — likely the cart's line-item rows also carry add-to-cart-adjacent language. Unrelated to this fix; pick up only if it causes real confusion downstream.

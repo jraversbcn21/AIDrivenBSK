@@ -43,10 +43,13 @@ e2e:
 # committed coverage/functional-map.json. Scheduled-only (needs a GitLab CI/CD Schedule created
 # under Settings -> CI/CD -> Schedules; `rules` below means it never runs on an ordinary push/MR
 # pipeline) and non-blocking (allow_failure: true) on purpose: the committed map is a bounded
-# crawl (EXPLORER_MAX_PAGES=80, matched here so diffs compare like-for-like) with known gaps
-# (PLP/category grids aren't detected yet - see the DES live-validation findings doc), so
-# --fail-on-new is expected to surface real drift for review, not to gate every merge on a map
-# that is itself still maturing. Promote to blocking once the map's coverage is trustworthy.
+# crawl (EXPLORER_MAX_PAGES=80, matched here so diffs compare like-for-like); --fail-on-new is
+# expected to surface real drift for review, not to gate every merge on a map that is itself
+# still maturing. Promote to blocking once the map's coverage is trustworthy.
+# EXPLORER_TIME_BUDGET_MS raised from the 600_000ms default (2026-07-03): the PLP-grid
+# extraction fix (findings doc §10) adds a real, measured ~3.5-5s/page settle wait, so an
+# 80-page/session crawl now measures ~8.3s/page average (~11 min bare minimum) and no longer
+# fits the old 10-minute default with any margin.
 explore:
   stage: explore
   rules:
@@ -55,6 +58,7 @@ explore:
   variables:
     ENVIRONMENT: des
     EXPLORER_MAX_PAGES: "80"
+    EXPLORER_TIME_BUDGET_MS: "1200000"
   script:
     # The auth-session crawl reads .auth/state.json directly (explorer/cli.ts), which pnpm
     # explore does not generate itself - a fresh job checkout needs the Playwright setup

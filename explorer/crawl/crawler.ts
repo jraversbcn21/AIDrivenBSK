@@ -2,6 +2,7 @@ import type { BrowserContext } from '@playwright/test';
 import type { PageExtraction, Session } from '../types';
 import type { CrawlBounds, ExtractionMode } from '../config';
 import { Frontier, type FrontierItem } from './frontier';
+import { waitForSettle, DEFAULT_SETTLE } from './settle';
 import { extractorFor } from '../extract/fromPage';
 import { normalizePath, isSameOrigin, type RouteRules } from '../url';
 import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
@@ -46,6 +47,17 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
     try {
       await page.goto(item.path, { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
+      // Product grids (PLP/category pages) hydrate client-side ~1-2s after this point —
+      // extracting immediately missed them entirely (findings §8). Condition-based wait:
+      // poll the aria tree until it stops changing, bounded so a page that never quite
+      // settles doesn't stall the crawl (aria-only signal, so skip it in `dom` mode).
+      if (deps.extraction === 'aria') {
+        await waitForSettle(
+          () => page.locator('body').ariaSnapshot(),
+          (ms) => page.waitForTimeout(ms),
+          DEFAULT_SETTLE,
+        );
+      }
       const extraction = await extract(page, session, item.discoveredVia, deps.baseURL);
 
       // DES server-side redirects (e.g. the gender gate) can land two different queued

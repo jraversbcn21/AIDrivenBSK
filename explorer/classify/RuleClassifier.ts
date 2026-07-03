@@ -5,8 +5,12 @@ export class RuleClassifier implements Classifier {
     const s = ctx.signals;
     const p = ctx.path;
 
-    if (s.hasAddToCart && s.hasSizeSelector) return { pageType: 'PDP', confidence: 0.9 };
+    // PLP checked first: DES's grid cards each carry their own "Añadir a la cesta" quick-add
+    // button, and category pages often mention "talla" somewhere (e.g. a size-guide link)
+    // without being a genuine PDP — hasProductGrid+hasFilters is the more specific signal and
+    // must win when both fire together (live-confirmed 2026-07-03, findings doc §8).
     if (s.hasProductGrid && s.hasFilters) return { pageType: 'PLP', confidence: 0.85 };
+    if (s.hasAddToCart && s.hasSizeSelector) return { pageType: 'PDP', confidence: 0.9 };
     if (s.hasCheckoutSteps) return { pageType: 'Checkout', confidence: 0.8 };
     if (s.hasLoginForm) return { pageType: 'Account', confidence: 0.75 };
     if (s.hasSearchResults) return { pageType: 'Search', confidence: 0.75 };
