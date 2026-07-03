@@ -11,6 +11,7 @@ interface Fixtures {
   loginPage: LoginPage;
   searchResultsPage: SearchResultsPage;
   productPage: ProductPage;
+  routeEvidence: void;
 }
 
 export const test = base.extend<Fixtures>({
@@ -20,6 +21,18 @@ export const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => { await use(new LoginPage(page)); },
   searchResultsPage: async ({ page }, use) => { await use(new SearchResultsPage(page)); },
   productPage: async ({ page }, use) => { await use(new ProductPage(page)); },
+  // Records every main-frame navigation and attaches the ordered URL list to the test
+  // result; planner/evidence/reporter.ts aggregates the attachments into
+  // reports/route-evidence.json for journey-coverage matching (design spec
+  // 2026-07-02-coverage-planner-design.md).
+  routeEvidence: [async ({ page }, use, testInfo) => {
+    const urls: string[] = [];
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) urls.push(frame.url());
+    });
+    await use();
+    await testInfo.attach('route-evidence', { body: JSON.stringify(urls), contentType: 'application/json' });
+  }, { auto: true }],
 });
 
 export { expect };

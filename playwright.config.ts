@@ -24,6 +24,7 @@ export default defineConfig({
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],
     ['list'],
+    ['./planner/evidence/reporter.ts'],
   ],
   timeout: env.defaultTimeoutMs,
   use: {
