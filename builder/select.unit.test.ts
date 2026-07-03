@@ -61,4 +61,14 @@ describe('selectJourneys', () => {
     expect(r.journeys).toHaveLength(0);
     expect(r.skipped[0].reason).toMatch(/checkout/i);
   });
+  it('skips proposals with an empty steps array, without consuming top slots', () => {
+    // A proposal with steps: [] should not crash, not be added to journeys,
+    // and should appear in skipped with a reason mentioning "empty".
+    // A valid proposal following it should still be included (not consumed by the empty one).
+    const r = selectJourneys(report([[], ['pRoot', 'pHub']], ['empty', 'valid']), map, 1);
+    expect(r.journeys).toHaveLength(1);
+    expect(r.journeys[0].chain[0].path).toBe('/');
+    expect(r.skipped[0].flowId).toBe('flow_000000000000');
+    expect(r.skipped[0].reason).toMatch(/empty/i);
+  });
 });

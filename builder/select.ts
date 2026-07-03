@@ -49,6 +49,10 @@ export function selectJourneys(report: PlanReport, map: FunctionalMap, top: numb
   for (const proposal of report.proposals) {
     if (journeys.length >= top) break;
     const pages = proposal.steps.map((id) => pageById.get(id));
+    if (pages.length === 0) {
+      skipped.push({ flowId: proposal.flowId, reason: 'proposal has an empty steps array — nothing to walk' });
+      continue;
+    }
     if (pages.some((p) => p === undefined)) {
       skipped.push({ flowId: proposal.flowId, reason: 'references a page id missing from the map (stale proposals? re-run pnpm plan)' });
       continue;
