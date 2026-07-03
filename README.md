@@ -53,3 +53,17 @@ renders through `bds-` shadow-DOM components that light-DOM parsing cannot see; 
 offline linkedom path. Crawls are bounded by `EXPLORER_MAX_PAGES` and `EXPLORER_TIME_BUDGET_MS`.
 Per-run artifacts in `reports/explorer/` have the shape `{ map, errors }`; the committed
 canonical map stays a plain functional map.
+
+## Coverage Planner
+
+Annotates the functional map with journey coverage from real execution evidence and
+proposes what to validate next.
+
+```bash
+pnpm test                 # normal run; also writes reports/route-evidence.json
+pnpm plan                 # read-only: coverage summary + reports/planner/proposals.json
+pnpm plan --update        # additionally writes coveredBy into coverage/functional-map.json
+```
+
+A flow counts as covered when a passing test's visited routes contain the flow's steps as
+an ordered subsequence. Only passed tests count; `--update` refuses empty evidence.
