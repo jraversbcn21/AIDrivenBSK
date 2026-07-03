@@ -20,15 +20,13 @@ If a task does not improve at least one of these capabilities, question whether 
 
 ---
 
-## Where a fresh session resumes (2026-07-02)
+## Where a fresh session resumes (2026-07-03)
 
-**Next actionable work: M5b — implement the Coverage Planner.** Design and implementation plan are both written, reviewed, and committed; no more design decisions are needed:
-- Spec: `docs/superpowers/specs/2026-07-02-coverage-planner-design.md`
-- Plan: `docs/superpowers/plans/2026-07-02-coverage-planner.md` — 7 TDD tasks; tasks 1–6 are offline, task 7 is DEFERRED-live (needs VPN: run the suite to produce evidence, `pnpm plan --update`, commit the annotated map).
+**M5b is done** — the Coverage Planner is implemented, live-validated, and the first evidence-annotated map (schema 1.2, `coveredBy` on all 152 flows) is committed. See findings doc §9 for the live results and their main lesson: coverage numbers are currently bounded by map completeness (no `/q/`, PDP, or logon flows in the map yet — the Explorer's PLP-grid gap, findings §8).
 
-After that: **M6 — Builder Engine spec** (Execution Agent, Phase 5), following the same brainstorm → spec → plan → implement process used for every milestone so far.
+**Next: M6 — Builder Engine spec** (Execution Agent, Phase 5), following the same brainstorm → spec → plan → implement process used for every milestone so far. Per the working agreement, confirm with Jorge before starting the M6 brainstorm/spec. When scoping M6+, weigh findings §9's consequence: closing the Explorer's PLP-grid gap may add more platform value than any other single item, because it's what makes coverage/proposals meaningful for the high-value journeys.
 
-See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items (none block M5b).
+See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items.
 
 ---
 
@@ -45,15 +43,15 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | 0 | Professional automation framework | Phase 0 foundation (POM/COM, fixtures, multi-env config, CI) | ✅ Done, live-validated against DES; interaction reliability hardened (act→verify→retry, M1) |
 | 1 | Application discovery | Explorer Agent | ✅ **Closed.** Aria-tree extraction (M2) + first live crawl (M2c): 150 unique pages, 2414 real elements, 0 errors |
 | 2 | Persistent functional knowledge | Versioned `coverage/functional-map.json` + differ | ✅ Canonical map committed and diffable (schema 1.1, multi-step flows); CI diff gate wired (M3, scheduled/non-blocking) |
-| 3 | Knowledge Graph | Evolution of the map schema — pages/components/elements/flows are already relational via stable IDs | 🔶 Flow synthesis done (M4): real root→leaf navigation chains. Remaining: coverage annotations (M5b, designed not yet built), run-result linkage. Plain JSON + stable IDs suffices through Phase 4; no graph DB before it earns its keep |
-| 4 | Planning Agent | Coverage + Test Generator agents | 🔶 Designed (M5: Coverage Planner spec+plan committed) — evidence-based `coveredBy` + ranked proposals; consumes flows/priorities from the map. **Not yet implemented (M5b).** |
+| 3 | Knowledge Graph | Evolution of the map schema — pages/components/elements/flows are already relational via stable IDs | ✅ Coverage annotations landed (M5b, schema 1.2): flows now carry `coveredBy` from real run evidence — the first run-result→map linkage (seed of Phase 8). Plain JSON + stable IDs suffices through Phase 4; no graph DB before it earns its keep |
+| 4 | Planning Agent | Coverage + Test Generator agents | ✅ **Implemented and live-validated (M5b).** `pnpm plan`: evidence-based `coveredBy` + ranked proposals. Caveat: proposal quality is bounded by map completeness (findings §9) — the PLP-grid gap keeps the high-value journeys out of the map |
 | 5 | Execution Agent | Builder Engine | ⬜ Generates specs that imitate the POM/COM contracts exactly — the contracts' regularity was designed for this |
 | 6 | Risk Analysis Agent | Failure Analyzer (+ risk-scoring of map diffs) | ⬜ Traces/videos/JSON results are already captured by default as its inputs |
 | 7 | Self-Healing | Selector Healing Agent | ⬜ `Strategy`/`selectorHints` + per-element testId-presence recording exist as its seam |
 | 8 | Continuous Learning | Feed run results and diffs back into the functional map | ⬜ |
 | 9 | Autonomous Quality Engineering | Orchestration of phases 4–8 | ⬜ |
 
-**Current position: Phase 2 closed / mid-Phase 3.** The Explorer has real, verified, multi-step knowledge of DES (152 flows, 74 of them real navigation chains). M5's design is done (Coverage Planner: execution-evidence-based `coveredBy` annotations + ranked test proposals) — implementation (M5b) is the next actionable work; see "Where a fresh session resumes" above.
+**Current position: Phase 4 reached (planning half done).** The Explorer has real, verified, multi-step knowledge of DES (152 flows, 74 real navigation chains), and the Coverage Planner now closes the loop deterministically: run evidence → `coveredBy` annotations (3/152 covered by today's 3-spec suite) → ranked proposals. The generation half of Phase 4/5 (Builder Engine, M6) is next; see "Where a fresh session resumes" above.
 
 ---
 
@@ -79,7 +77,7 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | **M2** ✅ | Explorer DES-readiness: aria-tree extraction, crawler tour suppression + time budget, `errors[]` artifact; **first live crawl** → committed `coverage/functional-map.json` (150 pages, 2414 elements) | Closed Phase 1, opened Phase 2 | Knowledge |
 | **M3** ✅ | CI Explorer gate: `explore` stage in `.gitlab-ci.yml` running `pnpm explore --diff --fail-on-new` — **scheduled-only, non-blocking** (`allow_failure: true`) by deliberate choice, since the map is still bounded/incomplete (B8 flow synthesis, PLP-grid gap). **Manual step outstanding:** a GitLab CI/CD Schedule must be created in the project (Settings → CI/CD → Schedules) for the job to ever run — not doable from this environment. Runner reachability to `*.inditex.grp` still unverified (C11) | New-flow detection runs without a human, once scheduled | Autonomy |
 | **M4** ✅ | Flow synthesis: `MapFlow.steps` now carries real root→leaf navigation chains reconstructed from `discoveredVia` (schema 1.1; canonical map refreshed live: 152 flows, 74 multi-step). Coverage annotations deliberately deferred to M5, where they belong | Phase 2 → 3 | Knowledge |
-| **M5** 🔶 | Coverage Planner (Planning Agent): design done (execution-evidence `coveredBy` + ranked proposals, no codegen — see spec/plan above). **Implementation (M5b) not started — next actionable work.** | Phase 4 | Reasoning |
+| **M5** ✅ | Coverage Planner (Planning Agent): `pnpm plan` annotates flows with evidence-based `coveredBy` (schema 1.2) and ranks uncovered flows into proposals. Live-validated 2026-07-03: 3/152 flows covered by the 3-spec suite; first annotated map committed. Coverage usefulness bounded by map completeness (findings §9) | Phase 4 | Reasoning |
 | **M6** | Builder Engine spec (Execution Agent): generates specs imitating the POM/COM contracts | Phase 5 | Autonomy |
 
 Rules of engagement (unchanged from the repo's working method):

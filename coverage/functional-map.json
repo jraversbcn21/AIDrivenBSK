@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "generatedAt": "2026-07-02T19:48:21.391Z",
   "environment": "des",
   "pages": [
@@ -41037,7 +41037,8 @@
       "priority": "med",
       "steps": [
         "page_d40cd57c0e62"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_65b6de4fdcde",
@@ -41048,7 +41049,8 @@
       "steps": [
         "page_d40cd57c0e62",
         "page_49d2ae779cc2"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e7b11142f5d8",
@@ -41060,7 +41062,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_b1ec771fc108"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_94d821294512",
@@ -41072,7 +41075,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_820a257e37e3"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a59f478c0113",
@@ -41084,7 +41088,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_bd2027ad5c71"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a8c11c97b6f0",
@@ -41096,7 +41101,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_d0786cacbd95"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6c7bd9e3f53a",
@@ -41108,7 +41114,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_9d4d6efbde76"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_68a1cf92bcab",
@@ -41120,7 +41127,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_2647b03e7f66"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bf0791cdc747",
@@ -41132,7 +41140,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_0e8d033a0647"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_be7938a25166",
@@ -41144,7 +41153,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_991eac4a3c61"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b3184333daa1",
@@ -41156,7 +41166,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_535114b0543b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f590862db9a4",
@@ -41168,7 +41179,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_9fe0dd9b5bfc"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5e03c1f42064",
@@ -41180,7 +41192,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_9e84bc866f2c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d31aa2a03823",
@@ -41192,7 +41205,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_92ebe5b84a4e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7e8ddd656fe2",
@@ -41204,7 +41218,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_a2a24ad76c3c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e62b3dd6f795",
@@ -41216,7 +41231,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_afe50ec44ffb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_58455449e2d6",
@@ -41228,7 +41244,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_6b6db14e500d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7e4d455091ee",
@@ -41240,7 +41257,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_8325ae8354ae"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4e79108293e4",
@@ -41252,7 +41270,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_14000a3c1baa"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ac560d4d0661",
@@ -41264,7 +41283,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_ccf3230a1d9e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_183628ed45dd",
@@ -41276,7 +41296,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_63280a7110a7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_960ceaa6b799",
@@ -41288,7 +41309,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_c317a8b42f0a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_25d0bfd33d9a",
@@ -41300,7 +41322,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_a37b13978fcd"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8eba28bd55de",
@@ -41312,7 +41335,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_c2e4a136a041"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0050b97a7730",
@@ -41324,7 +41348,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_f198ef5e6251"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_97c44933c933",
@@ -41336,7 +41361,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_7a36631e18d4"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cf8d1ea369d7",
@@ -41348,7 +41374,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_546639de89bb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6926c636d9d8",
@@ -41360,7 +41387,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_8f55ebc54306"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b13a294ceff7",
@@ -41372,7 +41400,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_09cac16c9b80"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_431456f2555c",
@@ -41384,7 +41413,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_a7c94991c225"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bca7ff2f5922",
@@ -41396,7 +41426,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_96cc30e974ef"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c49009e8373f",
@@ -41408,7 +41439,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_2f3e65706788"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0673c5e45f03",
@@ -41420,7 +41452,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_82de0a10e146"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c98886d0276d",
@@ -41432,7 +41465,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_7b6953230791"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3a1ebda56945",
@@ -41444,7 +41478,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_3ea5f9d42b2d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_188d7aed9f29",
@@ -41456,7 +41491,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_7a9e8469a22f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5e018f73b820",
@@ -41468,7 +41504,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_0341463292ff"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_93678ee5bb45",
@@ -41480,7 +41517,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_a104a1903857"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9c5189a65482",
@@ -41492,7 +41530,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_d7a4808bbf50"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_750ed6a269e5",
@@ -41504,7 +41543,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_524a0f19c05a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_844073942b82",
@@ -41516,7 +41556,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_b246e6f41d75"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bad472d95a3b",
@@ -41528,7 +41569,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_d398d8744d13"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7978f1f52987",
@@ -41540,7 +41582,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_9bac8e357769"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_120f6fde5ed9",
@@ -41552,7 +41595,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_d44e19e60589"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5787d4a86b2a",
@@ -41564,7 +41608,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_93500a4897b2"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c4cbdafb7b0c",
@@ -41576,7 +41621,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_769081a78293"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_dfc10e392063",
@@ -41588,7 +41634,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_d4f959593dc5"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6c21390a7589",
@@ -41600,7 +41647,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_81fbe22cf59f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_10dc594b2f58",
@@ -41612,7 +41660,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_8993e059bf55"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_634f96170efb",
@@ -41624,7 +41673,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_c8c7e982ef50"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9697245dc42d",
@@ -41636,7 +41686,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_639b6346786b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f4ec3c6b297e",
@@ -41648,7 +41699,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_a1954552b388"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_132b90914696",
@@ -41660,7 +41712,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_3dbcf32f1e87"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a4f2977de2db",
@@ -41672,7 +41725,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_7287fd9db22c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_23fed0ba795d",
@@ -41684,7 +41738,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_1911192ce030"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_15c05c611120",
@@ -41696,7 +41751,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_78da8373d121"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1928d215d507",
@@ -41708,7 +41764,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_7f59884d9c8f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_474d6e66a29b",
@@ -41720,7 +41777,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_1287c48cb37a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_91379532c6e2",
@@ -41732,7 +41790,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_f4ae89af76df"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9661f8615104",
@@ -41744,7 +41803,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_48d4c1279455"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0acedc1a423f",
@@ -41756,7 +41816,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_1c1de49e5f74"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f41b319c4ac0",
@@ -41768,7 +41829,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_8cbd205b0f28"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fad92cf4ffbb",
@@ -41780,7 +41842,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_936c4f282d73"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c7db424e3c9f",
@@ -41792,7 +41855,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_47618d058cd5"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1766863ce9ea",
@@ -41804,7 +41868,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_e1456d7c7526"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_316d961b4cdd",
@@ -41816,7 +41881,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_89fd1c78d8cb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c4c2c84bb3fd",
@@ -41828,7 +41894,8 @@
         "page_d40cd57c0e62",
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_dda0b203e753",
@@ -41841,7 +41908,8 @@
         "page_49d2ae779cc2",
         "page_820a257e37e3",
         "page_783372384afd"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f573319cae4b",
@@ -41854,7 +41922,8 @@
         "page_49d2ae779cc2",
         "page_7b6953230791",
         "page_cc87b152dc97"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f215cedace32",
@@ -41867,7 +41936,8 @@
         "page_49d2ae779cc2",
         "page_3ea5f9d42b2d",
         "page_218b3666e1db"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0156a080fd83",
@@ -41880,7 +41950,8 @@
         "page_49d2ae779cc2",
         "page_1c1de49e5f74",
         "page_b2dea213130d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_df42aeac487c",
@@ -41893,7 +41964,8 @@
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c",
         "page_1e545699f92c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_07fd840c7deb",
@@ -41906,7 +41978,8 @@
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c",
         "page_881b153bf979"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b44f5e74107f",
@@ -41919,7 +41992,8 @@
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c",
         "page_bd0ff41fed5c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b48b062ac618",
@@ -41932,7 +42006,8 @@
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c",
         "page_47a5abcca4a6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b3e63bb187e2",
@@ -41945,7 +42020,8 @@
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c",
         "page_77f964470da0"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5eeb09a253b5",
@@ -41955,6 +42031,11 @@
       "priority": "low",
       "steps": [
         "page_954c9446bb45"
+      ],
+      "coveredBy": [
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/search/search-plp-pdp.spec.ts"
       ]
     },
     {
@@ -41965,6 +42046,9 @@
       "priority": "low",
       "steps": [
         "page_4d1e2006f73b"
+      ],
+      "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts"
       ]
     },
     {
@@ -41975,7 +42059,8 @@
       "priority": "low",
       "steps": [
         "page_ba502bf34fb8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8855d4758beb",
@@ -41985,7 +42070,8 @@
       "priority": "low",
       "steps": [
         "page_8207dbc26a08"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a4592fe04046",
@@ -41995,7 +42081,8 @@
       "priority": "low",
       "steps": [
         "page_d7a4813c47cb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ac0d99f2f353",
@@ -42005,7 +42092,8 @@
       "priority": "low",
       "steps": [
         "page_2af0ade6d315"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c166c4b4b5c3",
@@ -42015,7 +42103,8 @@
       "priority": "low",
       "steps": [
         "page_c7a822390c17"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_77ce0f4c2f75",
@@ -42025,7 +42114,8 @@
       "priority": "low",
       "steps": [
         "page_2922cbf0ef23"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc2bd12c660e",
@@ -42035,7 +42125,8 @@
       "priority": "low",
       "steps": [
         "page_8cf8af282c8b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_54eecfbcc910",
@@ -42045,7 +42136,8 @@
       "priority": "low",
       "steps": [
         "page_64062dde82cc"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_de49d2e78923",
@@ -42055,7 +42147,8 @@
       "priority": "low",
       "steps": [
         "page_9ddecd582eca"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_eb44957a5487",
@@ -42065,7 +42158,8 @@
       "priority": "low",
       "steps": [
         "page_dd3988294d95"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_2d76e9b0f713",
@@ -42075,7 +42169,8 @@
       "priority": "low",
       "steps": [
         "page_2a9916f1d32f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0fe1b055a355",
@@ -42085,7 +42180,8 @@
       "priority": "low",
       "steps": [
         "page_dc53583e1b5b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_84a068c5248d",
@@ -42095,7 +42191,8 @@
       "priority": "low",
       "steps": [
         "page_356d4de61539"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c15a32563f47",
@@ -42105,7 +42202,8 @@
       "priority": "low",
       "steps": [
         "page_2e94413f8ed8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4c9986591477",
@@ -42115,7 +42213,8 @@
       "priority": "low",
       "steps": [
         "page_3387ae4c74eb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7750a6fedb8b",
@@ -42125,7 +42224,8 @@
       "priority": "low",
       "steps": [
         "page_4e9141056be6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_64153ad8829c",
@@ -42135,7 +42235,8 @@
       "priority": "low",
       "steps": [
         "page_3d4ab4ca9107"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3aeb19119c59",
@@ -42145,7 +42246,8 @@
       "priority": "low",
       "steps": [
         "page_47f78b629ca7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_81523b24130c",
@@ -42155,7 +42257,8 @@
       "priority": "low",
       "steps": [
         "page_690b77158b3f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc36a18982b0",
@@ -42165,7 +42268,8 @@
       "priority": "low",
       "steps": [
         "page_ba73037838ac"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_58e9b31feac8",
@@ -42175,7 +42279,8 @@
       "priority": "low",
       "steps": [
         "page_f11ce30b83ed"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d362ec0c79b8",
@@ -42185,7 +42290,8 @@
       "priority": "low",
       "steps": [
         "page_ef497e35d3a7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_feb2a0501922",
@@ -42195,7 +42301,8 @@
       "priority": "low",
       "steps": [
         "page_48af47c522ef"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fb780bd51b6e",
@@ -42205,7 +42312,8 @@
       "priority": "low",
       "steps": [
         "page_849ca323f330"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3b7a7054c8e8",
@@ -42215,7 +42323,8 @@
       "priority": "low",
       "steps": [
         "page_1f66f45c2ae8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d91802dac2d5",
@@ -42225,7 +42334,8 @@
       "priority": "low",
       "steps": [
         "page_dcfa134e87b8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3dd87891e5ed",
@@ -42235,7 +42345,8 @@
       "priority": "low",
       "steps": [
         "page_37147bc21cd8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_90a619461a20",
@@ -42245,7 +42356,8 @@
       "priority": "low",
       "steps": [
         "page_168907ae4a0d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b466c5474c00",
@@ -42255,7 +42367,8 @@
       "priority": "low",
       "steps": [
         "page_ce8d96d7b8ba"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8d1bd94648b5",
@@ -42265,7 +42378,8 @@
       "priority": "low",
       "steps": [
         "page_49e2b9039268"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_29e3e0e7750b",
@@ -42275,7 +42389,8 @@
       "priority": "low",
       "steps": [
         "page_1356ec9ba54c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e9b35295b4f0",
@@ -42285,7 +42400,8 @@
       "priority": "low",
       "steps": [
         "page_38570e4aad48"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ece31ed7de5a",
@@ -42295,7 +42411,8 @@
       "priority": "low",
       "steps": [
         "page_c6cf05ca57a9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_07eeda8c053d",
@@ -42305,7 +42422,8 @@
       "priority": "low",
       "steps": [
         "page_644ead08cde9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_2614a3f804aa",
@@ -42315,7 +42433,8 @@
       "priority": "low",
       "steps": [
         "page_a4a6c8dc3a0e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc2e41957b35",
@@ -42325,6 +42444,9 @@
       "priority": "low",
       "steps": [
         "page_ed4563bf282a"
+      ],
+      "coveredBy": [
+        "tests/auth/login.spec.ts"
       ]
     },
     {
@@ -42335,7 +42457,8 @@
       "priority": "high",
       "steps": [
         "page_282fa81716c8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_be68a42c4b0a",
@@ -42345,7 +42468,8 @@
       "priority": "low",
       "steps": [
         "page_e6739d37a4d4"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1e620fa31d68",
@@ -42355,7 +42479,8 @@
       "priority": "low",
       "steps": [
         "page_669e323ff3f5"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c6e55dc6ae32",
@@ -42365,7 +42490,8 @@
       "priority": "low",
       "steps": [
         "page_378aa7f7f5b7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_03864fc42965",
@@ -42375,7 +42501,8 @@
       "priority": "low",
       "steps": [
         "page_f41ce02fab9c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_2a16b103c76f",
@@ -42385,7 +42512,8 @@
       "priority": "low",
       "steps": [
         "page_bf9b5289c38c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d4ff490d00af",
@@ -42395,7 +42523,8 @@
       "priority": "low",
       "steps": [
         "page_aa1f0241676e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_aa18fc122241",
@@ -42405,7 +42534,8 @@
       "priority": "low",
       "steps": [
         "page_0782df9dd59b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7029e58bcb13",
@@ -42415,7 +42545,8 @@
       "priority": "low",
       "steps": [
         "page_3ff06c08b1c3"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_eb912c3150bf",
@@ -42425,7 +42556,8 @@
       "priority": "low",
       "steps": [
         "page_c460a7b7472f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ea0d6180dd73",
@@ -42435,7 +42567,8 @@
       "priority": "low",
       "steps": [
         "page_d4da5674cc2c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4a137ea7bf73",
@@ -42445,7 +42578,8 @@
       "priority": "low",
       "steps": [
         "page_3e502fa8185a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b5fc6847636e",
@@ -42455,7 +42589,8 @@
       "priority": "low",
       "steps": [
         "page_efef9768a3fa"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fc333e8022ef",
@@ -42465,7 +42600,8 @@
       "priority": "low",
       "steps": [
         "page_9fc81c679183"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f39d4e9b1890",
@@ -42475,7 +42611,8 @@
       "priority": "low",
       "steps": [
         "page_bfffcce7d2e7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9812a103112c",
@@ -42485,7 +42622,8 @@
       "priority": "low",
       "steps": [
         "page_04557d07d78f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_39e6e0f587e6",
@@ -42495,7 +42633,8 @@
       "priority": "low",
       "steps": [
         "page_ecbabf806c6c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_91cf1f974d13",
@@ -42505,7 +42644,8 @@
       "priority": "low",
       "steps": [
         "page_9e984cd9d2c4"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_82440282c329",
@@ -42515,7 +42655,8 @@
       "priority": "low",
       "steps": [
         "page_e8f8dd5b0144"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fd689835f406",
@@ -42525,7 +42666,8 @@
       "priority": "low",
       "steps": [
         "page_5cee3a67ebd4"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_479e0eec14c3",
@@ -42535,7 +42677,8 @@
       "priority": "low",
       "steps": [
         "page_2b45c13f8c76"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_40a672939124",
@@ -42545,7 +42688,8 @@
       "priority": "low",
       "steps": [
         "page_283d5f584350"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_91f18e2e3308",
@@ -42555,7 +42699,8 @@
       "priority": "low",
       "steps": [
         "page_e5bf62ddec7c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_87e460d561a8",
@@ -42565,7 +42710,8 @@
       "priority": "low",
       "steps": [
         "page_aba1ec982505"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_96bc6b4a1796",
@@ -42575,7 +42721,8 @@
       "priority": "low",
       "steps": [
         "page_95874813357f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ad5f15f4750e",
@@ -42585,7 +42732,8 @@
       "priority": "low",
       "steps": [
         "page_256b1e2e1e2d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_35fec79031bd",
@@ -42595,7 +42743,8 @@
       "priority": "low",
       "steps": [
         "page_2f8cff46a1bd"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c40ba8c012cf",
@@ -42605,7 +42754,8 @@
       "priority": "low",
       "steps": [
         "page_e1f3c8b2e7d9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5c8beb00e0d4",
@@ -42616,7 +42766,8 @@
       "steps": [
         "page_ba502bf34fb8",
         "page_b0cd4a740b68"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4ae8a8f389a1",
@@ -42627,7 +42778,8 @@
       "steps": [
         "page_1356ec9ba54c",
         "page_d6db1dbe36af"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b8bfd1edaea1",
@@ -42638,7 +42790,8 @@
       "steps": [
         "page_38570e4aad48",
         "page_a6082d0910f3"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fa4d11666832",
@@ -42649,7 +42802,8 @@
       "steps": [
         "page_283d5f584350",
         "page_1c283fe3ede9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8c840155419e",
@@ -42660,7 +42814,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_918f18f29b1b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f8ded03be9b1",
@@ -42671,7 +42826,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_fc9629bf8386"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_198f0e93dfcf",
@@ -42682,7 +42838,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_4a04f38dd955"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ee9e99d44448",
@@ -42693,7 +42850,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_8a1ce7fad186"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fe7ed5c8ced8",
@@ -42704,7 +42862,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_031745a44589"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b5c035ff2c4b",
@@ -42715,7 +42874,8 @@
       "steps": [
         "page_e1f3c8b2e7d9",
         "page_1a75b07f51ff"
-      ]
+      ],
+      "coveredBy": []
     }
   ]
 }
