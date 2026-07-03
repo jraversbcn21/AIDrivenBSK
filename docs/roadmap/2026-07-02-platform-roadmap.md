@@ -22,9 +22,9 @@ If a task does not improve at least one of these capabilities, question whether 
 
 ## Where a fresh session resumes (2026-07-03)
 
-**M5b is done** — the Coverage Planner is implemented, live-validated, and the first evidence-annotated map (schema 1.2, `coveredBy` on all 152 flows) is committed. See findings doc §9 for the live results and their main lesson: coverage numbers are currently bounded by map completeness (no `/q/`, PDP, or logon flows in the map yet — the Explorer's PLP-grid gap, findings §8).
+**M6/M6b is done** — the Builder Engine (v1, navigation specs only) is implemented and live-validated: `pnpm build-tests` generates Playwright specs + minimal page objects from the planner's top-ranked proposals, and 3/3 generated specs pass live against DES (findings doc §11). Along the way, closing M6b surfaced a real pre-existing framework gap (testId hints from `data-qa-anchor`/`data-qa` silently unresolvable via `locate()`'s `getByTestId()`) — worked around inside the Builder (excluded testId from its own signal selection) rather than fixed at the source, and tracked as backlog B15 for a dedicated session.
 
-**Next: M6 — Builder Engine spec** (Execution Agent, Phase 5), following the same brainstorm → spec → plan → implement process used for every milestone so far. Per the working agreement, confirm with Jorge before starting the M6 brainstorm/spec. When scoping M6+, weigh findings §9's consequence: closing the Explorer's PLP-grid gap may add more platform value than any other single item, because it's what makes coverage/proposals meaningful for the high-value journeys.
+**Next: decide the next milestone** — candidates in rough priority order: B15 (fix the `enrichTestIds`/`locate()` testId gap now that it's blocking real generated-code quality, not just theoretical), B13 (PDP/Checkout classifier gap from M6's PLP-grid work), B14 (Builder's loaded-signal quality — avoid picking generic header elements), or M7 (interaction-aware map knowledge, needed before the Builder can generate anything beyond navigation specs). Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
 
 See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items.
 
@@ -45,13 +45,13 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | 2 | Persistent functional knowledge | Versioned `coverage/functional-map.json` + differ | ✅ Canonical map committed and diffable (schema 1.1, multi-step flows); CI diff gate wired (M3, scheduled/non-blocking) |
 | 3 | Knowledge Graph | Evolution of the map schema — pages/components/elements/flows are already relational via stable IDs | ✅ Coverage annotations landed (M5b, schema 1.2): flows now carry `coveredBy` from real run evidence — the first run-result→map linkage (seed of Phase 8). Plain JSON + stable IDs suffices through Phase 4; no graph DB before it earns its keep |
 | 4 | Planning Agent | Coverage + Test Generator agents | ✅ **Implemented and live-validated (M5b).** `pnpm plan`: evidence-based `coveredBy` + ranked proposals. Caveat: proposal quality is bounded by map completeness (findings §9) — the PLP-grid gap keeps the high-value journeys out of the map |
-| 5 | Execution Agent | Builder Engine | ⬜ Generates specs that imitate the POM/COM contracts exactly — the contracts' regularity was designed for this |
+| 5 | Execution Agent | Builder Engine | ✅ **v1 implemented and live-validated (M6b).** `pnpm build-tests` generates navigation specs + minimal page objects imitating BasePage/locate(); 3/3 pass live against DES. Interaction specs remain future work (needs B9's interaction-aware map knowledge) |
 | 6 | Risk Analysis Agent | Failure Analyzer (+ risk-scoring of map diffs) | ⬜ Traces/videos/JSON results are already captured by default as its inputs |
-| 7 | Self-Healing | Selector Healing Agent | ⬜ `Strategy`/`selectorHints` + per-element testId-presence recording exist as its seam |
+| 7 | Self-Healing | Selector Healing Agent | ⬜ `Strategy`/`selectorHints` + per-element testId-presence recording exist as its seam. **Now has a concrete first target (B15):** the testId/`locate()` mismatch M6b found and worked around is exactly the kind of break this agent should heal |
 | 8 | Continuous Learning | Feed run results and diffs back into the functional map | ⬜ |
 | 9 | Autonomous Quality Engineering | Orchestration of phases 4–8 | ⬜ |
 
-**Current position: Phase 4 reached (planning half done).** The Explorer has real, verified, multi-step knowledge of DES (152 flows, 74 real navigation chains), and the Coverage Planner now closes the loop deterministically: run evidence → `coveredBy` annotations (3/152 covered by today's 3-spec suite) → ranked proposals. The generation half of Phase 4/5 (Builder Engine, M6) is next; see "Where a fresh session resumes" above.
+**Current position: Phase 5 reached (v1, navigation-only).** The Explorer has real, verified, multi-step knowledge of DES (152 flows, 74 real navigation chains); the Coverage Planner closes the loop deterministically (run evidence → `coveredBy` → ranked proposals); the Builder Engine turns proposals into live-passing generated specs. The chain from discovery → planning → generation is now proven end-to-end for navigation journeys. See "Where a fresh session resumes" above for what's next.
 
 ---
 
@@ -78,7 +78,7 @@ That sequence maps 1:1 onto the 10-phase agentic evolution below. No redesign is
 | **M3** ✅ | CI Explorer gate: `explore` stage in `.gitlab-ci.yml` running `pnpm explore --diff --fail-on-new` — **scheduled-only, non-blocking** (`allow_failure: true`) by deliberate choice, since the map is still bounded/incomplete (B8 flow synthesis, PLP-grid gap). **Manual step outstanding:** a GitLab CI/CD Schedule must be created in the project (Settings → CI/CD → Schedules) for the job to ever run — not doable from this environment. Runner reachability to `*.inditex.grp` still unverified (C11) | New-flow detection runs without a human, once scheduled | Autonomy |
 | **M4** ✅ | Flow synthesis: `MapFlow.steps` now carries real root→leaf navigation chains reconstructed from `discoveredVia` (schema 1.1; canonical map refreshed live: 152 flows, 74 multi-step). Coverage annotations deliberately deferred to M5, where they belong | Phase 2 → 3 | Knowledge |
 | **M5** ✅ | Coverage Planner (Planning Agent): `pnpm plan` annotates flows with evidence-based `coveredBy` (schema 1.2) and ranks uncovered flows into proposals. Live-validated 2026-07-03: 3/152 flows covered by the 3-spec suite; first annotated map committed. Coverage usefulness bounded by map completeness (findings §9) | Phase 4 | Reasoning |
-| **M6** | Builder Engine spec (Execution Agent): generates specs imitating the POM/COM contracts | Phase 5 | Autonomy |
+| **M6/M6b** ✅ | Builder Engine (Execution Agent) v1: `pnpm build-tests` generates navigation specs + minimal page objects from the planner's proposals, imitating the POM/COM contracts. Live-validated 2026-07-03: 3/3 generated specs pass against DES. Surfaced and worked around a real testId/`locate()` gap (backlog B15) | Phase 5 | Autonomy |
 
 Rules of engagement (unchanged from the repo's working method):
 
