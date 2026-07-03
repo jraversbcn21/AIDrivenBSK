@@ -56,4 +56,10 @@ describe('TemplateGenerator', () => {
     const [p] = g.generate({ ...input, loadedSignal: { role: { type: 'button', name: "Women's sale" } } });
     expect(p.content).toContain("name: 'Women\\'s sale'");
   });
+
+  it('emits a nested testId literal carrying the attribute provenance', () => {
+    const [p] = g.generate({ ...input, loadedSignal: { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } } });
+    expect(p.content).toContain("locate(this.page, { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } })");
+    expect(p.content).toContain("import { locate }");
+  });
 });

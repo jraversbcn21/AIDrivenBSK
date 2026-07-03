@@ -5,7 +5,9 @@ import { classNameFor, specFileNameFor, pageFileNameFor } from '../naming';
 const sq = (s: string): string => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 function strategyLiteral(s: Strategy): string {
-  if (s.testId !== undefined) return `{ testId: ${sq(s.testId)} }`;
+  if (s.testId !== undefined) {
+    return `{ testId: { attr: ${sq(s.testId.attr)}, value: ${sq(s.testId.value)} } }`;
+  }
   if (s.role !== undefined) return `{ role: { type: ${sq(s.role.type)}, name: ${sq(s.role.name)} } }`;
   if (s.label !== undefined) return `{ label: ${sq(s.label)} }`;
   return `{ placeholder: ${sq(s.placeholder ?? '')} }`;

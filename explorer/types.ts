@@ -1,7 +1,9 @@
+import type { TestIdHint } from '../src/support/locators';
+
 export type Session = 'anon' | 'auth';
 
 export interface SelectorHints {
-  testId?: string;
+  testId?: TestIdHint;
   role?: { type: string; name: string };
   label?: string;
 }

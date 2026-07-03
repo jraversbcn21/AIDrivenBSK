@@ -6,7 +6,7 @@ const pdp: PageExtraction = {
   meta: { path: '/es/abc-c0p123.html', url: 'u', title: 'Camiseta', session: 'anon', discoveredVia: '/es/search' },
   landmarkRoles: ['banner', 'main'], textSummary: 'talla',
   links: [], componentKinds: ['Header'],
-  elements: [{ type: 'button', label: 'Añadir a la cesta', role: 'button', selectorHints: { testId: 'add' }, destructive: false }],
+  elements: [{ type: 'button', label: 'Añadir a la cesta', role: 'button', selectorHints: { testId: { attr: 'data-testid', value: 'add' } }, destructive: false }],
   forms: [{ purposeHint: 'login', fields: [{ name: 'email', type: 'email', required: true }] }],
 };
 
@@ -21,7 +21,7 @@ describe('buildMap', () => {
   it('produces a schema-versioned map with stable, deterministic ids', () => {
     const a = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
-    expect(a.schemaVersion).toBe('1.2');
+    expect(a.schemaVersion).toBe('1.3');
     expect(a.pages[0].pageType).toBe('PDP');
     expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic

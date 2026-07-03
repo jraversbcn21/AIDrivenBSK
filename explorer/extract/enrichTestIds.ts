@@ -1,11 +1,13 @@
 import type { Page } from '@playwright/test';
+import { TESTID_ATTRS } from '../../src/support/locators';
 import type { PageExtraction } from '../types';
 
 // DES carries test-id-like attributes on at least some elements (data-qa-anchor="filterButton"
 // confirmed live — findings §7). The a11y tree does not expose attributes, so probe the DOM via
 // role locators (they pierce shadow DOM). Best-effort by design: strict-mode ambiguity or a
 // timeout simply leaves the hint unset — absence is itself signal (foundation Risk #1).
-const TESTID_ATTRS = ['data-testid', 'data-qa-anchor', 'data-qa'] as const;
+// The matched attribute is recorded with the value: getByTestId() only resolves data-testid,
+// so locate() needs the provenance to pick the right resolution (findings §11, M7).
 
 type RoleType = Parameters<Page['getByRole']>[0];
 
@@ -19,7 +21,7 @@ export async function enrichTestIds(page: Page, extraction: PageExtraction, cap 
       for (const attr of TESTID_ATTRS) {
         const value = await loc.getAttribute(attr, { timeout: 250 });
         if (value) {
-          el.selectorHints.testId = value;
+          el.selectorHints.testId = { attr, value };
           break;
         }
       }

@@ -21,8 +21,10 @@ export function roleOf(el: Element): string {
 
 export function hintsFor(el: Element): SelectorHints {
   const hints: SelectorHints = {};
-  const testId = el.getAttribute('data-testid') ?? el.getAttribute('data-qa');
-  if (testId) hints.testId = testId;
+  const dataTestId = el.getAttribute('data-testid');
+  const dataQa = el.getAttribute('data-qa');
+  if (dataTestId) hints.testId = { attr: 'data-testid', value: dataTestId };
+  else if (dataQa) hints.testId = { attr: 'data-qa', value: dataQa };
   const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ');
   if (name) hints.role = { type: roleOf(el), name };
   const label = el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? undefined;

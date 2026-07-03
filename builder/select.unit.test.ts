@@ -20,7 +20,7 @@ const map: FunctionalMap = {
   elements: [
     { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Eliminar', role: 'button', selectorHints: { role: { type: 'button', name: 'Eliminar' } }, destructive: true },
     { id: 'e2', pageId: 'pPlp', type: 'filter', label: 'Filtrar', role: 'button', selectorHints: { role: { type: 'button', name: 'Filtrar' } }, destructive: false },
-    { id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: 'quick-add' }, destructive: false },
+    { id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'quick-add' } }, destructive: false },
   ],
   flows: [],
 };
@@ -51,7 +51,7 @@ describe('selectJourneys', () => {
     // fall through to null rather than ever surfacing a testId-based Strategy.
     const testIdOnlyMap: FunctionalMap = {
       ...map,
-      elements: [{ id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: 'quick-add' }, destructive: false }],
+      elements: [{ id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'quick-add' } }, destructive: false }],
     };
     const r = selectJourneys(report([['pRoot', 'pPlp']]), testIdOnlyMap, 5);
     expect(r.journeys[0].loadedSignal).toBeNull();

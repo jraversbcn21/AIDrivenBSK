@@ -29,7 +29,7 @@ describe('analyzePage', () => {
     const r = analyzePage(HTML, meta);
     const addToCart = r.elements.find((e) => e.label.includes('Añadir'));
     const pay = r.elements.find((e) => e.label === 'Pagar');
-    expect(addToCart?.selectorHints.testId).toBe('add-to-cart');
+    expect(addToCart?.selectorHints.testId).toEqual({ attr: 'data-testid', value: 'add-to-cart' });
     expect(addToCart?.destructive).toBe(false);
     expect(pay?.destructive).toBe(true);
   });
