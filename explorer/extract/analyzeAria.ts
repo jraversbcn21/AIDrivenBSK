@@ -39,11 +39,13 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
   const componentKinds = new Set<ComponentKind>();
   const texts: string[] = [];
 
-  const visit = (node: AriaNode, inListitem: boolean): void => {
+  const visit = (node: AriaNode, inListitem: boolean, chrome: 'Header' | 'Footer' | undefined): void => {
     if (node.role === 'text') {
       if (node.text) texts.push(node.text);
       return;
     }
+    const nextChrome =
+      node.role === 'banner' ? 'Header' : node.role === 'contentinfo' ? 'Footer' : chrome;
     if (LANDMARKS.has(node.role)) landmarkRoles.push(node.role);
     if (node.role === 'banner') componentKinds.add('Header');
     if (node.role === 'contentinfo') componentKinds.add('Footer');
@@ -59,13 +61,18 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
 
     const type = elementTypeFor(node);
     if (type && elements.length < MAX_ELEMENTS_PER_PAGE) {
-      elements.push({
+      const el: ExtractedElement = {
         type,
         label: name,
         role: node.role,
         selectorHints: name ? { role: { type: node.role, name } } : {},
         destructive: isDestructive(name),
-      });
+      };
+      // Cart-named chrome inside the banner is the header cart affordance (MiniCart) —
+      // the regex is scoped to the banner so page-body "Añadir a la cesta" stays untagged.
+      const component = nextChrome === 'Header' && /cesta|cart/i.test(name) ? 'MiniCart' : nextChrome;
+      if (component !== undefined) el.component = component;
+      elements.push(el);
     }
 
     if (node.role === 'form') {
@@ -78,10 +85,10 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
       forms.push({ purposeHint: inferFormPurpose(node, fields.map((f) => f.name)), fields });
     }
 
-    node.children.forEach((child) => visit(child, inListitem || node.role === 'listitem'));
+    node.children.forEach((child) => visit(child, inListitem || node.role === 'listitem', nextChrome));
   };
 
-  nodes.forEach((n) => visit(n, false));
+  nodes.forEach((n) => visit(n, false, undefined));
 
   return {
     meta,
