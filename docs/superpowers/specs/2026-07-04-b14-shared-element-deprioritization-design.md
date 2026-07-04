@@ -54,11 +54,16 @@ Same pattern as the existing `inListitem` parameter: `visit` threads an ancestor
 
 - Inside a `banner` subtree → elements get `component: 'Header'`.
 - Inside a `contentinfo` subtree → `component: 'Footer'`.
-- A `link`/`button` whose name matches the existing cart regex (`/cesta|cart/i`, analyzeAria.ts
-  line 53) → `component: 'MiniCart'`, taking precedence over Header when both apply (the
-  "Ir a la cesta" link lives inside the banner; MiniCart is the more specific label).
-- Grounding: real DES fixtures show both landmarks — `banner` (`home.aria.txt:4`),
-  `contentinfo "Pie de página"` (`category-gate.aria.txt:417`).
+- An element **inside the banner** whose name matches the existing cart regex (`/cesta|cart/i`,
+  analyzeAria.ts line 53) → `component: 'MiniCart'`, taking precedence over Header (the
+  "Ir a la cesta" affordance lives inside the banner; MiniCart is the more specific label).
+  The cart regex is deliberately NOT applied outside the banner: a page-body element like the
+  PDP's "Añadir a la cesta" button matches the regex too, and tagging it shared would
+  deprioritize exactly the page-specific candidate this design wants to win.
+- Grounding: real DES fixtures show both landmarks — `banner "Cabecera de página"` containing
+  `button "Buscar en tienda"` (`category-gate.aria.txt:4-10`; note `home.aria.txt` is the
+  country-select page, whose banner has no buttons), `contentinfo "Pie de página"`
+  (`category-gate.aria.txt:417`).
 
 ### 3. Extraction — DOM path (`explorer/extract/analyze.ts`, offline-only)
 
@@ -73,17 +78,21 @@ builder.ts:51-57). `enrichTestIds` mutates hints only and is unaffected.
 
 ### 5. Builder — `loadedSignalFor` (`builder/select.ts`)
 
-Current: per tier, first candidate producing a `Strategy` wins. New: two passes per tier —
-first only candidates whose `component` is not in `{Header, Footer, MiniCart}`, then (fallback,
-decision 2) the shared ones. Map order remains the tiebreak within each pass — determinism
-intact. Deprioritization applies uniformly to all three tiers (a header testId is just as weak
-a leaf-page signal as a header role).
+Current: per tier, first candidate producing a `Strategy` wins. New: two passes, pass-major —
+the full tier order (testId → role → label) runs first over page-specific candidates only
+(`component` absent or not in `{Header, Footer, MiniCart}`), and only if that yields nothing
+runs again over the shared ones (fallback, decision 2). Pass-major means an own role/label
+signal beats a shared testId: a header testId is just as weak a leaf-page signal as a header
+role, so page-specificity outranks tier. Map order remains the tiebreak within each pass —
+determinism intact.
 
 ### 6. Tests
 
-- `analyzeAria.unit.test.ts`: elements under `banner`/`contentinfo` carry `component`; the cart
-  link carries `MiniCart` (precedence over Header); `main` elements carry nothing; one case fed
-  from the real `home.aria.txt` fixture asserting "Buscar en tienda" comes out `Header`.
+- `analyzeAria.unit.test.ts`: elements under `banner`/`contentinfo` carry `component`; a
+  cart-named element inside the banner carries `MiniCart` (precedence over Header); `main`
+  elements carry nothing — including the cart-named "Añadir a la cesta" (the regression the
+  banner restriction exists for); one case fed from the real `category-gate.aria.txt` fixture
+  asserting "Buscar en tienda" comes out `Header` and footer's "WhatsApp" comes out `Footer`.
 - `select.unit.test.ts`: page with a header-role element first and an own element later → the
   own element wins; page where everything is shared → the shared element is returned (not
   `null`); legacy 1.3-shaped map (no `component` anywhere) → current behavior, no crash.
