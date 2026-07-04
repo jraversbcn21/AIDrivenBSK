@@ -29,6 +29,14 @@ function detectComponents(document: Document): ComponentKind[] {
   return kinds;
 }
 
+function componentFor(el: Element, label: string): ComponentKind | undefined {
+  // Cart-named chrome inside the header is the cart affordance (MiniCart); the regex is
+  // scoped to the header so page-body "Añadir a la cesta" stays untagged (page-specific).
+  if (el.closest('header, [role=banner]')) return /cesta|cart/i.test(label) ? 'MiniCart' : 'Header';
+  if (el.closest('footer, [role=contentinfo]')) return 'Footer';
+  return undefined;
+}
+
 export function analyzePage(html: string, meta: PageMeta): PageExtraction {
   const { document } = parseHTML(html);
 
@@ -40,7 +48,12 @@ export function analyzePage(html: string, meta: PageMeta): PageExtraction {
 
   const pushEl = (el: Element, type: ElementType): void => {
     const label = text(el);
-    elements.push({ type, label, role: roleOf(el), selectorHints: hintsFor(el), destructive: isDestructive(label) });
+    const entry: ExtractedElement = {
+      type, label, role: roleOf(el), selectorHints: hintsFor(el), destructive: isDestructive(label),
+    };
+    const component = componentFor(el, label);
+    if (component !== undefined) entry.component = component;
+    elements.push(entry);
   };
 
   // Ordered highest-priority-first: an element matching multiple passes is

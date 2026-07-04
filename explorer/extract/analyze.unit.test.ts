@@ -55,4 +55,18 @@ describe('analyzePage', () => {
     expect(matches).toHaveLength(1);
     expect(matches[0].type).toBe('sort');
   });
+  it('tags header/footer elements with component provenance, leaving body elements untagged (B14)', () => {
+    const html = `
+<html><body>
+  <header><button>Buscar en tienda</button><button>Ver cesta</button></header>
+  <main><button>Añadir a la cesta</button></main>
+  <footer><button>Ayuda</button></footer>
+</body></html>`;
+    const r = analyzePage(html, meta);
+    const byLabel = (l: string) => r.elements.find((e) => e.label === l);
+    expect(byLabel('Buscar en tienda')?.component).toBe('Header');
+    expect(byLabel('Ver cesta')?.component).toBe('MiniCart');
+    expect(byLabel('Ayuda')?.component).toBe('Footer');
+    expect(byLabel('Añadir a la cesta')?.component).toBeUndefined();
+  });
 });
