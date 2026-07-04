@@ -16,6 +16,7 @@ export interface ExtractedElement {
   role: string;
   selectorHints: SelectorHints;
   destructive: boolean;
+  component?: ComponentKind; // shared-chrome provenance (B14); absent = page-specific
 }
 
 export interface ExtractedFormField {

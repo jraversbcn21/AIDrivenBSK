@@ -34,7 +34,7 @@ describe('annotateCoverage', () => {
   const out = annotateCoverage(map, evidence);
 
   it('bumps schemaVersion and leaves the input untouched', () => {
-    expect(out.schemaVersion).toBe('1.3');
+    expect(out.schemaVersion).toBe('1.4');
     expect(map.flows[0].coveredBy).toBeUndefined(); // pure: input not mutated
   });
   it('covers a flow when its step patterns are an ordered subsequence of a PASSED test', () => {
