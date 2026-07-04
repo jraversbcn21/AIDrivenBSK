@@ -33,16 +33,26 @@ function toStrategy(hints: SelectorHints): Strategy | null {
   return null;
 }
 
+// Shared chrome (Header/Footer/MiniCart) proves the app shell rendered, not that the leaf
+// page did — deprioritized pass-major, never excluded (design spec 2026-07-04, B14).
+const SHARED_COMPONENTS = new Set<string>(['Header', 'Footer', 'MiniCart']);
+
 /** First non-destructive element whose best hint matches the framework's selector
  *  priority (testId -> role -> label); null means the template falls back to the
- *  main landmark. Deterministic: map element order. testId is trustworthy again
+ *  main landmark. Pass-major (B14): the tier order runs over page-specific candidates
+ *  first, and over shared chrome only when no page-specific candidate has any hint.
+ *  Deterministic: map element order within each pass. testId is trustworthy again
  *  since M7 (attribute provenance — design spec 2026-07-03-testid-attribute-fix-design.md). */
 function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
   const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive);
-  for (const key of ['testId', 'role', 'label'] as const) {
-    for (const el of candidates) {
-      const s = toStrategy(el.selectorHints);
-      if (s !== null && key in s) return s;
+  const specific = candidates.filter((e) => e.component === undefined || !SHARED_COMPONENTS.has(e.component));
+  const shared = candidates.filter((e) => e.component !== undefined && SHARED_COMPONENTS.has(e.component));
+  for (const pass of [specific, shared]) {
+    for (const key of ['testId', 'role', 'label'] as const) {
+      for (const el of pass) {
+        const s = toStrategy(el.selectorHints);
+        if (s !== null && key in s) return s;
+      }
     }
   }
   return null;

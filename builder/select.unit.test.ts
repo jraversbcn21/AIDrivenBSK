@@ -99,4 +99,41 @@ describe('selectJourneys', () => {
     const r = selectJourneys(report([['pRoot', 'pPlp']]), nullTestIdMap, 5);
     expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Seleccionar' } });
   });
+  it('deprioritizes shared chrome: an own role hint beats an earlier header role hint (B14)', () => {
+    const chromeMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Buscar en tienda', role: 'button', selectorHints: { role: { type: 'button', name: 'Buscar en tienda' } }, destructive: false, component: 'Header' },
+        { id: 'e2', pageId: 'pPlp', type: 'button', label: 'Añadir a la lista', role: 'button', selectorHints: { role: { type: 'button', name: 'Añadir a la lista' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), chromeMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Añadir a la lista' } });
+  });
+
+  it('pass-major: an own role hint beats a shared testId hint (B14)', () => {
+    // A header testId is just as weak a leaf-page signal as a header role —
+    // page-specificity outranks tier (design spec §5).
+    const chromeMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Buscar en tienda', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'storeSearch' } }, destructive: false, component: 'Header' },
+        { id: 'e2', pageId: 'pPlp', type: 'button', label: 'Añadir a la lista', role: 'button', selectorHints: { role: { type: 'button', name: 'Añadir a la lista' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), chromeMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Añadir a la lista' } });
+  });
+
+  it('falls back to the shared element when everything on the leaf is shared (B14)', () => {
+    // Deprioritize, never exclude: a shared signal still beats the null/main fallback.
+    const allSharedMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Buscar en tienda', role: 'button', selectorHints: { role: { type: 'button', name: 'Buscar en tienda' } }, destructive: false, component: 'Header' },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), allSharedMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Buscar en tienda' } });
+  });
 });
