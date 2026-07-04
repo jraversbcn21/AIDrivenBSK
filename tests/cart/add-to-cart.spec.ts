@@ -14,8 +14,8 @@ test('adding a product updates the mini cart', async ({ homePage, searchResultsP
   await productPage.selectFirstSize();
   await productPage.addToCart();
 
-  await productPage.header.openMiniCart();
-  const miniCart = productPage.header.miniCart();
-  await expect.poll(() => miniCart.isVisible(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
-  await expect.poll(() => miniCart.itemCount(), { timeout: HYDRATION_TIMEOUT_MS }).toBeGreaterThan(0);
+  await productPage.header.goToCart();
+  const cartTab = productPage.header.cartTab();
+  await expect.poll(() => cartTab.isVisible(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
+  await expect.poll(() => cartTab.itemCount(), { timeout: HYDRATION_TIMEOUT_MS }).toBeGreaterThan(0);
 });

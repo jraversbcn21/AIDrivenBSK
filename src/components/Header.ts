@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { BaseComponent } from './BaseComponent';
 import { SearchBar } from './SearchBar';
-import { MiniCart } from './MiniCart';
+import { CartTab } from './CartTab';
 import { dismissOnboardingTour } from '../support/consent';
 
 export class Header extends BaseComponent {
@@ -26,12 +26,12 @@ export class Header extends BaseComponent {
   }
 
   /** There is no mini-cart drawer on this site: "Ir a la cesta" navigates to the full cart page. */
-  async openMiniCart(): Promise<void> {
+  async goToCart(): Promise<void> {
     await dismissOnboardingTour(this.page); // the tour can (re)appear asynchronously and block this click
     await this.root.getByRole('link', { name: 'Ir a la cesta', exact: true }).click();
   }
 
-  miniCart(): MiniCart {
-    return new MiniCart(this.page.getByRole('tab', { name: /^cesta/i }));
+  cartTab(): CartTab {
+    return new CartTab(this.page.getByRole('tab', { name: /^cesta/i }));
   }
 }

@@ -1,6 +1,6 @@
 import { BaseComponent } from './BaseComponent';
 
-export class MiniCart extends BaseComponent {
+export class CartTab extends BaseComponent {
   /** Rooted at the cart page's "Cesta (N)" tab — there is no separate drawer/dialog on this site. */
   async isVisible(): Promise<boolean> {
     return this.root.isVisible();

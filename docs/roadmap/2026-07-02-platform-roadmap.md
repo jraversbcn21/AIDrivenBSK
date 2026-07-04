@@ -24,6 +24,8 @@ If a task does not improve at least one of these capabilities, question whether 
 
 **B14 is done** — shared-element deprioritization closes the Builder's remaining loaded-signal gap (M7 had already closed the common testId case). Both extraction paths now tag elements with `component?: 'Header' | 'Footer' | 'MiniCart'` provenance (schema 1.4), and `builder/select.ts`'s `loadedSignalFor` runs pass-major: page-specific candidates across all selector tiers before falling back to shared chrome. Live-validated 2026-07-04: full re-crawl (152 pages, both sessions), 17/17 generated specs pass live against DES, including a leaf page with no testId-bearing element whose generated spec now asserts a page-specific role signal (a PDP carousel control) instead of the generic shared header button. `pnpm test` 4/4 (no regression). Merged to `master` (fast-forward) and pushed — findings doc §14.
 
+**A4 is also done** — the `MiniCart` naming debt (backlog A4): `src/components/MiniCart.ts` renamed to `CartTab.ts`, `Header.miniCart()`/`openMiniCart()` renamed to `cartTab()`/`goToCart()`. Cosmetic, no live-validation needed; `typecheck`/`lint`/`test:unit` (170 tests) pass.
+
 **Next: decide the next milestone** — candidate: **M8** (interaction-aware map knowledge — open nav menus/overlays during crawl, needed before the Builder can generate anything beyond navigation specs; backlog B9). Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
 
 See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items.
