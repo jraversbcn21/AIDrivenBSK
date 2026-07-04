@@ -49,11 +49,13 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
     nodeByKey.set(`${ex.meta.session}:${ex.meta.path}`, { id: pageId, path: ex.meta.path, discoveredVia: ex.meta.discoveredVia });
 
     ex.elements.forEach((el) => {
-      elements.push({
+      const mapEl: MapElement = {
         id: makeId('elem', pageId, el.role, el.label, el.type),
         pageId, type: el.type, label: el.label, role: el.role,
         selectorHints: el.selectorHints, destructive: el.destructive,
-      });
+      };
+      if (el.component !== undefined) mapEl.component = el.component;
+      elements.push(mapEl);
     });
 
     ex.forms.forEach((f, i) => {

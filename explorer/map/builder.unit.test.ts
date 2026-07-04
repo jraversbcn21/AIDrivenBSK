@@ -6,7 +6,10 @@ const pdp: PageExtraction = {
   meta: { path: '/es/abc-c0p123.html', url: 'u', title: 'Camiseta', session: 'anon', discoveredVia: '/es/search' },
   landmarkRoles: ['banner', 'main'], textSummary: 'talla',
   links: [], componentKinds: ['Header'],
-  elements: [{ type: 'button', label: 'Añadir a la cesta', role: 'button', selectorHints: { testId: { attr: 'data-testid', value: 'add' } }, destructive: false }],
+  elements: [
+    { type: 'button', label: 'Añadir a la cesta', role: 'button', selectorHints: { testId: { attr: 'data-testid', value: 'add' } }, destructive: false },
+    { type: 'button', label: 'Buscar en tienda', role: 'button', selectorHints: { role: { type: 'button', name: 'Buscar en tienda' } }, destructive: false, component: 'Header' },
+  ],
   forms: [{ purposeHint: 'login', fields: [{ name: 'email', type: 'email', required: true }] }],
 };
 
@@ -75,5 +78,11 @@ describe('buildMap', () => {
     });
     const authFlow = m.flows.find((f) => f.session === 'auth');
     expect(authFlow?.steps).toHaveLength(1); // anon '/' must NOT be its parent
+  });
+
+  it('passes element component provenance through to MapElement (B14)', () => {
+    const m = buildMap({ classified, environment: 'des' });
+    expect(m.elements.find((e) => e.label === 'Buscar en tienda')?.component).toBe('Header');
+    expect(m.elements.find((e) => e.label === 'Añadir a la cesta')?.component).toBeUndefined();
   });
 });
