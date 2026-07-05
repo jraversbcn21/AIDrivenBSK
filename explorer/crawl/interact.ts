@@ -1,6 +1,8 @@
-import type { ExtractedElement } from '../types';
-import type { AriaNode } from '../extract/aria';
+import type { ExtractedElement, ExtractedInteraction, PageMeta } from '../types';
+import { type AriaNode, parseAriaSnapshot } from '../extract/aria';
 import { routePattern } from '../url';
+import { waitForSettle, type SettleOptions } from './settle';
+import { analyzeAriaNodes } from '../extract/analyzeAria';
 
 const CLICKABLE_TYPES = new Set(['button', 'filter', 'sort']);
 const CHROME = new Set(['Header', 'Footer', 'MiniCart']);
@@ -56,4 +58,99 @@ export function newOverlayNodes(before: AriaNode[], after: AriaNode[]): AriaNode
   };
   after.forEach(collectAfter);
   return found;
+}
+
+/** Abstraction over Playwright so `discoverInteractions` is unit-testable with a scripted fake. */
+export interface InteractionDriver {
+  snapshot(): Promise<string>; // body ariaSnapshot
+  click(role: string, name: string): Promise<void>;
+  pressEscape(): Promise<void>;
+  currentPath(): string; // normalized
+  /** Recover the original page: goto(originalPath) + consent + settle. */
+  recover(): Promise<void>;
+  wait(ms: number): Promise<void>;
+}
+
+export const INTERACT_SETTLE: SettleOptions = { minWaitMs: 1000, pollIntervalMs: 500, maxWaitMs: 5000 };
+export const MAX_CLICK_ATTEMPTS = 3;
+export const MAX_CLOSE_ATTEMPTS = 3;
+
+/**
+ * The act->verify->retry interaction-discovery protocol (CLAUDE.md's "Interaction reliability"
+ * rule, applied to crawling): click a candidate, settle, and classify what happened —
+ * `overlay` (a new dialog/menu appeared; extract its contents, then close it with Escape,
+ * falling back to a full page `recover()` if it won't close), `navigated` (the click left the
+ * page; record where and recover, aborting remaining candidates if recovery itself fails —
+ * there's no safe page left to keep clicking on), or `none` (no observable change after
+ * `MAX_CLICK_ATTEMPTS` clicks — a lost hydration click and a genuine no-op look identical from
+ * outside, so this is a bounded give-up, not a claim the element does nothing).
+ *
+ * A driver exception on one candidate (e.g. the click throws) skips just that candidate —
+ * logged via `console.warn` — so one bad element doesn't abort discovery for the rest of the page.
+ */
+export async function discoverInteractions(
+  driver: InteractionDriver,
+  candidates: ExtractedElement[],
+  meta: PageMeta,
+): Promise<ExtractedInteraction[]> {
+  const results: ExtractedInteraction[] = [];
+  for (const el of candidates) {
+    const role = el.selectorHints.role;
+    if (role === undefined) continue;
+    try {
+      const before = await driver.snapshot();
+      let outcome: ExtractedInteraction | null = null;
+      for (let attempt = 0; attempt < MAX_CLICK_ATTEMPTS && outcome === null; attempt++) {
+        await driver.click(role.type, role.name);
+        await waitForSettle(() => driver.snapshot(), (ms) => driver.wait(ms), INTERACT_SETTLE);
+
+        if (driver.currentPath() !== meta.path) {
+          const navigatedTo = driver.currentPath();
+          await driver.recover();
+          outcome = {
+            trigger: { role: el.role, label: el.label, type: el.type },
+            outcome: 'navigated',
+            revealedElements: [],
+            revealedLinks: [],
+            navigatedTo,
+          };
+          results.push(outcome);
+          if (driver.currentPath() !== meta.path) return results; // recovery failed — abort page
+          break;
+        }
+
+        const after = await driver.snapshot();
+        const overlays = newOverlayNodes(parseAriaSnapshot(before), parseAriaSnapshot(after));
+        if (overlays.length > 0) {
+          const revealed = analyzeAriaNodes(overlays, meta);
+          outcome = {
+            trigger: { role: el.role, label: el.label, type: el.type },
+            outcome: 'overlay',
+            revealedElements: revealed.elements,
+            revealedLinks: revealed.links,
+          };
+          results.push(outcome);
+          // Close: Escape until the overlay is gone, else recover the page wholesale.
+          let closed = false;
+          for (let c = 0; c < MAX_CLOSE_ATTEMPTS && !closed; c++) {
+            await driver.pressEscape();
+            const now = await driver.snapshot();
+            closed = newOverlayNodes(parseAriaSnapshot(before), parseAriaSnapshot(now)).length === 0;
+          }
+          if (!closed) await driver.recover();
+        }
+      }
+      if (outcome === null) {
+        results.push({
+          trigger: { role: el.role, label: el.label, type: el.type },
+          outcome: 'none',
+          revealedElements: [],
+          revealedLinks: [],
+        });
+      }
+    } catch (err) {
+      console.warn(`interaction skipped on ${meta.path} ("${el.label}"): ${String(err)}`);
+    }
+  }
+  return results;
 }

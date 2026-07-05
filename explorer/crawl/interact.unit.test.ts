@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { InteractionLedger, selectCandidates, newOverlayNodes } from './interact';
-import type { ExtractedElement } from '../types';
+import { InteractionLedger, selectCandidates, newOverlayNodes, discoverInteractions } from './interact';
+import type { ExtractedElement, PageMeta } from '../types';
+import type { InteractionDriver } from './interact';
 import { parseAriaSnapshot } from '../extract/aria';
 
 const btn = (label: string, over: Partial<ExtractedElement> = {}): ExtractedElement => ({
@@ -59,5 +60,87 @@ describe('newOverlayNodes', () => {
   it('returns empty when nothing overlay-like appeared', () => {
     const after = `${BEFORE}\n- text: nuevo banner promocional`;
     expect(newOverlayNodes(parseAriaSnapshot(BEFORE), parseAriaSnapshot(after))).toHaveLength(0);
+  });
+});
+
+const META: PageMeta = { path: '/es/p-c0p1.html', url: 'https://x/es/p-c0p1.html', title: 'P', session: 'auth', discoveredVia: 'seed' };
+const D_BASE = `- main:\n  - button "Añadir a cesta"`;
+const D_WITH_DIALOG = `${D_BASE}\n- dialog "Tallas":\n  - button "Talla S"\n  - link "Guía de tallas":\n    - /url: /es/guia.html`;
+
+/** Driver whose snapshot() pops from a script; other calls are recorded. */
+function fakeDriver(script: string[], opts: { path?: () => string } = {}): InteractionDriver & { calls: string[] } {
+  const calls: string[] = [];
+  let last = script[0];
+  return {
+    calls,
+    snapshot: async () => { calls.push('snapshot'); if (script.length > 0) last = script.shift() as string; return last; },
+    click: async (_r, n) => { calls.push(`click:${n}`); },
+    pressEscape: async () => { calls.push('escape'); },
+    currentPath: () => (opts.path ? opts.path() : META.path),
+    recover: async () => { calls.push('recover'); },
+    wait: async () => {},
+  };
+}
+
+describe('discoverInteractions', () => {
+  it('detects an overlay, extracts revealed elements/links, closes with Escape', async () => {
+    // before, settle(first read + stable read), after-click diff read, post-escape read
+    const d = fakeDriver([D_BASE, D_WITH_DIALOG, D_WITH_DIALOG, D_WITH_DIALOG, D_BASE]);
+    const [it1] = await discoverInteractions(d, [btn('Añadir a cesta')], META);
+    expect(it1.outcome).toBe('overlay');
+    expect(it1.revealedElements.map((e) => e.label)).toContain('Talla S');
+    expect(it1.revealedLinks).toContain('/es/guia.html');
+    expect(d.calls).toContain('escape');
+    expect(d.calls).not.toContain('recover');
+  });
+
+  it('records navigated and recovers', async () => {
+    let path = META.path;
+    const d = fakeDriver([D_BASE, D_BASE, D_BASE], { path: () => path });
+    d.click = async () => { path = '/es/otra.html'; };
+    d.recover = async () => { path = META.path; d.calls.push('recover'); };
+    const [it1] = await discoverInteractions(d, [btn('Añadir a cesta')], META);
+    expect(it1.outcome).toBe('navigated');
+    expect(it1.navigatedTo).toBe('/es/otra.html');
+    expect(d.calls).toContain('recover');
+  });
+
+  it('aborts remaining candidates when recovery fails', async () => {
+    let path = META.path;
+    const d = fakeDriver([D_BASE, D_BASE, D_BASE], { path: () => path });
+    d.click = async (_r, n) => { d.calls.push(`click:${n}`); path = '/es/otra.html'; };
+    d.recover = async () => { d.calls.push('recover'); }; // path stays wrong
+    const out = await discoverInteractions(d, [btn('Uno'), btn('Dos')], META);
+    expect(out).toHaveLength(1);
+    expect(d.calls.filter((c) => c.startsWith('click:'))).toEqual(['click:Uno']);
+  });
+
+  it('returns none after bounded click attempts with no change', async () => {
+    const d = fakeDriver([D_BASE]); // snapshot never changes
+    const [it1] = await discoverInteractions(d, [btn('Inerte')], META);
+    expect(it1.outcome).toBe('none');
+    expect(d.calls.filter((c) => c === 'click:Inerte').length).toBeLessThanOrEqual(3);
+  });
+
+  it('falls back to recover() when Escape never closes the overlay', async () => {
+    const always = [D_BASE, ...Array(20).fill(D_WITH_DIALOG)] as string[];
+    const d = fakeDriver(always);
+    const [it1] = await discoverInteractions(d, [btn('Añadir a cesta')], META);
+    expect(it1.outcome).toBe('overlay');
+    expect(d.calls).toContain('recover');
+  });
+
+  it('skips a candidate whose driver call throws and continues', async () => {
+    // candidate 1 ('Roto') consumes one snapshot call (its own `before` read) before throwing on click.
+    // candidate 2's before-read must stay dialog-free and its post-click reads must show the dialog —
+    // tuned from the brief's script (last entry changed BASE -> D_WITH_DIALOG) so the diff-read after
+    // the click actually observes the opened dialog; see report for why.
+    const d = fakeDriver([D_BASE, D_BASE, D_WITH_DIALOG, D_WITH_DIALOG, D_WITH_DIALOG]);
+    const boom = btn('Roto');
+    const orig = d.click.bind(d);
+    d.click = async (r, n) => { if (n === 'Roto') throw new Error('boom'); return orig(r, n); };
+    const out = await discoverInteractions(d, [boom, btn('Añadir a cesta')], META);
+    expect(out).toHaveLength(1);
+    expect(out[0].outcome).toBe('overlay');
   });
 });
