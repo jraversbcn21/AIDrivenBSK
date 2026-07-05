@@ -38,7 +38,7 @@ Two adjacent minor findings from M8's final review live in the same code and are
 
 ### 3.1 Must-capture patterns: one config, two roles
 
-New config option `interactions.mustCapture: RegExp[]`, default `[/^añadir a la cesta/i]`. Env override `EXPLORER_MUST_CAPTURE` (optional): semicolon-separated regex sources, compiled case-insensitive (semicolon, not comma or pipe, to avoid colliding with regex syntax). When set, it **replaces** the default list (standard defaults+env-override semantics of `loadExplorerConfig`); an empty string disables must-capture entirely.
+New config option `interactions.mustCapture: RegExp[]`, default `[/^añadir a (la )?cesta/i]` (matches both the PDP button "Añadir a cesta" and the card quick-add "Añadir a la cesta {product}" — corrected here on final whole-branch review; the implementation and plan always used this form, this doc's literal example was stale). Env override `EXPLORER_MUST_CAPTURE` (optional): semicolon-separated regex sources, compiled case-insensitive (semicolon, not comma or pipe, to avoid colliding with regex syntax). When set, it **replaces** the default list (standard defaults+env-override semantics of `loadExplorerConfig`); an empty string disables must-capture entirely.
 
 Each pattern plays two roles:
 
