@@ -16,6 +16,9 @@ export interface LlmConfig {
 export interface InteractionsConfig {
   enabled: boolean;
   maxPerPage: number;
+  /** Trigger-label patterns with guaranteed capture: prioritized on every page until
+   *  each yields one `overlay` outcome anywhere in the crawl (design 2026-07-05-m8b §3). */
+  mustCapture: RegExp[];
 }
 
 export interface ExplorerConfig {
@@ -36,7 +39,7 @@ const DEFAULTS: ExplorerConfig = {
   bounds: { maxPages: 200, maxDepth: 4, politenessMs: 300, timeBudgetMs: 600_000 },
   llm: { model: 'claude-haiku-4-5-20251001', apiKeyEnv: 'ANTHROPIC_API_KEY' },
   autoThreshold: 0.7,
-  interactions: { enabled: true, maxPerPage: 3 },
+  interactions: { enabled: true, maxPerPage: 3, mustCapture: [/^añadir a (la )?cesta/i] },
 };
 
 function envMode(): ClassifierMode | undefined {
@@ -62,6 +65,20 @@ function envInteractions(): boolean | undefined {
   if (v === undefined) return undefined;
   if (v !== 'on' && v !== 'off') throw new Error('EXPLORER_INTERACTIONS must be on | off');
   return v === 'on';
+}
+
+function envMustCapture(): RegExp[] | undefined {
+  const raw = process.env.EXPLORER_MUST_CAPTURE;
+  if (raw === undefined) return undefined;
+  // Semicolon-separated regex sources; empty string disables must-capture (design §3.1).
+  const sources = raw.split(';').map((s) => s.trim()).filter((s) => s !== '');
+  return sources.map((s) => {
+    try {
+      return new RegExp(s, 'i');
+    } catch {
+      throw new Error(`EXPLORER_MUST_CAPTURE: invalid regex "${s}"`);
+    }
+  });
 }
 
 function envPositiveNumber(name: string, fallback: number): number {
@@ -92,6 +109,7 @@ export function loadExplorerConfig(overrides: Partial<ExplorerConfig> = {}): Exp
     interactions: {
       enabled: envInteractions() ?? DEFAULTS.interactions.enabled,
       maxPerPage: envPositiveNumber('EXPLORER_MAX_INTERACTIONS_PER_PAGE', DEFAULTS.interactions.maxPerPage),
+      mustCapture: envMustCapture() ?? DEFAULTS.interactions.mustCapture,
     },
   };
   return {

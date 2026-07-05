@@ -11,6 +11,7 @@ describe('loadExplorerConfig', () => {
     delete process.env.EXPLORER_TIME_BUDGET_MS;
     delete process.env.EXPLORER_INTERACTIONS;
     delete process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE;
+    delete process.env.EXPLORER_MUST_CAPTURE;
   });
   afterEach(() => { process.env = { ...saved }; });
 
@@ -75,9 +76,15 @@ describe('loadExplorerConfig', () => {
     expect(() => loadExplorerConfig()).toThrow(/EXPLORER_TIME_BUDGET_MS/);
   });
 
-  it('defaults interactions to enabled with maxPerPage 3', () => {
+  it('defaults interactions to enabled, maxPerPage 3, and the añadir-a-cesta must-capture', () => {
     const cfg = loadExplorerConfig();
-    expect(cfg.interactions).toEqual({ enabled: true, maxPerPage: 3 });
+    expect(cfg.interactions.enabled).toBe(true);
+    expect(cfg.interactions.maxPerPage).toBe(3);
+    expect(cfg.interactions.mustCapture).toHaveLength(1);
+    // Both live label variants: PDP main button and card quick-add (design §3.1).
+    expect(cfg.interactions.mustCapture[0].test('Añadir a cesta')).toBe(true);
+    expect(cfg.interactions.mustCapture[0].test('Añadir a la cesta Short denim mini')).toBe(true);
+    expect(cfg.interactions.mustCapture[0].test('Filtrar')).toBe(false);
   });
 
   it('EXPLORER_INTERACTIONS=off disables', () => {
@@ -98,6 +105,25 @@ describe('loadExplorerConfig', () => {
   it('EXPLORER_MAX_INTERACTIONS_PER_PAGE overrides the budget', () => {
     process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE = '5';
     expect(loadExplorerConfig().interactions.maxPerPage).toBe(5);
+  });
+
+  it('EXPLORER_MUST_CAPTURE replaces the default list (semicolon-separated, case-insensitive)', () => {
+    process.env.EXPLORER_MUST_CAPTURE = '^categorías y productos; ^mercado';
+    const { mustCapture } = loadExplorerConfig().interactions;
+    expect(mustCapture).toHaveLength(2);
+    expect(mustCapture[0].test('Categorías y productos')).toBe(true);
+    expect(mustCapture[1].test('Mercado')).toBe(true);
+    expect(mustCapture.some((r) => r.test('Añadir a cesta'))).toBe(false);
+  });
+
+  it('EXPLORER_MUST_CAPTURE="" disables must-capture entirely', () => {
+    process.env.EXPLORER_MUST_CAPTURE = '';
+    expect(loadExplorerConfig().interactions.mustCapture).toEqual([]);
+  });
+
+  it('rejects an invalid EXPLORER_MUST_CAPTURE regex', () => {
+    process.env.EXPLORER_MUST_CAPTURE = '([';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_MUST_CAPTURE/);
   });
 });
 
