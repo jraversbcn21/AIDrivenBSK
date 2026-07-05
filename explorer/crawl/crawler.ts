@@ -1,11 +1,12 @@
-import type { BrowserContext } from '@playwright/test';
+import type { BrowserContext, Page } from '@playwright/test';
 import type { PageExtraction, Session } from '../types';
-import type { CrawlBounds, ExtractionMode } from '../config';
+import type { CrawlBounds, ExtractionMode, InteractionsConfig } from '../config';
 import { Frontier, type FrontierItem } from './frontier';
 import { waitForSettle, DEFAULT_SETTLE } from './settle';
 import { extractorFor } from '../extract/fromPage';
 import { normalizePath, isSameOrigin, type RouteRules } from '../url';
 import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
+import { InteractionLedger, selectCandidates, discoverInteractions, INTERACT_SETTLE, type InteractionDriver } from './interact';
 
 export interface CrawlDeps {
   context: BrowserContext;
@@ -13,6 +14,24 @@ export interface CrawlDeps {
   rules: RouteRules;
   bounds: CrawlBounds;
   extraction: ExtractionMode;
+  interactions: InteractionsConfig;
+}
+
+function playwrightDriver(page: Page, originalPath: string, baseURL: string): InteractionDriver {
+  return {
+    snapshot: () => page.locator('body').ariaSnapshot(),
+    // force: true per the DES hover-reveal precedent (SearchBar, findings §5); the
+    // act→verify→retry loop in discoverInteractions is the real reliability layer.
+    click: (role, name) => page.getByRole(role as Parameters<Page['getByRole']>[0], { name, exact: true }).first().click({ force: true }),
+    pressEscape: () => page.keyboard.press('Escape'),
+    currentPath: () => normalizePath(page.url(), baseURL),
+    recover: async () => {
+      await page.goto(originalPath, { waitUntil: 'domcontentloaded' });
+      await acceptConsent(page);
+      await waitForSettle(() => page.locator('body').ariaSnapshot(), (ms) => page.waitForTimeout(ms), INTERACT_SETTLE);
+    },
+    wait: (ms) => page.waitForTimeout(ms),
+  };
 }
 
 export interface CrawlError {
@@ -30,6 +49,7 @@ export interface CrawlResult {
 
 export async function crawlSession(deps: CrawlDeps, session: Session, seeds: string[]): Promise<CrawlResult> {
   const frontier = new Frontier(deps.rules, deps.bounds);
+  const ledger = new InteractionLedger();
   for (const seed of seeds) {
     frontier.add({ path: normalizePath(seed, deps.baseURL), session, depth: 0, discoveredVia: 'seed' });
   }
@@ -68,6 +88,19 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
         continue;
       }
       extractions.push(extraction);
+
+      if (deps.extraction === 'aria' && deps.interactions.enabled) {
+        const candidates = selectCandidates(
+          extraction.elements, extraction.meta.path, ledger, deps.interactions.maxPerPage,
+        );
+        if (candidates.length > 0) {
+          const driver = playwrightDriver(page, extraction.meta.path, deps.baseURL);
+          extraction.interactions = await discoverInteractions(driver, candidates, extraction.meta);
+          for (const it of extraction.interactions) {
+            extraction.links.push(...it.revealedLinks);
+          }
+        }
+      }
 
       for (const href of extraction.links) {
         if (!isSameOrigin(href, deps.baseURL)) continue;

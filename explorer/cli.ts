@@ -36,7 +36,7 @@ async function main(): Promise<void> {
         ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
       });
       const result = await crawlSession(
-        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction },
+        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions },
         session,
         SEEDS,
       );
