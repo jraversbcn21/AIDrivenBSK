@@ -9,6 +9,8 @@ describe('loadExplorerConfig', () => {
     delete process.env.EXPLORER_ALLOW_PROD;
     delete process.env.EXPLORER_EXTRACTION;
     delete process.env.EXPLORER_TIME_BUDGET_MS;
+    delete process.env.EXPLORER_INTERACTIONS;
+    delete process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE;
   });
   afterEach(() => { process.env = { ...saved }; });
 
@@ -71,6 +73,31 @@ describe('loadExplorerConfig', () => {
   it('rejects a non-positive time budget', () => {
     process.env.EXPLORER_TIME_BUDGET_MS = '0';
     expect(() => loadExplorerConfig()).toThrow(/EXPLORER_TIME_BUDGET_MS/);
+  });
+
+  it('defaults interactions to enabled with maxPerPage 3', () => {
+    const cfg = loadExplorerConfig();
+    expect(cfg.interactions).toEqual({ enabled: true, maxPerPage: 3 });
+  });
+
+  it('EXPLORER_INTERACTIONS=off disables', () => {
+    process.env.EXPLORER_INTERACTIONS = 'off';
+    expect(loadExplorerConfig().interactions.enabled).toBe(false);
+  });
+
+  it('EXPLORER_INTERACTIONS=on enables', () => {
+    process.env.EXPLORER_INTERACTIONS = 'on';
+    expect(loadExplorerConfig().interactions.enabled).toBe(true);
+  });
+
+  it('rejects invalid EXPLORER_INTERACTIONS', () => {
+    process.env.EXPLORER_INTERACTIONS = 'yes';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_INTERACTIONS/);
+  });
+
+  it('EXPLORER_MAX_INTERACTIONS_PER_PAGE overrides the budget', () => {
+    process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE = '5';
+    expect(loadExplorerConfig().interactions.maxPerPage).toBe(5);
   });
 });
 

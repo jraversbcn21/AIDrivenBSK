@@ -13,12 +13,18 @@ export interface LlmConfig {
   apiKeyEnv: string;
 }
 
+export interface InteractionsConfig {
+  enabled: boolean;
+  maxPerPage: number;
+}
+
 export interface ExplorerConfig {
   mode: ClassifierMode;
   extraction: ExtractionMode;
   bounds: CrawlBounds;
   llm: LlmConfig;
   autoThreshold: number;
+  interactions: InteractionsConfig;
 }
 
 const MODES: ClassifierMode[] = ['rules', 'llm', 'auto'];
@@ -30,6 +36,7 @@ const DEFAULTS: ExplorerConfig = {
   bounds: { maxPages: 200, maxDepth: 4, politenessMs: 300, timeBudgetMs: 600_000 },
   llm: { model: 'claude-haiku-4-5-20251001', apiKeyEnv: 'ANTHROPIC_API_KEY' },
   autoThreshold: 0.7,
+  interactions: { enabled: true, maxPerPage: 3 },
 };
 
 function envMode(): ClassifierMode | undefined {
@@ -48,6 +55,13 @@ function envExtraction(): ExtractionMode | undefined {
     throw new Error(`EXPLORER_EXTRACTION must be one of: ${EXTRACTIONS.join(' | ')}`);
   }
   return e as ExtractionMode;
+}
+
+function envInteractions(): boolean | undefined {
+  const v = process.env.EXPLORER_INTERACTIONS;
+  if (v === undefined) return undefined;
+  if (v !== 'on' && v !== 'off') throw new Error('EXPLORER_INTERACTIONS must be on | off');
+  return v === 'on';
 }
 
 function envPositiveNumber(name: string, fallback: number): number {
@@ -75,11 +89,16 @@ export function loadExplorerConfig(overrides: Partial<ExplorerConfig> = {}): Exp
     mode: envMode() ?? DEFAULTS.mode,
     extraction: envExtraction() ?? DEFAULTS.extraction,
     bounds: { ...DEFAULTS.bounds, maxPages, timeBudgetMs },
+    interactions: {
+      enabled: envInteractions() ?? DEFAULTS.interactions.enabled,
+      maxPerPage: envPositiveNumber('EXPLORER_MAX_INTERACTIONS_PER_PAGE', DEFAULTS.interactions.maxPerPage),
+    },
   };
   return {
     ...base,
     ...overrides,
     bounds: { ...base.bounds, ...overrides.bounds },
     llm: { ...base.llm, ...overrides.llm },
+    interactions: { ...base.interactions, ...overrides.interactions },
   };
 }
