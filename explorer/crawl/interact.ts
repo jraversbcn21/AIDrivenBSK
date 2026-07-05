@@ -58,15 +58,36 @@ export class InteractionLedger {
   }
 }
 
+function eligible(el: ExtractedElement): boolean {
+  if (!CLICKABLE_TYPES.has(el.type) || el.destructive) return false;
+  const name = el.selectorHints.role?.name;
+  return name !== undefined && name !== '';
+}
+
 export function selectCandidates(
   elements: ExtractedElement[], path: string, ledger: InteractionLedger, maxPerPage: number,
 ): ExtractedElement[] {
   const picked: ExtractedElement[] = [];
+
+  // Pass 1: unsatisfied must-capture classes, one per class per page, ahead of the
+  // extraction-order race. No ordinary claim: the class is retried on later pages
+  // until it yields an overlay — a hydration-lost click must not burn it (design §3.2).
+  const pickedClasses = new Set<string>();
   for (const el of elements) {
     if (picked.length >= maxPerPage) break;
-    if (!CLICKABLE_TYPES.has(el.type) || el.destructive) continue;
-    const name = el.selectorHints.role?.name;
-    if (name === undefined || name === '') continue;
+    if (!eligible(el)) continue;
+    const cls = ledger.mustCaptureClass(el.label);
+    if (cls === null || ledger.isSatisfied(cls) || pickedClasses.has(cls)) continue;
+    pickedClasses.add(cls);
+    picked.push(el);
+  }
+
+  // Pass 2: ordinary candidates. Must-capture-classed elements never claim here —
+  // unsatisfied ones are pass 1's job, satisfied ones are done for the crawl.
+  for (const el of elements) {
+    if (picked.length >= maxPerPage) break;
+    if (!eligible(el)) continue;
+    if (ledger.mustCaptureClass(el.label) !== null) continue;
     if (!ledger.tryClaim(el, path)) continue;
     picked.push(el);
   }

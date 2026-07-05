@@ -257,3 +257,39 @@ describe('InteractionLedger must-capture accounting', () => {
     expect(l.tryClaim(btn('Filtrar'), '/es/hombre/vestidos-n5001.html')).toBe(false);
   });
 });
+
+describe('selectCandidates must-capture priority', () => {
+  it('picks an unsatisfied must-capture candidate first regardless of element order', () => {
+    const ledger = new InteractionLedger(MUST);
+    const els = [btn('Uno'), btn('Dos'), btn('Tres'), btn('Añadir a la cesta Vestido')];
+    const picked = selectCandidates(els, '/es/shop-cart.html', ledger, 3);
+    expect(picked[0].label).toBe('Añadir a la cesta Vestido');
+    expect(picked).toHaveLength(3); // maxPerPage still respected
+  });
+
+  it('picks at most one candidate per must-capture class per page', () => {
+    const ledger = new InteractionLedger(MUST);
+    const els = [btn('Añadir a la cesta Uno'), btn('Añadir a la cesta Dos')];
+    expect(selectCandidates(els, '/es/shop-cart.html', ledger, 3)).toHaveLength(1);
+  });
+
+  it('retries the class on later pages while unsatisfied, never picks it again once satisfied', () => {
+    const ledger = new InteractionLedger(MUST);
+    // Page 1: picked, but the click was hydration-lost (`none` outcome — nothing marked satisfied).
+    expect(selectCandidates([btn('Añadir a la cesta A')], '/es/shop-cart.html', ledger, 3)).toHaveLength(1);
+    // Page 2: still unsatisfied — picked again. This retry IS the determinism guarantee (design §3.2).
+    expect(selectCandidates([btn('Añadir a la cesta B')], '/es/mujer/camisetas-n4365.html', ledger, 3)).toHaveLength(1);
+    ledger.markSatisfied('Añadir a la cesta B');
+    // Page 3: satisfied — not picked again, not even as an ordinary candidate.
+    expect(selectCandidates([btn('Añadir a la cesta C')], '/es/prod-c0p9.html', ledger, 3)).toHaveLength(0);
+  });
+
+  it('keeps the safety gates on must-capture candidates', () => {
+    const ledger = new InteractionLedger(MUST);
+    const els = [
+      btn('Añadir a la cesta X', { destructive: true }),
+      { ...btn('Añadir a la cesta Y'), type: 'link' } as ExtractedElement,
+    ];
+    expect(selectCandidates(els, '/es/shop-cart.html', ledger, 3)).toHaveLength(0);
+  });
+});
