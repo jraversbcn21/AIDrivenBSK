@@ -7,6 +7,7 @@ import { assertCrawlableEnv, loadExplorerConfig } from './config';
 import { parseArgs } from './args';
 import { DEFAULT_ROUTE_RULES } from './url';
 import { crawlSession, type CrawlError } from './crawl/crawler';
+import { InteractionLedger } from './crawl/interact';
 import { buildPageContext } from './classify/context';
 import { makeClassifier } from './classify/factory';
 import { buildMap, type ClassifiedPage } from './map/builder';
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
 
   const sessions: Session[] = args.session === 'both' ? ['anon', 'auth'] : [args.session];
   const classifier = makeClassifier(cfg);
+  const ledger = new InteractionLedger(cfg.interactions.mustCapture);
 
   const browser = await chromium.launch();
   const classified: ClassifiedPage[] = [];
@@ -36,7 +38,7 @@ async function main(): Promise<void> {
         ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
       });
       const result = await crawlSession(
-        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions },
+        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger },
         session,
         SEEDS,
       );
@@ -48,6 +50,12 @@ async function main(): Promise<void> {
     }
   } finally {
     await browser.close();
+  }
+
+  if (cfg.extraction === 'aria' && cfg.interactions.enabled) {
+    for (const src of ledger.unsatisfiedPatterns()) {
+      console.warn(`Must-capture pattern /${src}/i never produced an overlay this crawl — the map may lack its interaction (M8b design §3.2).`);
+    }
   }
 
   const map = buildMap({ classified, environment: env.name });

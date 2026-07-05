@@ -54,6 +54,13 @@ offline linkedom path. Crawls are bounded by `EXPLORER_MAX_PAGES` and `EXPLORER_
 Per-run artifacts in `reports/explorer/` have the shape `{ map, errors }`; the committed
 canonical map stays a plain functional map.
 
+Interaction discovery (`EXPLORER_INTERACTIONS=on|off`, default `on`; aria mode only) opens
+non-destructive overlays/dialogs during the crawl so the map records what they reveal.
+`EXPLORER_MUST_CAPTURE` (optional, M8b): semicolon-separated, case-insensitive regex patterns
+for trigger labels the crawl must capture deterministically — matching candidates are
+prioritized on every page until each pattern yields an overlay outcome once per crawl.
+Default: `^añadir a (la )?cesta`. Empty string disables.
+
 ## Coverage Planner
 
 Annotates the functional map with journey coverage from real execution evidence and

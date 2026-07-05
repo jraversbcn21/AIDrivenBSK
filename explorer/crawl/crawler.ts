@@ -6,7 +6,7 @@ import { waitForSettle, DEFAULT_SETTLE } from './settle';
 import { extractorFor } from '../extract/fromPage';
 import { normalizePath, isSameOrigin, type RouteRules } from '../url';
 import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
-import { InteractionLedger, selectCandidates, discoverInteractions, INTERACT_SETTLE, type InteractionDriver } from './interact';
+import { selectCandidates, discoverInteractions, INTERACT_SETTLE, type InteractionDriver, type InteractionLedger } from './interact';
 
 export interface CrawlDeps {
   context: BrowserContext;
@@ -15,6 +15,9 @@ export interface CrawlDeps {
   bounds: CrawlBounds;
   extraction: ExtractionMode;
   interactions: InteractionsConfig;
+  /** Per-crawl-global, shared by both sessions (M8b fix a): chrome dedupe and
+   *  must-capture satisfaction span the whole crawl, not one session. */
+  ledger: InteractionLedger;
 }
 
 function playwrightDriver(page: Page, originalPath: string, baseURL: string): InteractionDriver {
@@ -49,7 +52,6 @@ export interface CrawlResult {
 
 export async function crawlSession(deps: CrawlDeps, session: Session, seeds: string[]): Promise<CrawlResult> {
   const frontier = new Frontier(deps.rules, deps.bounds);
-  const ledger = new InteractionLedger();
   for (const seed of seeds) {
     frontier.add({ path: normalizePath(seed, deps.baseURL), session, depth: 0, discoveredVia: 'seed' });
   }
@@ -91,12 +93,15 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
 
       if (deps.extraction === 'aria' && deps.interactions.enabled) {
         const candidates = selectCandidates(
-          extraction.elements, extraction.meta.path, ledger, deps.interactions.maxPerPage,
+          extraction.elements, extraction.meta.path, deps.ledger, deps.interactions.maxPerPage,
         );
         if (candidates.length > 0) {
           const driver = playwrightDriver(page, extraction.meta.path, deps.baseURL);
           extraction.interactions = await discoverInteractions(driver, candidates, extraction.meta);
           for (const it of extraction.interactions) {
+            // Only an overlay capture satisfies a must-capture class — `none`/`navigated`
+            // leave it retryable on later pages (design §3.2).
+            if (it.outcome === 'overlay') deps.ledger.markSatisfied(it.trigger.label);
             extraction.links.push(...it.revealedLinks);
           }
         }
