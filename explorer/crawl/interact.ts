@@ -1,4 +1,5 @@
 import type { ExtractedElement } from '../types';
+import type { AriaNode } from '../extract/aria';
 import { routePattern } from '../url';
 
 const CLICKABLE_TYPES = new Set(['button', 'filter', 'sort']);
@@ -29,4 +30,30 @@ export function selectCandidates(
     picked.push(el);
   }
   return picked;
+}
+
+/** Overlay nodes (role dialog|menu, keyed role+name) present in `after` but not `before`.
+ *  DES overlays are dialogs (Tallas, filter drawer, mobile-nav — findings §5/§7); menu
+ *  covers plain dropdowns. Deliberately NOT a generic tree diff (spec §3). */
+export function newOverlayNodes(before: AriaNode[], after: AriaNode[]): AriaNode[] {
+  const OVERLAY_ROLES = new Set(['dialog', 'menu']);
+  const overlaySig = (n: AriaNode): string => `${n.role}|${n.name ?? ''}`;
+
+  const seen = new Set<string>();
+  const collectBefore = (n: AriaNode): void => {
+    if (OVERLAY_ROLES.has(n.role)) seen.add(overlaySig(n));
+    n.children.forEach(collectBefore);
+  };
+  before.forEach(collectBefore);
+
+  const found: AriaNode[] = [];
+  const collectAfter = (n: AriaNode): void => {
+    if (OVERLAY_ROLES.has(n.role) && !seen.has(overlaySig(n))) {
+      found.push(n);
+      return; // the whole subtree belongs to this overlay
+    }
+    n.children.forEach(collectAfter);
+  };
+  after.forEach(collectAfter);
+  return found;
 }
