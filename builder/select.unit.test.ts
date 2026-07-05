@@ -24,6 +24,7 @@ const map: FunctionalMap = {
     { id: 'e3', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'quick-add' } }, destructive: false },
   ],
   flows: [],
+  interactions: [],
 };
 
 const report = (steps: string[][], names?: string[]): PlanReport => ({

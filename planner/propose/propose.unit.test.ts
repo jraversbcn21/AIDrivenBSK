@@ -8,7 +8,7 @@ const flow = (id: string, priority: MapFlow['priority'], steps: string[], covere
 
 const map: FunctionalMap = {
   schemaVersion: '1.2', generatedAt: '2026-07-02T18:00:00Z', environment: 'des',
-  pages: [], components: [], elements: [], forms: [],
+  pages: [], components: [], elements: [], forms: [], interactions: [],
   flows: [
     flow('covered-high', 'high', ['a', 'b'], ['tests/x.spec.ts']),
     flow('deep-high', 'high', ['a', 'b', 'c'], []),

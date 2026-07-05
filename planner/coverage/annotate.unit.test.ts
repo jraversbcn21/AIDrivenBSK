@@ -18,6 +18,7 @@ const map: FunctionalMap = {
     { id: 'fCart2', name: '/ -> /es/shop-cart.html', type: 'Cart', session: 'auth', priority: 'high', steps: ['pA2', 'pB2'] },
     { id: 'fWish', name: '/es/wishlist.html', type: 'Wishlist', session: 'anon', priority: 'high', steps: ['pC'] },
   ],
+  interactions: [],
 };
 
 const evidence: RouteEvidence = {
@@ -34,7 +35,7 @@ describe('annotateCoverage', () => {
   const out = annotateCoverage(map, evidence);
 
   it('bumps schemaVersion and leaves the input untouched', () => {
-    expect(out.schemaVersion).toBe('1.4');
+    expect(out.schemaVersion).toBe('1.5');
     expect(map.flows[0].coveredBy).toBeUndefined(); // pure: input not mutated
   });
   it('covers a flow when its step patterns are an ordered subsequence of a PASSED test', () => {

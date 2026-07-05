@@ -24,7 +24,7 @@ describe('buildMap', () => {
   it('produces a schema-versioned map with stable, deterministic ids', () => {
     const a = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
-    expect(a.schemaVersion).toBe('1.4');
+    expect(a.schemaVersion).toBe('1.5');
     expect(a.pages[0].pageType).toBe('PDP');
     expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic
@@ -84,5 +84,42 @@ describe('buildMap', () => {
     const m = buildMap({ classified, environment: 'des' });
     expect(m.elements.find((e) => e.label === 'Buscar en tienda')?.component).toBe('Header');
     expect(m.elements.find((e) => e.label === 'Añadir a la cesta')?.component).toBeUndefined();
+  });
+
+  it('emits interactions and revealed elements with revealedBy back-references', () => {
+    const base = page('/es/prod-c0p1.html', 'seed');
+    const ex: PageExtraction = { ...base, meta: { ...base.meta, session: 'auth' } };
+    ex.elements.push({
+      type: 'button', label: 'Añadir a cesta', role: 'button',
+      selectorHints: { role: { type: 'button', name: 'Añadir a cesta' } }, destructive: false,
+    });
+    ex.interactions = [{
+      trigger: { role: 'button', label: 'Añadir a cesta', type: 'button' },
+      outcome: 'overlay',
+      revealedElements: [{
+        type: 'button', label: 'Talla S', role: 'button',
+        selectorHints: { role: { type: 'button', name: 'Talla S' } }, destructive: false,
+      }],
+      revealedLinks: [],
+    }];
+
+    const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PDP', confidence: 1 } }], environment: 'des' });
+
+    expect(m.schemaVersion).toBe('1.5');
+    expect(m.interactions).toHaveLength(1);
+    const inter = m.interactions[0];
+    const mapPage = m.pages[0];
+    const trigger = m.elements.find((e) => e.label === 'Añadir a cesta');
+    expect(inter.pageId).toBe(mapPage.id);
+    expect(inter.triggerElementId).toBe(trigger?.id);
+    expect(inter.outcome).toBe('overlay');
+    const revealed = m.elements.find((e) => e.label === 'Talla S');
+    expect(revealed?.revealedBy).toBe(inter.id);
+    expect(inter.revealedElementIds).toEqual([revealed?.id]);
+  });
+
+  it('interactions[] is always present (empty when no extraction has any)', () => {
+    const m = buildMap({ classified: [], environment: 'des' });
+    expect(m.interactions).toEqual([]);
   });
 });

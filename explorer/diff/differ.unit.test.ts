@@ -8,7 +8,7 @@ const page = (id: string, pageType: MapPage['pageType']): MapPage => ({
 
 const map = (pages: MapPage[]): FunctionalMap => ({
   schemaVersion: '1.0', generatedAt: 'x', environment: 'des',
-  pages, components: [], elements: [], forms: [], flows: [],
+  pages, components: [], elements: [], forms: [], flows: [], interactions: [],
 });
 
 describe('diffMaps', () => {

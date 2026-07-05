@@ -49,4 +49,15 @@ export interface PageExtraction {
   elements: ExtractedElement[];
   forms: ExtractedForm[];
   componentKinds: ComponentKind[];
+  interactions?: ExtractedInteraction[]; // optional — analyzers never set it; the crawler attaches it
+}
+
+export type InteractionOutcome = 'overlay' | 'navigated' | 'none';
+
+export interface ExtractedInteraction {
+  trigger: { role: string; label: string; type: ElementType };
+  outcome: InteractionOutcome;
+  revealedElements: ExtractedElement[]; // empty unless outcome === 'overlay'
+  revealedLinks: string[];              // empty unless outcome === 'overlay'
+  navigatedTo?: string;                 // normalized path; only when outcome === 'navigated'
 }

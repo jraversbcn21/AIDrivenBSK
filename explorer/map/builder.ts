@@ -2,7 +2,7 @@ import type { PageExtraction } from '../types';
 import type { Classification } from '../classify/Classifier';
 import {
   SCHEMA_VERSION, type FunctionalMap, type MapPage, type MapComponent,
-  type MapElement, type MapForm, type MapFlow, type PageType, type Priority,
+  type MapElement, type MapForm, type MapFlow, type MapInteraction, type PageType, type Priority,
 } from './schema';
 import { makeId } from '../ids';
 import { routePattern } from '../url';
@@ -34,6 +34,7 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
   const elements: MapElement[] = [];
   const forms: MapForm[] = [];
   const flows: MapFlow[] = [];
+  const interactions: MapInteraction[] = [];
   const componentsByKey = new Map<string, MapComponent>();
   // session:path -> chain node, for reconstructing each page's discoveredVia chain (design
   // spec 2026-07-02-flow-synthesis-design.md).
@@ -56,6 +57,28 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
       };
       if (el.component !== undefined) mapEl.component = el.component;
       elements.push(mapEl);
+    });
+
+    (ex.interactions ?? []).forEach((it) => {
+      const triggerElementId = makeId('elem', pageId, it.trigger.role, it.trigger.label, it.trigger.type);
+      const interactionId = makeId('inter', pageId, triggerElementId);
+      const revealedElementIds: string[] = [];
+      it.revealedElements.forEach((el) => {
+        const mapEl: MapElement = {
+          id: makeId('elem', interactionId, el.role, el.label, el.type),
+          pageId, type: el.type, label: el.label, role: el.role,
+          selectorHints: el.selectorHints, destructive: el.destructive,
+          revealedBy: interactionId,
+        };
+        if (el.component !== undefined) mapEl.component = el.component;
+        elements.push(mapEl);
+        revealedElementIds.push(mapEl.id);
+      });
+      const interaction: MapInteraction = {
+        id: interactionId, pageId, triggerElementId, outcome: it.outcome, revealedElementIds,
+      };
+      if (it.navigatedTo !== undefined) interaction.navigatedTo = it.navigatedTo;
+      interactions.push(interaction);
     });
 
     ex.forms.forEach((f, i) => {
@@ -102,6 +125,6 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
     schemaVersion: SCHEMA_VERSION,
     generatedAt: input.now ?? new Date().toISOString(),
     environment: input.environment,
-    pages, components: [...componentsByKey.values()], elements, forms, flows,
+    pages, components: [...componentsByKey.values()], elements, forms, flows, interactions,
   };
 }
