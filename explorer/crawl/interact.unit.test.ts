@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { InteractionLedger, selectCandidates, newOverlayNodes, discoverInteractions } from './interact';
+import {
+  InteractionLedger, selectCandidates, newOverlayNodes, discoverInteractions, labelClass, interactionScope,
+} from './interact';
 import type { ExtractedElement, PageMeta } from '../types';
 import type { InteractionDriver } from './interact';
 import { parseAriaSnapshot } from '../extract/aria';
@@ -188,5 +190,70 @@ describe('discoverInteractions', () => {
     expect(d.calls).toContain('recover'); // recovery was attempted, it just didn't restore the path
     expect(out).toHaveLength(0);
     expect(d.calls.filter((c) => c.startsWith('click:'))).toEqual(['click:Roto']);
+  });
+});
+
+const MUST = [/^añadir a (la )?cesta/i];
+
+describe('labelClass', () => {
+  it('collapses matching labels into the pattern class', () => {
+    expect(labelClass('Añadir a la cesta Short denim mini', MUST)).toBe(MUST[0].source);
+    expect(labelClass('Añadir a cesta', MUST)).toBe(MUST[0].source);
+  });
+
+  it('returns the label itself when nothing matches', () => {
+    expect(labelClass('Filtrar', MUST)).toBe('Filtrar');
+  });
+
+  it('first matching pattern wins', () => {
+    const two = [/^añadir/i, /cesta/i];
+    expect(labelClass('Añadir a cesta', two)).toBe(two[0].source);
+  });
+});
+
+describe('interactionScope', () => {
+  it('collapses all category PLPs into one shared scope', () => {
+    expect(interactionScope('/es/mujer/ropa/camisetas-n4365.html')).toBe('-n{id}.html');
+    expect(interactionScope('/es/hombre/ropa/vestidos-n5001.html')).toBe('-n{id}.html');
+  });
+
+  it('keeps routePattern behavior for non-category paths', () => {
+    expect(interactionScope('/es/prod-c0p123.html')).toBe('/es/prod-c0p{id}.html');
+    expect(interactionScope('/es/shop-cart.html')).toBe('/es/shop-cart.html');
+  });
+});
+
+describe('InteractionLedger must-capture accounting', () => {
+  it('classifies must-capture labels and tracks satisfaction by class', () => {
+    const l = new InteractionLedger(MUST);
+    const cls = l.mustCaptureClass('Añadir a la cesta Vestido corsé');
+    expect(cls).toBe(MUST[0].source);
+    expect(l.isSatisfied(cls as string)).toBe(false);
+    l.markSatisfied('Añadir a la cesta Short denim mini'); // different product, same class
+    expect(l.isSatisfied(cls as string)).toBe(true);
+    expect(l.unsatisfiedPatterns()).toEqual([]);
+  });
+
+  it('markSatisfied is a no-op for non-must-capture labels', () => {
+    const l = new InteractionLedger(MUST);
+    l.markSatisfied('Filtrar');
+    expect(l.unsatisfiedPatterns()).toEqual([MUST[0].source]);
+  });
+
+  it('mustCaptureClass returns null with an empty pattern list', () => {
+    const l = new InteractionLedger();
+    expect(l.mustCaptureClass('Añadir a cesta')).toBeNull();
+  });
+
+  it('tryClaim collapses per-product label variants via labelClass', () => {
+    const l = new InteractionLedger(MUST);
+    expect(l.tryClaim(btn('Añadir a la cesta Uno'), '/es/shop-cart.html')).toBe(true);
+    expect(l.tryClaim(btn('Añadir a la cesta Dos'), '/es/shop-cart.html')).toBe(false);
+  });
+
+  it('tryClaim dedupes ordinary candidates across all category PLPs', () => {
+    const l = new InteractionLedger();
+    expect(l.tryClaim(btn('Filtrar'), '/es/mujer/camisetas-n4365.html')).toBe(true);
+    expect(l.tryClaim(btn('Filtrar'), '/es/hombre/vestidos-n5001.html')).toBe(false);
   });
 });

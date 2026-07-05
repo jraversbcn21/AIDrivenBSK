@@ -7,12 +7,51 @@ import { analyzeAriaNodes } from '../extract/analyzeAria';
 const CLICKABLE_TYPES = new Set(['button', 'filter', 'sort']);
 const CHROME = new Set(['Header', 'Footer', 'MiniCart']);
 
+/** Canonical equivalence class for a label: the source of the first matching pattern,
+ *  or the label itself. "Añadir a la cesta Short denim mini" and "Añadir a la cesta
+ *  Vestido corsé" collapse into one class (design 2026-07-05-m8b §3.1). */
+export function labelClass(label: string, patterns: RegExp[]): string {
+  const p = patterns.find((r) => r.test(label));
+  return p !== undefined ? p.source : label;
+}
+
+/** Ledger-only scope: routePattern plus all category PLPs (`...-n{digits}.html`)
+ *  collapsed into one shared scope. Deliberately NOT routePattern itself — that
+ *  feeds the map schema and the differ (design §3.3). */
+export function interactionScope(path: string): string {
+  const p = routePattern(path);
+  return /-n\d+\.html$/i.test(p) ? '-n{id}.html' : p;
+}
+
 export class InteractionLedger {
   private readonly claimed = new Set<string>();
+  private readonly satisfied = new Set<string>();
+
+  constructor(private readonly mustCapture: RegExp[] = []) {}
+
+  /** The pattern class for a must-capture label, or null if no pattern matches. */
+  mustCaptureClass(label: string): string | null {
+    const p = this.mustCapture.find((r) => r.test(label));
+    return p !== undefined ? p.source : null;
+  }
+
+  isSatisfied(cls: string): boolean {
+    return this.satisfied.has(cls);
+  }
+
+  /** Call with an interaction trigger's label when its outcome was `overlay`. */
+  markSatisfied(label: string): void {
+    const cls = this.mustCaptureClass(label);
+    if (cls !== null) this.satisfied.add(cls);
+  }
+
+  unsatisfiedPatterns(): string[] {
+    return this.mustCapture.filter((r) => !this.satisfied.has(r.source)).map((r) => r.source);
+  }
 
   tryClaim(el: ExtractedElement, path: string): boolean {
-    const scope = el.component !== undefined && CHROME.has(el.component) ? 'chrome' : routePattern(path);
-    const key = `${scope}|${el.role}|${el.label}`;
+    const scope = el.component !== undefined && CHROME.has(el.component) ? 'chrome' : interactionScope(path);
+    const key = `${scope}|${el.role}|${labelClass(el.label, this.mustCapture)}`;
     if (this.claimed.has(key)) return false;
     this.claimed.add(key);
     return true;
