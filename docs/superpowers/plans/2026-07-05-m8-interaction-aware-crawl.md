@@ -299,8 +299,10 @@ describe('selectCandidates', () => {
 
   it('dedupes page-specific triggers by routePattern across pages', () => {
     const ledger = new InteractionLedger();
+    // Both normalize to the same routePattern ('/es/a-c0p{id}.html') — same equivalence class.
     expect(selectCandidates([btn('Añadir a cesta')], '/es/a-c0p1.html', ledger, 3)).toHaveLength(1);
-    expect(selectCandidates([btn('Añadir a cesta')], '/es/b-c0p2.html', ledger, 3)).toHaveLength(0);
+    expect(selectCandidates([btn('Añadir a cesta')], '/es/a-c0p2.html', ledger, 3)).toHaveLength(0);
+    // Different routePattern entirely — not deduped against the c0p class.
     expect(selectCandidates([btn('Añadir a cesta')], '/es/mujer/ropa.html', ledger, 3)).toHaveLength(1);
   });
 
