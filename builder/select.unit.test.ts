@@ -137,4 +137,21 @@ describe('selectJourneys', () => {
     const r = selectJourneys(report([['pRoot', 'pPlp']]), allSharedMap, 5);
     expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Buscar en tienda' } });
   });
+
+  it('excludes revealed elements from loaded-signal selection (M8 guard)', () => {
+    // A revealed element (only exists after an interaction, e.g. a size button inside the
+    // "Tallas" dialog) comes first in element order and has a strong role hint — under the
+    // old logic it would win. It must never be picked: asserting it in isLoaded() would
+    // always time out on a freshly-loaded page (the exact failure mode B14/M7 closed).
+    const revealedMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'e1', pageId: 'pPlp', type: 'button', label: 'Talla S', role: 'button', selectorHints: { role: { type: 'button', name: 'Talla S' } }, destructive: false, revealedBy: 'inter_x' },
+        { id: 'e2', pageId: 'pPlp', type: 'button', label: 'Añadir a la lista', role: 'button', selectorHints: { role: { type: 'button', name: 'Añadir a la lista' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), revealedMap, 5);
+    expect(r.journeys[0].loadedSignal).not.toEqual({ role: { type: 'button', name: 'Talla S' } });
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Añadir a la lista' } });
+  });
 });

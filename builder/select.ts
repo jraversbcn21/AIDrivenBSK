@@ -44,7 +44,9 @@ const SHARED_COMPONENTS = new Set<string>(['Header', 'Footer', 'MiniCart']);
  *  Deterministic: map element order within each pass. testId is trustworthy again
  *  since M7 (attribute provenance — design spec 2026-07-03-testid-attribute-fix-design.md). */
 function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
-  const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive);
+  // Revealed elements (M8) only exist after an interaction — asserting one in isLoaded()
+  // would always time out on a freshly-loaded page (the exact failure mode B14/M7 closed).
+  const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive && e.revealedBy === undefined);
   const specific = candidates.filter((e) => e.component === undefined || !SHARED_COMPONENTS.has(e.component));
   const shared = candidates.filter((e) => e.component !== undefined && SHARED_COMPONENTS.has(e.component));
   for (const pass of [specific, shared]) {
