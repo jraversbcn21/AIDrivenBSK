@@ -85,8 +85,12 @@ export const MAX_CLOSE_ATTEMPTS = 3;
  * `MAX_CLICK_ATTEMPTS` clicks — a lost hydration click and a genuine no-op look identical from
  * outside, so this is a bounded give-up, not a claim the element does nothing).
  *
- * A driver exception on one candidate (e.g. the click throws) skips just that candidate —
- * logged via `console.warn` — so one bad element doesn't abort discovery for the rest of the page.
+ * A driver exception on one candidate (e.g. the click throws, or `snapshot()` throws mid-protocol
+ * with a navigation in flight) skips just that candidate — logged via `console.warn` — so one bad
+ * element doesn't abort discovery for the rest of the page. Before moving on, the page state is
+ * recovered if the exception left it on a foreign path: if recovery succeeds, the next candidate
+ * proceeds normally; if recovery fails (or itself throws), remaining candidates for this page are
+ * aborted, mirroring the `navigated`-outcome recovery-failure semantics above.
  */
 export async function discoverInteractions(
   driver: InteractionDriver,
@@ -150,6 +154,15 @@ export async function discoverInteractions(
       }
     } catch (err) {
       console.warn(`interaction skipped on ${meta.path} ("${el.label}"): ${String(err)}`);
+      // Recover page state so the next candidate starts from the original page —
+      // an exception mid-protocol can leave the page navigated away or with an
+      // overlay still open (final-review finding; design spec §9.4's stray-overlay lead).
+      try {
+        if (driver.currentPath() !== meta.path) await driver.recover();
+        if (driver.currentPath() !== meta.path) return results; // recovery failed — abort page
+      } catch {
+        return results; // recovery itself threw — abort remaining candidates for this page
+      }
     }
   }
   return results;

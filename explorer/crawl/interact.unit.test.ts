@@ -143,4 +143,50 @@ describe('discoverInteractions', () => {
     expect(out).toHaveLength(1);
     expect(out[0].outcome).toBe('overlay');
   });
+
+  it('recovers page state when a candidate throws mid-protocol after navigating away, then continues with the next candidate', async () => {
+    // 'Roto' click flips the page to a foreign path and the *next* snapshot() call throws
+    // (mirrors "execution context destroyed" firing while a click-triggered navigation is
+    // in flight). The catch block must recover the page before moving on to 'Sano'.
+    let path = META.path;
+    const d = fakeDriver([], { path: () => path });
+    d.snapshot = async () => {
+      d.calls.push('snapshot');
+      if (path !== META.path) throw new Error('execution context destroyed');
+      return D_BASE;
+    };
+    d.click = async (_r, n) => {
+      d.calls.push(`click:${n}`);
+      if (n === 'Roto') path = '/es/otra.html';
+    };
+    d.recover = async () => { d.calls.push('recover'); path = META.path; };
+
+    const out = await discoverInteractions(d, [btn('Roto'), btn('Sano')], META);
+
+    expect(d.calls).toContain('recover');
+    expect(d.calls).toContain('click:Sano');
+    expect(out).toHaveLength(1); // only 'Sano' produced an outcome ('Roto' threw, no result recorded)
+    expect(out[0].outcome).toBe('none');
+  });
+
+  it('aborts remaining candidates when recovery after a mid-protocol exception fails to restore the path', async () => {
+    let path = META.path;
+    const d = fakeDriver([], { path: () => path });
+    d.snapshot = async () => {
+      d.calls.push('snapshot');
+      if (path !== META.path) throw new Error('execution context destroyed');
+      return D_BASE;
+    };
+    d.click = async (_r, n) => {
+      d.calls.push(`click:${n}`);
+      if (n === 'Roto') path = '/es/otra.html';
+    };
+    d.recover = async () => { d.calls.push('recover'); }; // path stays wrong — recovery fails
+
+    const out = await discoverInteractions(d, [btn('Roto'), btn('Sano')], META);
+
+    expect(d.calls).toContain('recover'); // recovery was attempted, it just didn't restore the path
+    expect(out).toHaveLength(0);
+    expect(d.calls.filter((c) => c.startsWith('click:'))).toEqual(['click:Roto']);
+  });
 });
