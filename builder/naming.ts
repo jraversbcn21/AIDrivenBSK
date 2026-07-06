@@ -15,22 +15,38 @@ function nonLocaleSegments(routePattern: string): string[] {
     .map((seg) => seg.replace(/\.html?$/i, '').replace(/\{id\}/g, ''));
 }
 
-function flowSuffix(flowId: string): string {
-  return flowId.replace(/^flow_/, '').slice(0, 8).toUpperCase();
+function idSuffix(id: string): string {
+  return id.replace(/^(flow|inter)_/, '').slice(0, 8).toUpperCase();
 }
 
 export function classNameFor(routePattern: string, flowId: string): string {
   const ws = words(nonLocaleSegments(routePattern).join('-'));
   const base = ws.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
-  return `${base || 'Home'}Page${flowSuffix(flowId)}`;
+  return `${base || 'Home'}Page${idSuffix(flowId)}`;
 }
 
 export function specFileNameFor(routePattern: string, flowId: string): string {
   const segments = nonLocaleSegments(routePattern);
   const slug = words(segments[segments.length - 1] ?? '').join('-') || 'home';
-  return `${slug}-${flowId.replace(/^flow_/, '').slice(0, 8)}.spec.ts`;
+  return `${slug}-${idSuffix(flowId).toLowerCase()}.spec.ts`;
 }
 
 export function pageFileNameFor(routePattern: string, flowId: string): string {
   return `${classNameFor(routePattern, flowId)}.ts`;
+}
+
+export function interactionClassNameFor(routePattern: string, interactionId: string): string {
+  const ws = words(nonLocaleSegments(routePattern).join('-'));
+  const base = ws.map((w) => w[0].toUpperCase() + w.slice(1)).join('');
+  return `${base || 'Home'}Interaction${idSuffix(interactionId)}`;
+}
+
+export function interactionSpecFileNameFor(routePattern: string, interactionId: string): string {
+  const segments = nonLocaleSegments(routePattern);
+  const slug = words(segments[segments.length - 1] ?? '').join('-') || 'home';
+  return `interaction-${slug}-${idSuffix(interactionId).toLowerCase()}.spec.ts`;
+}
+
+export function interactionPageFileNameFor(routePattern: string, interactionId: string): string {
+  return `${interactionClassNameFor(routePattern, interactionId)}.ts`;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classNameFor, specFileNameFor, pageFileNameFor } from './naming';
+import { classNameFor, specFileNameFor, pageFileNameFor, interactionClassNameFor, interactionSpecFileNameFor, interactionPageFileNameFor } from './naming';
 
 describe('classNameFor', () => {
   it('PascalCases all non-locale segments and appends Page plus the flowId suffix', () => {
@@ -47,5 +47,23 @@ describe('pageFileNameFor', () => {
     const a = pageFileNameFor('/es/blusa-x-c0p{id}.html', 'flow_aaaaaaaaaaaa');
     const b = pageFileNameFor('/es/blusa-x-c0p{id}.html', 'flow_bbbbbbbbbbbb');
     expect(a).not.toBe(b);
+  });
+});
+
+describe('interaction naming', () => {
+  it('builds the class name with an Interaction suffix and the interaction-id tail', () => {
+    expect(interactionClassNameFor('/es/mujer/ropa/rebajas-n5303.html', 'inter_f05b1c4b0668'))
+      .toBe('MujerRopaRebajasN5303InteractionF05B1C4B');
+  });
+  it('prefixes the spec filename with interaction- so it never collides with the navigation spec', () => {
+    expect(interactionSpecFileNameFor('/es/mujer/ropa/rebajas-n5303.html', 'inter_f05b1c4b0668'))
+      .toBe('interaction-rebajas-n5303-f05b1c4b.spec.ts');
+  });
+  it('derives the page object filename from the class name', () => {
+    expect(interactionPageFileNameFor('/es/mujer/ropa/rebajas-n5303.html', 'inter_f05b1c4b0668'))
+      .toBe('MujerRopaRebajasN5303InteractionF05B1C4B.ts');
+  });
+  it('falls back to Home for a bare root pattern', () => {
+    expect(interactionClassNameFor('/', 'inter_0011223344')).toBe('HomeInteraction00112233');
   });
 });
