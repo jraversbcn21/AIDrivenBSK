@@ -37,4 +37,5 @@ export interface GeneratedFile {
  *  templates today, an LLM-backed implementation can plug in without CLI changes. */
 export interface Generator {
   generate(input: JourneyInput): GeneratedFile[];
+  generateInteraction(input: InteractionJourneyInput): GeneratedFile[];
 }

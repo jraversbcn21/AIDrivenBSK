@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TemplateGenerator } from './TemplateGenerator';
-import type { JourneyInput } from './Generator';
+import type { JourneyInput, InteractionJourneyInput } from './Generator';
 
 const input: JourneyInput = {
   flowId: 'flow_a1b2c3d4e5f6',
@@ -61,5 +61,70 @@ describe('TemplateGenerator', () => {
     const [p] = g.generate({ ...input, loadedSignal: { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } } });
     expect(p.content).toContain("locate(this.page, { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } })");
     expect(p.content).toContain("import { locate }");
+  });
+});
+
+// NOTE: the brief's relPath literal for the spec file was `interaction-rebajas-n-id-f05b1c4b.spec.ts`;
+// hand-computed against the actual (already-committed) builder/naming.ts implementation, the real value
+// is `interaction-rebajas-n-f05b1c4b.spec.ts` (nonLocaleSegments strips the literal `{id}` substring
+// before the last segment is slugged, so no stray "id" token survives). The page-file literal in the
+// brief was already correct and is used verbatim.
+const interactionInput: InteractionJourneyInput = {
+  flowId: 'flow_94d821294512',
+  interactionId: 'inter_f05b1c4b0668',
+  journeyName: '/ -> /es/mujer/ropa/rebajas-n5303.html => overlay "Añadir a la cesta"',
+  session: 'anon',
+  chain: [
+    { path: '/', routePattern: '/', title: 'Home' },
+    { path: '/es/mujer/ropa/rebajas-n5303.html', routePattern: '/es/mujer/ropa/rebajas-n{id}.html', title: 'Rebajas' },
+  ],
+  loadedSignal: { role: { type: 'button', name: 'Filtrar' } },
+  mapGeneratedAt: '2026-07-05T00:00:00Z',
+  trigger: { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } },
+  triggerLabel: 'Añadir a la cesta Pantalón bombacho',
+  overlayIsDialog: true,
+  overlayElementSignal: null,
+};
+
+describe('TemplateGenerator.generateInteraction', () => {
+  const files = new TemplateGenerator().generateInteraction(interactionInput);
+  const page = files.find((f) => f.relPath.startsWith('pages/'))!;
+  const spec = files.find((f) => !f.relPath.startsWith('pages/'))!;
+
+  it('emits an interaction-prefixed spec and an Interaction-suffixed page object', () => {
+    expect(spec.relPath).toBe('interaction-rebajas-n-f05b1c4b.spec.ts');
+    expect(page.relPath).toBe('pages/MujerRopaRebajasNInteractionF05B1C4B.ts');
+  });
+  it('clicks the trigger with .first() (repeated-grid semantics) inside an act->verify->retry loop', () => {
+    expect(page.content).toContain(".first().click()");
+    expect(page.content).toContain('dismissOnboardingTour');
+    expect(page.content).toContain('Date.now() + 20_000');
+  });
+  it('asserts overlay-open via a name-less dialog role when overlayIsDialog', () => {
+    expect(page.content).toContain("this.page.getByRole('dialog').isVisible()");
+    expect(page.content).not.toContain("getByRole('dialog', {"); // no name — product-variable
+  });
+  it('falls back to the revealed-element signal when the overlay is not a dialog', () => {
+    const alt = new TemplateGenerator().generateInteraction({
+      ...interactionInput,
+      overlayIsDialog: false,
+      overlayElementSignal: { role: { type: 'button', name: 'Descartar' } },
+    });
+    const altPage = alt.find((f) => f.relPath.startsWith('pages/'))!;
+    expect(altPage.content).toContain("locate(this.page, { role: { type: 'button', name: 'Descartar' } }).first().isVisible()");
+  });
+  it('closes via Escape with verify-retry and stamps the interaction header', () => {
+    expect(page.content).toContain("keyboard.press('Escape')");
+    expect(page.content).toContain('GENERATED from interaction inter_f05b1c4b0668');
+  });
+  it('spec walks open -> isLoaded -> openOverlay -> open-poll -> closeOverlay -> closed-poll', () => {
+    expect(spec.content).toContain("test('interaction:");
+    const order = ['await target.open()', 'target.isLoaded()', 'await target.openOverlay()', 'target.isOverlayOpen(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true)', 'await target.closeOverlay()', 'target.isOverlayOpen(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(false)'];
+    let last = -1;
+    for (const piece of order) {
+      const idx = spec.content.indexOf(piece);
+      expect(idx, piece).toBeGreaterThan(last);
+      last = idx;
+    }
   });
 });
