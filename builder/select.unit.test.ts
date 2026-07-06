@@ -154,4 +154,42 @@ describe('selectJourneys', () => {
     expect(r.journeys[0].loadedSignal).not.toEqual({ role: { type: 'button', name: 'Talla S' } });
     expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Añadir a la lista' } });
   });
+
+  it('B16: a testId repeated on the same page is not eligible as loaded-signal; the element falls to its role hint', () => {
+    const gridMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'g1', pageId: 'pPlp', type: 'button', label: 'Guardar 1', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'productItemWishlist' }, role: { type: 'button', name: 'Guardar en lista' } }, destructive: false },
+        { id: 'g2', pageId: 'pPlp', type: 'button', label: 'Guardar 2', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'productItemWishlist' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), gridMap, 5);
+    // The repeated testId (x2 on pPlp) is skipped; g1's own role hint wins in the role tier.
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Guardar en lista' } });
+  });
+  it('B16: a unique testId still wins over any role hint', () => {
+    const uniqueMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'u1', pageId: 'pPlp', type: 'button', label: 'Filtrar', role: 'button', selectorHints: { role: { type: 'button', name: 'Filtrar' } }, destructive: false },
+        { id: 'u2', pageId: 'pPlp', type: 'button', label: 'Añadir', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), uniqueMap, 5);
+    expect(r.journeys[0].loadedSignal).toEqual({ testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } });
+  });
+  it('B16: the repeat count includes revealed/destructive instances (page-wide), not just candidates', () => {
+    const mixedMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'm1', pageId: 'pPlp', type: 'button', label: 'Guardar', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'productItemWishlist' } }, destructive: false },
+        { id: 'm2', pageId: 'pPlp', type: 'button', label: 'Guardar (revelado)', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'productItemWishlist' } }, destructive: false, revealedBy: 'inter_x' },
+        { id: 'm3', pageId: 'pPlp', type: 'filter', label: 'Filtrar', role: 'button', selectorHints: { role: { type: 'button', name: 'Filtrar' } }, destructive: false },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), mixedMap, 5);
+    // m1's testId is unique among *candidates* but repeated page-wide — a strict-mode
+    // violation live resolves against the DOM, not against our candidate filter.
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
+  });
 });

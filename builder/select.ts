@@ -1,7 +1,7 @@
 import type { FunctionalMap, MapPage } from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
 import type { SelectorHints } from '../explorer/types';
-import type { Strategy } from '../src/support/locators';
+import type { Strategy, TestIdHint } from '../src/support/locators';
 import type { JourneyInput } from './generate/Generator';
 
 // Route-based on purpose: the map's pageType 'Checkout' labels are unreliable (backlog B13),
@@ -33,6 +33,22 @@ function toStrategy(hints: SelectorHints): Strategy | null {
   return null;
 }
 
+type Tier = 'testId' | 'role' | 'label';
+
+// Tier-aware sibling of toStrategy: yields the strategy for one specific tier, so an
+// element whose testId is disqualified (B16) can still contribute its role/label hint
+// in a later tier — deprioritize, not exclude (B14 precedent).
+function strategyForTier(hints: SelectorHints, tier: Tier): Strategy | null {
+  if (tier === 'testId' && hints.testId !== undefined && typeof hints.testId === 'object' && hints.testId !== null) {
+    return { testId: hints.testId };
+  }
+  if (tier === 'role' && hints.role !== undefined && hints.role.name !== '') {
+    return { role: { type: hints.role.type as NonNullable<Strategy['role']>['type'], name: hints.role.name } };
+  }
+  if (tier === 'label' && hints.label !== undefined) return { label: hints.label };
+  return null;
+}
+
 // Shared chrome (Header/Footer/MiniCart) proves the app shell rendered, not that the leaf
 // page did — deprioritized pass-major, never excluded (design spec 2026-07-04, B14).
 const SHARED_COMPONENTS = new Set<string>(['Header', 'Footer', 'MiniCart']);
@@ -46,14 +62,34 @@ const SHARED_COMPONENTS = new Set<string>(['Header', 'Footer', 'MiniCart']);
 function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
   // Revealed elements (M8) only exist after an interaction — asserting one in isLoaded()
   // would always time out on a freshly-loaded page (the exact failure mode B14/M7 closed).
+  // B16: a testId repeated among the page's elements resolves to a multi-element locator
+  // live (strict-mode violation), so only page-unique testIds are eligible in the testId
+  // tier; the element still competes in the role/label tiers. Counted page-wide (including
+  // revealed/destructive instances) because Playwright resolves against the DOM, not
+  // against our candidate filter. Note the deliberate asymmetry: interaction *triggers*
+  // use .first() on a repeated testId instead ("any exemplar opens the overlay").
+  const testIdCounts = new Map<string, number>();
+  for (const e of map.elements) {
+    if (e.pageId !== leaf.id) continue;
+    const t = e.selectorHints.testId;
+    if (t !== undefined && typeof t === 'object' && t !== null) {
+      const k = `${t.attr}=${t.value}`;
+      testIdCounts.set(k, (testIdCounts.get(k) ?? 0) + 1);
+    }
+  }
   const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive && e.revealedBy === undefined);
   const specific = candidates.filter((e) => e.component === undefined || !SHARED_COMPONENTS.has(e.component));
   const shared = candidates.filter((e) => e.component !== undefined && SHARED_COMPONENTS.has(e.component));
   for (const pass of [specific, shared]) {
-    for (const key of ['testId', 'role', 'label'] as const) {
+    for (const tier of ['testId', 'role', 'label'] as const) {
       for (const el of pass) {
-        const s = toStrategy(el.selectorHints);
-        if (s !== null && key in s) return s;
+        const s = strategyForTier(el.selectorHints, tier);
+        if (s === null) continue;
+        if (tier === 'testId') {
+          const t = s.testId as TestIdHint;
+          if ((testIdCounts.get(`${t.attr}=${t.value}`) ?? 0) !== 1) continue;
+        }
+        return s;
       }
     }
   }
