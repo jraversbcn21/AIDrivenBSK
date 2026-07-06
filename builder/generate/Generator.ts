@@ -17,6 +17,17 @@ export interface JourneyInput {
   mapGeneratedAt: string; // stamped into headers instead of wall-clock time (determinism)
 }
 
+/** A journey that additionally opens (and closes) a map-recorded overlay interaction
+ *  on the leaf page. Selection guarantees an open-signal exists: either the overlay
+ *  is a dialog (assert getByRole('dialog')) or overlayElementSignal is non-null. */
+export interface InteractionJourneyInput extends JourneyInput {
+  interactionId: string;
+  trigger: Strategy; // clicked with .first(): "any exemplar of the (possibly grid-repeated) trigger"
+  triggerLabel: string;
+  overlayIsDialog: boolean;
+  overlayElementSignal: Strategy | null;
+}
+
 export interface GeneratedFile {
   relPath: string; // relative to the output dir
   content: string;

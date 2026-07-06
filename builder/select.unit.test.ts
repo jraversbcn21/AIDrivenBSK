@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { selectJourneys } from './select';
+import { selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture } from './select';
 import type { FunctionalMap, MapPage } from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
 import type { TestIdHint } from '../src/support/locators';
+import type { MapInteraction, MapElement, MapFlow } from '../explorer/map/schema';
 
 const page = (id: string, path: string): MapPage => ({
   id, path, routePattern: path, pageType: 'Other', session: 'anon', title: path, discoveredVia: '/',
@@ -191,5 +192,119 @@ describe('selectJourneys', () => {
     // m1's testId is unique among *candidates* but repeated page-wide — a strict-mode
     // violation live resolves against the DOM, not against our candidate filter.
     expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
+  });
+});
+
+const MUST = [/^añadir a (la )?cesta/i];
+
+const el = (id: string, pageId: string, over: Partial<MapElement> = {}): MapElement => ({
+  id, pageId, type: 'button', label: 'x', role: 'button',
+  selectorHints: { role: { type: 'button', name: 'x' } }, destructive: false, ...over,
+});
+const inter = (id: string, pageId: string, triggerElementId: string, over: Partial<MapInteraction> = {}): MapInteraction => ({
+  id, pageId, triggerElementId, outcome: 'overlay', revealedElementIds: [], ...over,
+});
+const flow = (id: string, steps: string[], session: 'anon' | 'auth' = 'anon'): MapFlow => ({
+  id, name: steps.join(' -> '), type: 'PLP', session, priority: 'med', steps,
+});
+
+const trigger = el('eTrig', 'pPlp', {
+  label: 'Añadir a la cesta Pantalón bombacho',
+  selectorHints: { role: { type: 'button', name: 'Añadir a la cesta Pantalón bombacho' }, testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } },
+});
+const dialogEl = el('eDlg', 'pPlp', { type: 'modal', label: 'Tallas', role: 'dialog', selectorHints: { role: { type: 'dialog', name: 'Tallas 32 34' } }, revealedBy: 'i1' });
+
+const interMap: FunctionalMap = {
+  ...map,
+  elements: [trigger, dialogEl],
+  flows: [flow('fPlp', ['pRoot', 'pHub', 'pPlp'])],
+  interactions: [inter('i1', 'pPlp', 'eTrig', { revealedElementIds: ['eDlg'] })],
+};
+
+describe('selectInteractionJourneys', () => {
+  it('generates for an overlay interaction whose trigger matches a must-capture pattern, inheriting chain and session from the flow ending at its page', () => {
+    const r = selectInteractionJourneys(interMap, MUST);
+    expect(r.journeys).toHaveLength(1);
+    const j = r.journeys[0];
+    expect(j.interactionId).toBe('i1');
+    expect(j.flowId).toBe('fPlp');
+    expect(j.session).toBe('anon');
+    expect(j.chain.map((s) => s.path)).toEqual(['/', '/es/h-woman.html', '/es/mujer/ropa/camisetas-n4365.html']);
+    expect(j.trigger).toEqual({ testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } });
+    expect(j.overlayIsDialog).toBe(true);
+    expect(j.overlayElementSignal).toBeNull();
+    expect(j.mapGeneratedAt).toBe(interMap.generatedAt);
+  });
+  it('the trigger may use a testId that repeats on the page (opposite policy to B16 — .first() semantics)', () => {
+    const repeated: FunctionalMap = {
+      ...interMap,
+      elements: [trigger, { ...trigger, id: 'eTrig2', label: 'Añadir a la cesta Vestido corsé' }, dialogEl],
+    };
+    const r = selectInteractionJourneys(repeated, MUST);
+    expect(r.journeys[0].trigger).toEqual({ testId: { attr: 'data-qa-anchor', value: 'addToCartSizeBtn' } });
+  });
+  it('ignores non-overlay outcomes and non-matching trigger labels silently (not skips)', () => {
+    const m: FunctionalMap = {
+      ...interMap,
+      elements: [trigger, el('eOther', 'pPlp', { label: 'Filtrar' })],
+      interactions: [
+        inter('i2', 'pPlp', 'eTrig', { outcome: 'navigated', navigatedTo: '/x' }),
+        inter('i3', 'pPlp', 'eOther'),
+      ],
+    };
+    const r = selectInteractionJourneys(m, MUST);
+    expect(r.journeys).toHaveLength(0);
+    expect(r.skipped).toHaveLength(0);
+  });
+  it('resolves a duplicated trigger element id to the first occurrence (canonical map has id collisions)', () => {
+    const dup: FunctionalMap = {
+      ...interMap,
+      elements: [trigger, { ...trigger, label: 'Añadir a la cesta Otro' }, dialogEl],
+    };
+    const r = selectInteractionJourneys(dup, MUST);
+    expect(r.journeys).toHaveLength(1);
+    expect(r.journeys[0].triggerLabel).toBe('Añadir a la cesta Pantalón bombacho');
+  });
+  it('skips with a reason when no flow ends at the interaction page', () => {
+    const m: FunctionalMap = { ...interMap, flows: [flow('fHub', ['pRoot', 'pHub'])] };
+    const r = selectInteractionJourneys(m, MUST);
+    expect(r.journeys).toHaveLength(0);
+    expect(r.skipped[0]).toEqual({ flowId: 'i1', reason: expect.stringMatching(/no flow ends/i) });
+  });
+  it('skips when the trigger element id resolves to nothing', () => {
+    const m: FunctionalMap = { ...interMap, elements: [dialogEl] };
+    const r = selectInteractionJourneys(m, MUST);
+    expect(r.skipped[0].reason).toMatch(/trigger element missing/i);
+  });
+  it('skips checkout-looking chains by path guard', () => {
+    const m: FunctionalMap = {
+      ...interMap,
+      elements: [el('eT', 'pPay', { label: 'Añadir a la cesta X' }), el('eD', 'pPay', { role: 'dialog', selectorHints: { role: { type: 'dialog', name: 'D' } } })],
+      flows: [flow('fPay', ['pRoot', 'pPay'])],
+      interactions: [inter('i9', 'pPay', 'eT', { revealedElementIds: ['eD'] })],
+    };
+    const r = selectInteractionJourneys(m, MUST);
+    expect(r.journeys).toHaveLength(0);
+    expect(r.skipped[0].reason).toMatch(/checkout/i);
+  });
+  it('falls back to the first usable revealed hint when no revealed element is a dialog, and skips when there is none', () => {
+    const btn = el('eBtn', 'pPlp', { label: 'Descartar', selectorHints: { role: { type: 'button', name: 'Descartar' } }, revealedBy: 'i1' });
+    const withBtn: FunctionalMap = { ...interMap, elements: [trigger, btn], interactions: [inter('i1', 'pPlp', 'eTrig', { revealedElementIds: ['eBtn'] })] };
+    expect(selectInteractionJourneys(withBtn, MUST).journeys[0]).toMatchObject({
+      overlayIsDialog: false,
+      overlayElementSignal: { role: { type: 'button', name: 'Descartar' } },
+    });
+    const bare = el('eBare', 'pPlp', { label: '', selectorHints: {}, revealedBy: 'i1' });
+    const without: FunctionalMap = { ...interMap, elements: [trigger, bare], interactions: [inter('i1', 'pPlp', 'eTrig', { revealedElementIds: ['eBare'] })] };
+    const r = selectInteractionJourneys(without, MUST);
+    expect(r.journeys).toHaveLength(0);
+    expect(r.skipped[0].reason).toMatch(/no verifiable overlay/i);
+  });
+});
+
+describe('unsatisfiedMustCapture', () => {
+  it('names patterns with no matching overlay capture in the map', () => {
+    expect(unsatisfiedMustCapture(interMap, MUST)).toEqual([]);
+    expect(unsatisfiedMustCapture({ ...interMap, interactions: [] }, MUST)).toEqual([MUST[0].source]);
   });
 });

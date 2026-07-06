@@ -1,8 +1,10 @@
-import type { FunctionalMap, MapPage } from '../explorer/map/schema';
+import type {
+  FunctionalMap, MapPage, MapFlow, MapElement,
+} from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
 import type { SelectorHints } from '../explorer/types';
 import type { Strategy, TestIdHint } from '../src/support/locators';
-import type { JourneyInput } from './generate/Generator';
+import type { JourneyInput, InteractionJourneyInput } from './generate/Generator';
 
 // Route-based on purpose: the map's pageType 'Checkout' labels are unreliable (backlog B13),
 // and the checkoutAllowed rule must never depend on them.
@@ -128,5 +130,100 @@ export function selectJourneys(report: PlanReport, map: FunctionalMap, top: numb
     });
   }
 
+  return { journeys, skipped };
+}
+
+export interface InteractionSelection {
+  journeys: InteractionJourneyInput[];
+  // flowId carries the interaction id here — the skip list predates interactions.
+  skipped: SkippedProposal[];
+}
+
+/** Must-capture patterns with no satisfying overlay capture anywhere in the map —
+ *  the CLI's non-fatal staleness warning ("re-crawl with pnpm explore --update"). */
+export function unsatisfiedMustCapture(map: FunctionalMap, mustCapture: RegExp[]): string[] {
+  return mustCapture
+    .filter((r) => !map.interactions.some((i) => {
+      if (i.outcome !== 'overlay') return false;
+      const trigger = map.elements.find((e) => e.id === i.triggerElementId);
+      return trigger !== undefined && r.test(trigger.label);
+    }))
+    .map((r) => r.source);
+}
+
+/** One interaction spec per must-capture overlay capture in the map (M9 design §3).
+ *  Selection is map-only — no PlanReport: the navigation chain is inherited from the
+ *  flow whose leaf is the interaction's page (pages are per-session, so this fixes
+ *  the session too). */
+export function selectInteractionJourneys(map: FunctionalMap, mustCapture: RegExp[]): InteractionSelection {
+  const journeys: InteractionJourneyInput[] = [];
+  const skipped: SkippedProposal[] = [];
+  const pageById = new Map(map.pages.map((p) => [p.id, p]));
+  const flowByLeaf = new Map<string, MapFlow>();
+  for (const f of map.flows) {
+    const leafId = f.steps[f.steps.length - 1];
+    if (leafId !== undefined && !flowByLeaf.has(leafId)) flowByLeaf.set(leafId, f);
+  }
+
+  for (const interaction of map.interactions) {
+    if (interaction.outcome !== 'overlay') continue;
+    // .find() = first match on purpose: the canonical map has duplicate element ids
+    // (label+page-derived ids collide; observed 2026-07-06, recorded as a finding).
+    const trigger = map.elements.find((e) => e.id === interaction.triggerElementId);
+    if (trigger === undefined) {
+      skipped.push({ flowId: interaction.id, reason: 'trigger element missing from the map' });
+      continue;
+    }
+    if (!mustCapture.some((r) => r.test(trigger.label))) continue; // out of M9 scope, not a defect
+    const flow = flowByLeaf.get(interaction.pageId);
+    if (flow === undefined) {
+      skipped.push({ flowId: interaction.id, reason: 'no flow ends at the interaction page (stale map?)' });
+      continue;
+    }
+    const pages = flow.steps.map((id) => pageById.get(id));
+    if (pages.some((p) => p === undefined)) {
+      skipped.push({ flowId: interaction.id, reason: 'flow references a page id missing from the map' });
+      continue;
+    }
+    const chain = (pages as MapPage[]).map((p) => ({ path: p.path, routePattern: p.routePattern, title: p.title }));
+    if (chain.some((s) => CHECKOUT_ROUTE.test(s.path))) {
+      skipped.push({ flowId: interaction.id, reason: 'checkout-looking route, skipped by path guard' });
+      continue;
+    }
+    const triggerStrategy = toStrategy(trigger.selectorHints);
+    if (triggerStrategy === null) {
+      skipped.push({ flowId: interaction.id, reason: 'trigger has no usable selector hint' });
+      continue;
+    }
+    const revealed = interaction.revealedElementIds
+      .map((id) => map.elements.find((e) => e.id === id))
+      .filter((e): e is MapElement => e !== undefined);
+    const overlayIsDialog = revealed.some((e) => e.selectorHints.role?.type === 'dialog');
+    let overlayElementSignal: Strategy | null = null;
+    if (!overlayIsDialog) {
+      for (const e of revealed) {
+        const s = toStrategy(e.selectorHints);
+        if (s !== null) { overlayElementSignal = s; break; }
+      }
+      if (overlayElementSignal === null) {
+        skipped.push({ flowId: interaction.id, reason: 'no verifiable overlay open-signal (no dialog role, no usable revealed hint)' });
+        continue;
+      }
+    }
+    const leaf = (pages as MapPage[])[pages.length - 1];
+    journeys.push({
+      flowId: flow.id,
+      interactionId: interaction.id,
+      journeyName: `${flow.name} => overlay "${trigger.label}"`,
+      session: flow.session,
+      chain,
+      loadedSignal: loadedSignalFor(map, leaf),
+      mapGeneratedAt: map.generatedAt,
+      trigger: triggerStrategy,
+      triggerLabel: trigger.label,
+      overlayIsDialog,
+      overlayElementSignal,
+    });
+  }
   return { journeys, skipped };
 }
