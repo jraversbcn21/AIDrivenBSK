@@ -107,6 +107,12 @@ describe('TemplateGenerator.generateInteraction', () => {
     expect(page.content).not.toContain("this.page.getByRole('dialog').isVisible()");
     expect(page.content).not.toContain("getByRole('dialog', {"); // no name — product-variable
   });
+  it('captures the dialog baseline inside openOverlay(), after hydration is confirmed — not in open(), which only waits for domcontentloaded (final-review finding)', () => {
+    const openBody = page.content.slice(page.content.indexOf('async open(): Promise<void> {'), page.content.indexOf('async isLoaded(): Promise<boolean> {'));
+    const openOverlayBody = page.content.slice(page.content.indexOf('async openOverlay(): Promise<void> {'), page.content.indexOf('async isOverlayOpen(): Promise<boolean> {'));
+    expect(openBody).not.toContain('dialogBaselineCount');
+    expect(openOverlayBody).toContain("this.dialogBaselineCount = await this.page.getByRole('dialog').count();");
+  });
   it('falls back to the revealed-element signal when the overlay is not a dialog, and emits no baseline-count scaffolding', () => {
     const alt = new TemplateGenerator().generateInteraction({
       ...interactionInput,

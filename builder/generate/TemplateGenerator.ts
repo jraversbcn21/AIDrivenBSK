@@ -88,9 +88,14 @@ function dialogBaselineField(input: InteractionJourneyInput): string {
   return input.overlayIsDialog ? '  private dialogBaselineCount = 0;\n\n' : '';
 }
 
+// Captured at the start of openOverlay() — NOT in open() — because BasePage.goto() only
+// waits for domcontentloaded, and the persistent nav-menu drawer this baseline excludes is
+// a Vue-hydrated component that can mount well after that. By the time openOverlay() runs,
+// the spec's own expect.poll(isLoaded) has already confirmed hydration, so the baseline is
+// trustworthy and still precedes any click that could open the real overlay.
 function dialogBaselineCapture(input: InteractionJourneyInput): string {
   return input.overlayIsDialog
-    ? `\n    // DES keeps a second, persistent dialog-role element (a mobile nav-menu drawer) mounted\n    // on every page even when "closed" from the user's perspective — a bare dialog-role locator\n    // is never unique once a real overlay also opens, so diff against a pre-interaction baseline.\n    this.dialogBaselineCount = await this.page.getByRole('dialog').count();`
+    ? `    // DES keeps a second, persistent dialog-role element (a mobile nav-menu drawer) mounted\n    // on every page even when "closed" from the user's perspective — a bare dialog-role locator\n    // is never unique once a real overlay also opens, so diff against a pre-interaction baseline.\n    this.dialogBaselineCount = await this.page.getByRole('dialog').count();\n`
     : '';
 }
 
@@ -107,7 +112,7 @@ ${dialogBaselineField(input)}  /**
    * was discovered.
    */
   async open(): Promise<void> {
-${gotosBlock(input)}${dialogBaselineCapture(input)}
+${gotosBlock(input)}
   }
 
   async isLoaded(): Promise<boolean> {
@@ -120,7 +125,7 @@ ${isLoadedBody(input)}
    * repeat across a product grid and any exemplar opens the overlay (M9 design §4).
    */
   async openOverlay(): Promise<void> {
-    const deadline = Date.now() + 20_000;
+${dialogBaselineCapture(input)}    const deadline = Date.now() + 20_000;
     while (Date.now() < deadline) {
       await dismissOnboardingTour(this.page);
       await locate(this.page, ${strategyLiteral(input.trigger)}).first().click().catch(() => undefined);
