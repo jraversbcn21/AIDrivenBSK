@@ -20,20 +20,28 @@ function strategyLiteral(s: Strategy): string {
   return `{ placeholder: ${sq(s.placeholder ?? '')} }`;
 }
 
-const header = (i: JourneyInput): string =>
-  `// GENERATED from flow ${i.flowId} (map generated ${i.mapGeneratedAt}) — review before promoting; regeneration overwrites.\n`;
+function headerFor(kind: 'flow' | 'interaction', id: string, input: JourneyInput): string {
+  const source = kind === 'flow' ? `flow ${id}` : `interaction ${id} / flow ${input.flowId}`;
+  return `// GENERATED from ${source} (map generated ${input.mapGeneratedAt}) — review before promoting; regeneration overwrites.\n`;
+}
+
+function gotosBlock(input: JourneyInput): string {
+  return input.chain.map((s) => `    await this.goto(${sq(s.path)});`).join('\n');
+}
+
+function isLoadedBody(input: JourneyInput): string {
+  return input.loadedSignal !== null
+    ? `    return locate(this.page, ${strategyLiteral(input.loadedSignal)}).isVisible();`
+    : `    return this.page.getByRole('main').isVisible();`;
+}
 
 const leafOf = (i: JourneyInput) => i.chain[i.chain.length - 1];
 
 function pageObjectFile(input: JourneyInput): GeneratedFile {
   const className = classNameFor(leafOf(input).routePattern, input.flowId);
-  const gotos = input.chain.map((s) => `    await this.goto(${sq(s.path)});`).join('\n');
   const usesLocate = input.loadedSignal !== null;
-  const isLoadedBody = usesLocate
-    ? `    return locate(this.page, ${strategyLiteral(input.loadedSignal as Strategy)}).isVisible();`
-    : `    return this.page.getByRole('main').isVisible();`;
   const imports = `import { BasePage } from '../../../src/pages/BasePage';\n${usesLocate ? "import { locate } from '../../../src/support/locators';\n" : ''}`;
-  const content = `${header(input)}${imports}
+  const content = `${headerFor('flow', input.flowId, input)}${imports}
 export class ${className} extends BasePage {
   /**
    * Walks the discovered chain step by step: DES intermittently re-triggers the gender
@@ -41,11 +49,11 @@ export class ${className} extends BasePage {
    * was discovered.
    */
   async open(): Promise<void> {
-${gotos}
+${gotosBlock(input)}
   }
 
   async isLoaded(): Promise<boolean> {
-${isLoadedBody}
+${isLoadedBody(input)}
   }
 }
 `;
@@ -54,7 +62,7 @@ ${isLoadedBody}
 
 function specFile(input: JourneyInput): GeneratedFile {
   const className = classNameFor(leafOf(input).routePattern, input.flowId);
-  const content = `${header(input)}import { test, expect } from '../../src/fixtures/test';
+  const content = `${headerFor('flow', input.flowId, input)}import { test, expect } from '../../src/fixtures/test';
 import { ${className} } from './pages/${className}';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
@@ -68,9 +76,6 @@ test(${sq(`journey: ${input.journeyName}`)}, async ({ page }) => {
   return { relPath: specFileNameFor(leafOf(input).routePattern, input.flowId), content };
 }
 
-const interactionHeader = (i: InteractionJourneyInput): string =>
-  `// GENERATED from interaction ${i.interactionId} / flow ${i.flowId} (map generated ${i.mapGeneratedAt}) — review before promoting; regeneration overwrites.\n`;
-
 function overlayOpenExpr(input: InteractionJourneyInput): string {
   return input.overlayIsDialog
     ? `this.page.getByRole('dialog').isVisible()`
@@ -79,11 +84,7 @@ function overlayOpenExpr(input: InteractionJourneyInput): string {
 
 function interactionPageObjectFile(input: InteractionJourneyInput): GeneratedFile {
   const className = interactionClassNameFor(leafOf(input).routePattern, input.interactionId);
-  const gotos = input.chain.map((s) => `    await this.goto(${sq(s.path)});`).join('\n');
-  const isLoadedBody = input.loadedSignal !== null
-    ? `    return locate(this.page, ${strategyLiteral(input.loadedSignal)}).isVisible();`
-    : `    return this.page.getByRole('main').isVisible();`;
-  const content = `${interactionHeader(input)}import { BasePage } from '../../../src/pages/BasePage';
+  const content = `${headerFor('interaction', input.interactionId, input)}import { BasePage } from '../../../src/pages/BasePage';
 import { locate } from '../../../src/support/locators';
 import { dismissOnboardingTour } from '../../../src/support/consent';
 
@@ -94,11 +95,11 @@ export class ${className} extends BasePage {
    * was discovered.
    */
   async open(): Promise<void> {
-${gotos}
+${gotosBlock(input)}
   }
 
   async isLoaded(): Promise<boolean> {
-${isLoadedBody}
+${isLoadedBody(input)}
   }
 
   /**
@@ -137,7 +138,7 @@ ${isLoadedBody}
 
 function interactionSpecFile(input: InteractionJourneyInput): GeneratedFile {
   const className = interactionClassNameFor(leafOf(input).routePattern, input.interactionId);
-  const content = `${interactionHeader(input)}import { test, expect } from '../../src/fixtures/test';
+  const content = `${headerFor('interaction', input.interactionId, input)}import { test, expect } from '../../src/fixtures/test';
 import { ${className} } from './pages/${className}';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
