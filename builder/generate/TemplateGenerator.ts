@@ -78,8 +78,20 @@ test(${sq(`journey: ${input.journeyName}`)}, async ({ page }) => {
 
 function overlayOpenExpr(input: InteractionJourneyInput): string {
   return input.overlayIsDialog
-    ? `this.page.getByRole('dialog').isVisible()`
+    ? `(await this.page.getByRole('dialog').count()) > this.dialogBaselineCount`
     : `locate(this.page, ${strategyLiteral(input.overlayElementSignal as Strategy)}).first().isVisible()`;
+}
+
+// Only the dialog branch needs baseline scaffolding — the non-dialog branch asserts on a
+// specific revealed element's own locator, which is already unique without a baseline.
+function dialogBaselineField(input: InteractionJourneyInput): string {
+  return input.overlayIsDialog ? '  private dialogBaselineCount = 0;\n\n' : '';
+}
+
+function dialogBaselineCapture(input: InteractionJourneyInput): string {
+  return input.overlayIsDialog
+    ? `\n    // DES keeps a second, persistent dialog-role element (a mobile nav-menu drawer) mounted\n    // on every page even when "closed" from the user's perspective — a bare dialog-role locator\n    // is never unique once a real overlay also opens, so diff against a pre-interaction baseline.\n    this.dialogBaselineCount = await this.page.getByRole('dialog').count();`
+    : '';
 }
 
 function interactionPageObjectFile(input: InteractionJourneyInput): GeneratedFile {
@@ -89,13 +101,13 @@ import { locate } from '../../../src/support/locators';
 import { dismissOnboardingTour } from '../../../src/support/consent';
 
 export class ${className} extends BasePage {
-  /**
+${dialogBaselineField(input)}  /**
    * Walks the discovered chain step by step: DES intermittently re-triggers the gender
    * gate on direct deep-links (findings doc §8), so the journey navigates the way it
    * was discovered.
    */
   async open(): Promise<void> {
-${gotosBlock(input)}
+${gotosBlock(input)}${dialogBaselineCapture(input)}
   }
 
   async isLoaded(): Promise<boolean> {

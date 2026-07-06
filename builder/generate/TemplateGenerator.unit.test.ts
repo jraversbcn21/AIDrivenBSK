@@ -100,11 +100,14 @@ describe('TemplateGenerator.generateInteraction', () => {
     expect(page.content).toContain('dismissOnboardingTour');
     expect(page.content).toContain('Date.now() + 20_000');
   });
-  it('asserts overlay-open via a name-less dialog role when overlayIsDialog', () => {
-    expect(page.content).toContain("this.page.getByRole('dialog').isVisible()");
+  it('asserts overlay-open via a baseline dialog-count diff when overlayIsDialog (live finding: DES keeps a second, persistent dialog-role nav-menu mounted on every page)', () => {
+    expect(page.content).toContain('private dialogBaselineCount = 0;');
+    expect(page.content).toContain("this.dialogBaselineCount = await this.page.getByRole('dialog').count();");
+    expect(page.content).toContain("return (await this.page.getByRole('dialog').count()) > this.dialogBaselineCount;");
+    expect(page.content).not.toContain("this.page.getByRole('dialog').isVisible()");
     expect(page.content).not.toContain("getByRole('dialog', {"); // no name — product-variable
   });
-  it('falls back to the revealed-element signal when the overlay is not a dialog', () => {
+  it('falls back to the revealed-element signal when the overlay is not a dialog, and emits no baseline-count scaffolding', () => {
     const alt = new TemplateGenerator().generateInteraction({
       ...interactionInput,
       overlayIsDialog: false,
@@ -112,6 +115,7 @@ describe('TemplateGenerator.generateInteraction', () => {
     });
     const altPage = alt.find((f) => f.relPath.startsWith('pages/'))!;
     expect(altPage.content).toContain("locate(this.page, { role: { type: 'button', name: 'Descartar' } }).first().isVisible()");
+    expect(altPage.content).not.toContain('dialogBaselineCount');
   });
   it('closes via Escape with verify-retry and stamps the interaction header', () => {
     expect(page.content).toContain("keyboard.press('Escape')");
