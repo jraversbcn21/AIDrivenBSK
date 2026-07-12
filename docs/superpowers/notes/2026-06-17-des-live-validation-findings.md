@@ -320,3 +320,66 @@ Design: `docs/superpowers/specs/2026-07-06-m9-interaction-spec-generation-design
 **Final whole-branch review (fable) caught one more real bug before merge — fixed and re-validated live.** The baseline-dialog-count fix above was originally captured inside `open()`, immediately after the navigation chain's `goto()` calls. The reviewer traced this against the project's own hydration doctrine (`BasePage.goto()` only waits `domcontentloaded`; the persistent nav-menu drawer is a Vue-hydrated component that can mount well after that) and flagged a real race: an early, empty baseline would make `isOverlayOpen()` return `true` before any real overlay opened, silently defeating the whole mechanism — a latent flake the single live pass hadn't hit yet. **Fix:** moved the baseline capture to the start of `openOverlay()` instead, which runs only after the generated spec's own `expect.poll(isLoaded)` has already confirmed hydration. A new test locks in the location (asserts the capture line is inside `openOverlay()`'s body, not `open()`'s). Re-validated live after the fix: `pnpm test:generated` **5/5 passed, no retries** again (interaction spec: 30.6s). This is the second live-validation pass to find and fix a real design gap in the same overlay-open mechanism within one session — both fixes are now load-bearing parts of the design, not deferred follow-ups.
 
 **M9 closed.** B16 closed. A5 remains open (unrelated, pre-existing, tracked in the backlog).
+
+---
+
+## 18. A5 — Personalizable-product probe (2026-07-12)
+
+Design: `docs/superpowers/specs/2026-07-12-a5-personalizable-product-design.md`. Plan: `docs/superpowers/plans/2026-07-12-a5-personalizable-product.md`. This section is Task 1 of that plan (live probe only — no code fix; the fix is Task 2).
+
+**Step 2 — reproducing A5 live, with two honest surprises.**
+
+*First attempt* (`pnpm exec playwright test tests/cart/add-to-cart.spec.ts --project=chromium`, i.e. including the `setup` project dependency) never reached the target spec: `setup` itself failed both attempts (`Test timeout of 120000ms exceeded` waiting for `getByRole('button', { name: /continuar con e-?mail/i })`). The failure's accessibility snapshot showed `/es/logon.html` rendering the e-mail+password form **directly** — no "Continuar con e-mail" interstitial screen appeared at all (contradicts findings §4's recorded recipe). This is a genuine, live-observed drift in the DES login flow, unrelated to A5 and outside Task 1's file list (`src/pages/LoginPage.ts` was not touched) — recorded here as an environment aside for a future session, not investigated further. It did not block this probe: the `.auth/state.json` copied into the worktree was confirmed still a valid, live session by re-running with `--no-deps` (skips the `setup` dependency, reuses the stored session), which authenticated fine and drove the app normally.
+
+*Second attempt* (`--no-deps`, reused session): reached the real spec and the real PDP. The current **top-ranked** "camiseta" result is now **"Camiseta oversize print OLIVIA RODRIGO"** (`camiseta-oversize-print-olivia-rodrigo-c0p227229879.html`) — a **standard**, non-personalizable product (plain "Añadir a cesta" button, confirmed in the failure screenshot). The spec still **FAILED**, both attempts, but for an **unrelated** reason: `ProductPage.addToCart()`'s size-dialog-close retry loop exhausted its budget (`ProductPage: the size dialog did not close after selecting a size (add not confirmed)`) — matching the pre-existing Tallas-dialog-close environment-noise pattern already documented in §14/§16, not A5.
+
+**Catalog drift confirmed exactly as the brief anticipated ("cuts both ways"):** the Personalizable product ("Camiseta tirantes rib", the same product confirmed failing in M8b §16 and M9 §17) is no longer top-ranked for "camiseta" — it moved down the grid. Per the brief's branch instruction for this exact case, proceeded to the probe (Step 3) and searched deeper than the first card for a Personalizable signal.
+
+**Step 3/4 — probe results** (`tests/_probe/a5-probe.spec.ts`, temporary, deleted after this section was written; real live output, single run, **passed clean, 30.7s, no retries**):
+
+32 total `-c0p` cards rendered on first load of the "camiseta" grid (no scrolling needed). First 6 dumped for baseline, then a scan of all 32 for a `personaliz*` signal:
+
+- Card 0 "Camiseta oversize print OLIVIA RODRIGO" — standard: `button "Añadir a la cesta Camiseta oversize print OLIVIA RODRIGO"`.
+- Card 1 "Camiseta ajustada SPIDER-MAN" (colorId=600) — **out of stock**: `button "Temporalmente sin stock, ¡Avísame!"`, no quick-add button at all. A third card shape, outside A5's scope (a stock-status variant, not a personalization variant) but worth flagging for Task 2 so it isn't conflated with the Personalizable filter.
+- Card 2 "Camiseta ajustada SPIDER-MAN" (colorId=800) — standard.
+- Card 3 "Camiseta manga corta fruncido" — standard.
+- **Card 4 "Camiseta tirantes rib" — the Personalizable product.** Aria dump:
+  ```yaml
+  - listitem:
+    - link "Camiseta tirantes rib Añadir a la cesta Camiseta tirantes rib Añadir a la lista de deseos Personalizable Camiseta tirantes rib 5,99 € 6 Colores":
+      - /url: /es/camiseta-tirantes-rib-c0p229723035.html?colorId=251
+      - img "Camiseta tirantes rib"
+      - button "Añadir a la cesta Camiseta tirantes rib"
+      - button "Añadir a la lista de deseos"
+      - text: Personalizable
+      - paragraph: Camiseta tirantes rib
+      - text: 5,99 €
+      - paragraph: 6 Colores
+  ```
+  Note the `button "Añadir a la cesta Camiseta tirantes rib"` — **identical role and wording** to a standard card's quick-add — plus one extra node: a plain, unlabelled `text: Personalizable`, sibling to the buttons.
+- Card 5 "Camiseta tirantes cuello pico" — standard. No other card among the 32 scanned carried a `personaliz*` signal.
+
+Opening Card 4's PDP (`camiseta-tirantes-rib-c0p229723035.html?colorId=251`) confirmed the incompatible UI: `<main>` contains `button "Personalizar"` and `button "Añadir"` — **no** "Añadir a cesta"/"Añadir a la cesta" button anywhere in the PDP (grepped the full PDP dump to confirm; zero matches outside the card listing).
+
+**Q1 — card signal:** every card, including the Personalizable one, exposes the same per-card quick-add button, exact accessible name `"Añadir a la cesta {producto}"`, `getByRole('button')`-reachable (shadow DOM pierced fine as always on this site). The Personalizable card does **not** differ on this button — it carries it too, verbatim. The only thing that differs is an additional plain-text `"Personalizable"` node (no role, not part of any button's accessible name) that appeared on exactly one of the 32 cards scanned.
+
+**Q2 — correlation (load-bearing, the question the whole design hinges on):** confirmed **the positive-affordance test is defeated, exactly as design §4.1 flagged as the risk case.** A filter that keeps cards with a standard `"Añadir a la cesta"` quick-add button would **not** exclude Card 4 — it has that exact button, yet its PDP has no such button at all. Stated plainly, without softening (RIGOR Regla 7): **rung 1 (positive card-level capability filter) is rejected** — the presence of the standard quick-add on the card does not predict the PDP's add-to-cart variant. The `"Personalizable"` text badge, however, **does** correlate: it is present on exactly the one card whose PDP is confirmed (by direct navigation) to be incompatible, and absent from all 5 other cards dumped/all 32 scanned. → **rung 2 (negative card-level variant filter) is confirmed usable.**
+
+**Q3 — timing:** `waitForResults()` returned promptly; the entire probe (search → results → dump 6 cards → scan 32 for the badge → open PDP → dump PDP → `goBack()`) completed in 30.7s, zero retries. Both the quick-add button and the `"Personalizable"` badge were present in the very first `ariaSnapshot()` taken immediately after `waitForResults()` returned — no hover, no extra interaction. Not lazy, not hover-only.
+
+**Q4 — fallback viability:** not required (rung 2 is usable, so rungs 1–2 are not *both* rejected), but captured anyway since it was cheap: `page.goBack()` from the PDP returned to `https://…/es/q/camiseta` (the results grid URL), not home. Positive data point for a future rung-3 discussion, unused by this decision.
+
+**Rung decision: rung-2 — negative card-level variant filter.**
+
+Exact signal: a plain text node with content **`"Personalizable"`** (case-sensitive as observed, no ARIA role, not part of any button's accessible name), present inside the product card's `<listitem>`. Exact predicate, composing with the existing `-c0p` positive filter already in `SearchResultsPage.firstProduct()`:
+
+```ts
+this.page.getByRole('main').getByRole('listitem')
+  .filter({ has: this.page.locator('a[href*="-c0p"]') })
+  .filter({ hasNotText: 'Personalizable' })
+  .first()
+```
+
+Rationale: the design's rung 1 (positive quick-add-presence filter) is unusable here because the Personalizable card's quick-add button is indistinguishable from a standard card's — confirmed live, not assumed. Rung 2's denylist works because the `"Personalizable"` badge is a reliable, confirmed-correlated card-level signal for today's case. Per the design's own characterization (§3.2), this is a denylist — it fixes today's known variant but does not generalize to a hypothetically different incompatible variant that doesn't carry this exact badge; that residual risk is accepted as designed, not treated as a gap in this probe.
+
+**Exit gate:** rung-2 selected → proceed to Task 2 with this predicate. Rung-3 (PDP-level fallback) is **not** needed.
