@@ -59,7 +59,7 @@ export class SearchResultsPage extends BasePage {
     // the failure is actionable: a rendered grid with only incompatible variants is NOT a dead load.
     if (await this.productCards().first().isVisible().catch(() => false)) {
       throw new Error(
-        `SearchResultsPage: results grid rendered but no standard-add-to-cart product found within ${timeoutMs}ms (all variants Personalizable?)`,
+        `SearchResultsPage: results grid rendered but no standard-add-to-cart product found within ${timeoutMs}ms (all variants Personalizable or out-of-stock?)`,
       );
     }
     throw new Error(
