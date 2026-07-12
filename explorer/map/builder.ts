@@ -43,10 +43,12 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
   for (const { extraction: ex, classification } of input.classified) {
     const pattern = routePattern(ex.meta.path);
     const pageId = makeId('page', pattern, ex.meta.session);
-    pages.push({
+    const mapPage: MapPage = {
       id: pageId, path: ex.meta.path, routePattern: pattern, pageType: classification.pageType,
       session: ex.meta.session, title: ex.meta.title, discoveredVia: ex.meta.discoveredVia,
-    });
+    };
+    if (ex.truncated) mapPage.truncated = true;
+    pages.push(mapPage);
     nodeByKey.set(`${ex.meta.session}:${ex.meta.path}`, { id: pageId, path: ex.meta.path, discoveredVia: ex.meta.discoveredVia });
 
     ex.elements.forEach((el) => {

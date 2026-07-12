@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture } from './select';
+import {
+  selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture, mapIsStale,
+} from './select';
 import type { FunctionalMap, MapPage } from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
 import type { TestIdHint } from '../src/support/locators';
@@ -306,5 +308,15 @@ describe('unsatisfiedMustCapture', () => {
   it('names patterns with no matching overlay capture in the map', () => {
     expect(unsatisfiedMustCapture(interMap, MUST)).toEqual([]);
     expect(unsatisfiedMustCapture({ ...interMap, interactions: [] }, MUST)).toEqual([MUST[0].source]);
+  });
+});
+
+describe('mapIsStale', () => {
+  it('is false when the report was computed from the given map', () => {
+    expect(mapIsStale(report([]), map)).toBe(false);
+  });
+  it('is true when the report references a different map generation', () => {
+    const staleReport = { ...report([]), mapGeneratedAt: '2020-01-01T00:00:00Z' };
+    expect(mapIsStale(staleReport, map)).toBe(true);
   });
 });

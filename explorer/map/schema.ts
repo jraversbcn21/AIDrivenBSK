@@ -2,7 +2,7 @@ import type {
   Session, SelectorHints, ElementType, ComponentKind, ExtractedFormField,
 } from '../types';
 
-export const SCHEMA_VERSION = '1.5';
+export const SCHEMA_VERSION = '1.6';
 
 export type PageType =
   | 'Home' | 'PLP' | 'PDP' | 'Cart' | 'Checkout' | 'Account' | 'Wishlist' | 'Search' | 'Other';
@@ -17,6 +17,7 @@ export interface MapPage {
   session: Session;
   title: string;
   discoveredVia: string;
+  truncated?: boolean; // true when extraction hit the per-page element cap (audit F11)
 }
 
 export interface MapComponent {

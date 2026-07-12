@@ -24,7 +24,7 @@ describe('buildMap', () => {
   it('produces a schema-versioned map with stable, deterministic ids', () => {
     const a = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
-    expect(a.schemaVersion).toBe('1.5');
+    expect(a.schemaVersion).toBe('1.6');
     expect(a.pages[0].pageType).toBe('PDP');
     expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic
@@ -37,6 +37,20 @@ describe('buildMap', () => {
     expect(m.forms[0].purpose).toBe('login');
     expect(m.components.find((c) => c.kind === 'Header')?.foundOnPages).toContain(pageId);
     expect(m.flows.find((f) => f.type.includes('PDP'))?.priority).toBe('high');
+  });
+
+  it('propagates PageExtraction.truncated onto the built MapPage (audit F11)', () => {
+    const truncatedPage: PageExtraction = { ...page('/es/y', 'seed'), truncated: true };
+    const m = buildMap({
+      classified: [{ extraction: truncatedPage, classification: { pageType: 'PLP', confidence: 0.9 } }],
+      environment: 'des',
+    });
+    expect(m.pages[0].truncated).toBe(true);
+  });
+
+  it('leaves MapPage.truncated unset when the page was not truncated', () => {
+    const m = buildMap({ classified, environment: 'des' });
+    expect(m.pages[0].truncated).toBeUndefined();
   });
 
   it('synthesizes the full discoveredVia chain into flow steps and a path-chain name', () => {
@@ -105,7 +119,7 @@ describe('buildMap', () => {
 
     const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PDP', confidence: 1 } }], environment: 'des' });
 
-    expect(m.schemaVersion).toBe('1.5');
+    expect(m.schemaVersion).toBe('1.6');
     expect(m.interactions).toHaveLength(1);
     const inter = m.interactions[0];
     const mapPage = m.pages[0];

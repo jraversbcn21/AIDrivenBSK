@@ -13,4 +13,8 @@ describe('parseArgs', () => {
   it('rejects an invalid session', () => {
     expect(() => parseArgs(['--session', 'nope'])).toThrow(/session/);
   });
+  it('defaults fromReport to undefined and parses --from-report (audit F12)', () => {
+    expect(parseArgs([]).fromReport).toBeUndefined();
+    expect(parseArgs(['--from-report', 'reports/explorer/x.json']).fromReport).toBe('reports/explorer/x.json');
+  });
 });

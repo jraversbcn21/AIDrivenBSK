@@ -1,6 +1,6 @@
 import type { FunctionalMap } from '../map/schema';
 
-export type DiffKind = 'page' | 'component' | 'element' | 'form' | 'flow';
+export type DiffKind = 'page' | 'component' | 'element' | 'form' | 'flow' | 'interaction';
 
 export interface DiffEntry { kind: DiffKind; id: string; summary: string }
 export interface MapDiff { added: DiffEntry[]; removed: DiffEntry[]; changed: DiffEntry[] }
@@ -30,6 +30,7 @@ export function diffMaps(oldMap: FunctionalMap, newMap: FunctionalMap): MapDiff 
   diffCollection('element', oldMap.elements, newMap.elements, diff);
   diffCollection('form', oldMap.forms, newMap.forms, diff);
   diffCollection('flow', oldMap.flows, newMap.flows, diff);
+  diffCollection('interaction', oldMap.interactions, newMap.interactions, diff);
   return diff;
 }
 

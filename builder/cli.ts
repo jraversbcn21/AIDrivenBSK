@@ -1,7 +1,9 @@
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { parseBuildArgs } from './args';
-import { selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture } from './select';
+import {
+  selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture, mapIsStale,
+} from './select';
 import { loadExplorerConfig } from '../explorer/config';
 import { TemplateGenerator } from './generate/TemplateGenerator';
 import type { FunctionalMap } from '../explorer/map/schema';
@@ -19,6 +21,15 @@ async function main(): Promise<void> {
   const args = parseBuildArgs(process.argv.slice(2));
   const report = await readJson<PlanReport>(args.proposals, 'pnpm plan');
   const map = await readJson<FunctionalMap>(args.map, 'pnpm explore --update');
+
+  if (mapIsStale(report, map)) {
+    console.error(
+      `${args.proposals} was computed from a map generated at ${report.mapGeneratedAt}, but ` +
+        `${args.map} was generated at ${map.generatedAt} — proposals are stale, re-run \`pnpm plan\`.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   const { journeys, skipped } = selectJourneys(report, map, args.top);
   for (const s of skipped) console.warn(`Skipped ${s.flowId}: ${s.reason}`);

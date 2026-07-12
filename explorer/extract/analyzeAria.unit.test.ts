@@ -77,4 +77,16 @@ describe('analyzeAriaNodes', () => {
     expect(byLabel('WhatsApp')?.component).toBe('Footer');
     expect(byLabel('Buscar')?.component).toBeUndefined(); // main-body search button
   });
+
+  it('marks truncated: true when a page has more eligible elements than the 60-cap (F11)', () => {
+    const manyButtons = Array.from({ length: 65 }, (_, i) => `  - button "Item ${i}"`).join('\n');
+    const bigSnapshot = `- main:\n${manyButtons}`;
+    const ex = analyzeAriaNodes(parseAriaSnapshot(bigSnapshot), meta);
+    expect(ex.elements).toHaveLength(60);
+    expect(ex.truncated).toBe(true);
+  });
+
+  it('leaves truncated unset when a page has fewer elements than the cap (F11)', () => {
+    expect(extraction.truncated).toBeUndefined();
+  });
 });

@@ -98,6 +98,13 @@ function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
   return null;
 }
 
+// Detects a re-crawl between `pnpm plan` and `pnpm build-tests`: without this, a stale
+// proposals.json surfaces only as N confusing per-proposal "page id missing from the map"
+// skips instead of one clear "proposals are stale, re-run pnpm plan" error (audit finding F9).
+export function mapIsStale(report: PlanReport, map: FunctionalMap): boolean {
+  return report.mapGeneratedAt !== map.generatedAt;
+}
+
 export function selectJourneys(report: PlanReport, map: FunctionalMap, top: number): Selection {
   const pageById = new Map(map.pages.map((p) => [p.id, p]));
   const journeys: JourneyInput[] = [];

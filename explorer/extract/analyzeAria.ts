@@ -38,6 +38,7 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
   const landmarkRoles: string[] = [];
   const componentKinds = new Set<ComponentKind>();
   const texts: string[] = [];
+  let truncated = false;
 
   const visit = (node: AriaNode, inListitem: boolean, chrome: 'Header' | 'Footer' | undefined): void => {
     if (node.role === 'text') {
@@ -60,19 +61,23 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
     }
 
     const type = elementTypeFor(node);
-    if (type && elements.length < MAX_ELEMENTS_PER_PAGE) {
-      const el: ExtractedElement = {
-        type,
-        label: name,
-        role: node.role,
-        selectorHints: name ? { role: { type: node.role, name } } : {},
-        destructive: isDestructive(name),
-      };
-      // Cart-named chrome inside the banner is the header cart affordance (MiniCart) —
-      // the regex is scoped to the banner so page-body "Añadir a la cesta" stays untagged.
-      const component = nextChrome === 'Header' && /cesta|cart/i.test(name) ? 'MiniCart' : nextChrome;
-      if (component !== undefined) el.component = component;
-      elements.push(el);
+    if (type) {
+      if (elements.length < MAX_ELEMENTS_PER_PAGE) {
+        const el: ExtractedElement = {
+          type,
+          label: name,
+          role: node.role,
+          selectorHints: name ? { role: { type: node.role, name } } : {},
+          destructive: isDestructive(name),
+        };
+        // Cart-named chrome inside the banner is the header cart affordance (MiniCart) —
+        // the regex is scoped to the banner so page-body "Añadir a la cesta" stays untagged.
+        const component = nextChrome === 'Header' && /cesta|cart/i.test(name) ? 'MiniCart' : nextChrome;
+        if (component !== undefined) el.component = component;
+        elements.push(el);
+      } else {
+        truncated = true;
+      }
     }
 
     if (node.role === 'form') {
@@ -98,5 +103,6 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
     elements,
     forms,
     componentKinds: [...componentKinds],
+    ...(truncated ? { truncated: true } : {}),
   };
 }

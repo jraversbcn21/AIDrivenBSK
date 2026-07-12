@@ -1,3 +1,4 @@
+import { TESTID_ATTRS } from '../../src/support/locators';
 import type { SelectorHints } from '../types';
 
 const ROLE_BY_TAG: Record<string, string> = {
@@ -21,10 +22,13 @@ export function roleOf(el: Element): string {
 
 export function hintsFor(el: Element): SelectorHints {
   const hints: SelectorHints = {};
-  const dataTestId = el.getAttribute('data-testid');
-  const dataQa = el.getAttribute('data-qa');
-  if (dataTestId) hints.testId = { attr: 'data-testid', value: dataTestId };
-  else if (dataQa) hints.testId = { attr: 'data-qa', value: dataQa };
+  for (const attr of TESTID_ATTRS) {
+    const value = el.getAttribute(attr);
+    if (value) {
+      hints.testId = { attr, value };
+      break;
+    }
+  }
   const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ');
   if (name) hints.role = { type: roleOf(el), name };
   const label = el.getAttribute('aria-label') ?? el.getAttribute('placeholder') ?? undefined;

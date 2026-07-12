@@ -50,6 +50,7 @@ export interface PageExtraction {
   forms: ExtractedForm[];
   componentKinds: ComponentKind[];
   interactions?: ExtractedInteraction[]; // optional — analyzers never set it; the crawler attaches it
+  truncated?: boolean; // true when the page had more eligible elements than the per-page cap (audit F11)
 }
 
 export type InteractionOutcome = 'overlay' | 'navigated' | 'none';

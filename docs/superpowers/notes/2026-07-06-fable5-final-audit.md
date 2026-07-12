@@ -167,17 +167,29 @@ When a page hits `MAX_ELEMENTS_PER_PAGE`, nothing records it — the map cannot 
 
 | Order | Items | Why this grouping | Behavior change? |
 |---|---|---|---|
-| 1 | **F2, F9, F6, F11** (+ F12 opportunistically) | Trivial, independent, zero doctrine contact, each closes a real blind spot. One small "hygiene" milestone. | No |
+| 1 | **F2, F9, F6, F11, F12 — done (2026-07-12)** | Trivial, independent, zero doctrine contact, each closed a real blind spot. Shipped as one small "hygiene" milestone (all five items, including F12 — not just opportunistically). | No |
 | 2 | **F3** | Small, output-identical, buys crawl-time headroom before any bigger crawl work. | No |
 | 3 | **F1 + F7 (+ F4 warning)** | The element-identity spec cycle: dedup + `count` field fixes duplicate ids, makes B16 exact, frees the extraction cap, and shrinks the map ~32%. F4's warning ships alongside to measure chain-truncation blast radius. Full re-crawl + diff-baseline reset + live validation. | ⚠ Yes — schema + committed ids |
 | 4 | **F5** | The coverage-contract spec cycle. Restores the planner's actual value proposition; should be decided (a/b/c) with live evidence. | ⚠ Yes — coverage semantics |
 | 5 | **F8** | Consolidation of the retry idiom, alone in its own branch, with a full live re-validation pass. Optional; defer freely. | ⚠ Intent-preserving, but touches validated paths |
 
-A5 (the open catalog-drift failure in `add-to-cart.spec.ts`) remains the natural *next milestone* regardless — nothing above competes with it; items 1–2 could ride as a small companion branch.
+A5 and A6 (both closed 2026-07-12, unrelated to this audit) were the actual next milestones that landed before this group — nothing above competed with them. B17 (=F1) and F18 (=F5) are now the natural next candidates; items 3–4 above are their audit-doc cross-references.
+
+## 3.1 Order-1 resolution note (2026-07-12)
+
+Implemented directly (TDD, no separate spec/plan cycle — the fixes were already fully specified by this audit's own §2 findings text, so a fresh design cycle would have re-derived what's written there). All five items shipped in one commit:
+
+- **F2** — `explorer/diff/differ.ts` now diffs `interactions[]` (new `DiffKind` member `'interaction'`); the CI diff gate is no longer blind to M8/M8b/M9's newest knowledge class.
+- **F9** — `builder/select.ts` gained `mapIsStale(report, map)`; `builder/cli.ts` now fails fast with one clear error instead of N confusing per-proposal skips when `proposals.json` and the map disagree on `generatedAt`.
+- **F6** — `explorer/extract/hints.ts` (offline DOM path) now iterates the shared `TESTID_ATTRS` constant, closing the `data-qa-anchor` gap versus the live aria path (`enrichTestIds.ts`).
+- **F11** — `PageExtraction.truncated?: boolean` (set by `analyzeAria.ts` when the 60-element cap is hit) now propagates onto the committed `MapPage.truncated`. **Schema bumped 1.5 → 1.6, additive only, no live re-crawl performed** — matches every prior additive bump's precedent; the committed canonical map keeps `schemaVersion: "1.5"` until its next natural re-crawl (not forced here, since this finding was explicitly rated "Behavior change? No" in the table above).
+- **F12** — `explorer/args.ts`/`explorer/cli.ts` gained `--from-report <path>`: skips crawling and reuses a previously-written `{ map, errors }` report, closing the footgun of hand-copying `.map` out of a report into the canonical map path (already caused a real mistake once, findings §15). Shipped as part of this pass, not deferred as merely "opportunistic."
+
+**A genuine internal contradiction was found and resolved before implementing F11:** §4 below originally read "(F1/F11 explicitly gated)," grouping F11 with F1/B17 as needing its own dedicated spec cycle — contradicting this table's own "Order 1 / trivial / No behavior change" classification for F11. Flagged to Jorge directly; resolved in favor of the Order-1 classification (F11's change is genuinely additive — an optional field, no live re-crawl, no reinterpretation of existing data — unlike F1/B17's wholesale id-changing rewrite). §4 corrected below to remove the stale reference.
 
 ## 4. Non-goals (restated)
 
-No functional changes proposed. No changes to the DES interaction-reliability patterns (A3 doctrine untouched — F8 centralizes, never removes). No schema change happens without a dedicated spec cycle (F1/F11 explicitly gated). Anything marked ⚠ stops for human review before becoming a spec.
+No functional changes proposed for items still pending (Orders 2–5). No changes to the DES interaction-reliability patterns (A3 doctrine untouched — F8 centralizes, never removes). No *disruptive* schema change (id reshaping, semantic reinterpretation) happens without a dedicated spec cycle — that gate is **F1/B17** specifically, not every schema-additive item (F11 shipped in Order 1, see §3.1). Anything marked ⚠ in the table above still stops for human review before becoming a spec.
 
 ## 5. After this audit
 

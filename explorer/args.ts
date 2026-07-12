@@ -4,6 +4,9 @@ export interface CliArgs {
   update: boolean;
   failOnNew: boolean;
   out: string;
+  // Skip crawling; read a previously-written { map, errors } report and reuse it (audit F12) —
+  // removes the footgun of hand-copying a report's .map into the canonical map path.
+  fromReport?: string;
 }
 
 const SESSIONS = ['anon', 'auth', 'both'] as const;
@@ -21,6 +24,8 @@ export function parseArgs(argv: string[]): CliArgs {
       args.session = v as CliArgs['session'];
     } else if (a === '--out') {
       args.out = argv[++i] ?? args.out;
+    } else if (a === '--from-report') {
+      args.fromReport = argv[++i];
     }
   }
   return args;

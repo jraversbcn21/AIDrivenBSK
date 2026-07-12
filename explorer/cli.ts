@@ -24,44 +24,54 @@ async function main(): Promise<void> {
   const cfg = loadExplorerConfig();
   const args = parseArgs(process.argv.slice(2));
 
-  const sessions: Session[] = args.session === 'both' ? ['anon', 'auth'] : [args.session];
-  const classifier = makeClassifier(cfg);
-  const ledger = new InteractionLedger(cfg.interactions.mustCapture);
+  let map: FunctionalMap;
+  let errors: CrawlError[];
 
-  const browser = await chromium.launch();
-  const classified: ClassifiedPage[] = [];
-  const errors: CrawlError[] = [];
-  try {
-    for (const session of sessions) {
-      const context = await browser.newContext({
-        baseURL: env.baseURL,
-        ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
-      });
-      const result = await crawlSession(
-        { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger },
-        session,
-        SEEDS,
-      );
-      errors.push(...result.errors);
-      for (const ex of result.extractions) {
-        classified.push({ extraction: ex, classification: await classifier.classifyPage(buildPageContext(ex)) });
+  if (args.fromReport) {
+    // Skip crawling; reuse a previously-written report instead of hand-copying its .map into
+    // the canonical map path (audit F12 — the report shape { map, errors } differs from the
+    // canonical map's bare shape, and that mismatch has already caused a real mistake once).
+    ({ map, errors } = await readReport(args.fromReport));
+  } else {
+    const sessions: Session[] = args.session === 'both' ? ['anon', 'auth'] : [args.session];
+    const classifier = makeClassifier(cfg);
+    const ledger = new InteractionLedger(cfg.interactions.mustCapture);
+
+    const browser = await chromium.launch();
+    const classified: ClassifiedPage[] = [];
+    errors = [];
+    try {
+      for (const session of sessions) {
+        const context = await browser.newContext({
+          baseURL: env.baseURL,
+          ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
+        });
+        const result = await crawlSession(
+          { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger },
+          session,
+          SEEDS,
+        );
+        errors.push(...result.errors);
+        for (const ex of result.extractions) {
+          classified.push({ extraction: ex, classification: await classifier.classifyPage(buildPageContext(ex)) });
+        }
+        await context.close();
       }
-      await context.close();
+    } finally {
+      await browser.close();
     }
-  } finally {
-    await browser.close();
-  }
 
-  if (cfg.extraction === 'aria' && cfg.interactions.enabled) {
-    for (const src of ledger.unsatisfiedPatterns()) {
-      console.warn(`Must-capture pattern /${src}/i never produced an overlay this crawl — the map may lack its interaction (M8b design §3.2).`);
+    if (cfg.extraction === 'aria' && cfg.interactions.enabled) {
+      for (const src of ledger.unsatisfiedPatterns()) {
+        console.warn(`Must-capture pattern /${src}/i never produced an overlay this crawl — the map may lack its interaction (M8b design §3.2).`);
+      }
     }
+
+    map = buildMap({ classified, environment: env.name });
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    await writeJson(`reports/explorer/${stamp}.json`, { map, errors });
   }
-
-  const map = buildMap({ classified, environment: env.name });
-
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await writeJson(`reports/explorer/${stamp}.json`, { map, errors });
 
   if (args.diff || args.failOnNew) {
     const prev = await readMap(args.out);
@@ -101,6 +111,10 @@ async function readMap(path: string): Promise<FunctionalMap | null> {
   } catch {
     return null;
   }
+}
+
+async function readReport(path: string): Promise<{ map: FunctionalMap; errors: CrawlError[] }> {
+  return JSON.parse(await readFile(path, 'utf8')) as { map: FunctionalMap; errors: CrawlError[] };
 }
 
 main().catch((err) => {

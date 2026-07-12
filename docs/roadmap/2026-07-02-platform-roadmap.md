@@ -30,7 +30,11 @@ If a task does not improve at least one of these capabilities, question whether 
 
 **A5 is done (2026-07-12)** — `SearchResultsPage.firstProduct()` now selects by capability (standard quick-add button present, `Personalizable` badge absent), live-validated 5/5 against DES. See backlog §A and findings doc §18 for full detail.
 
-**Next: decide the next milestone** — check [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for candidates. **B17** and **F18** are now the natural next candidates per the audit's own sequencing table — both are ⚠ schema/contract-affecting, and either needs its own spec cycle with live re-validation before implementation, not a quick patch. The audit's "hygiene" grouping (small, independent, zero-behavior-change items — audit §3 row 1) could ride as a companion branch alongside whichever of the above gets picked. Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
+**A6 is done (2026-07-12, same day)** — `LoginPage.login()` matches DES's current `/es/logon.html` flow again (no obsolete interstitial click); the full serialized `pnpm test` suite completes 4/4 end-to-end. See backlog §A and findings doc §19.
+
+**The audit's "hygiene" grouping is done (2026-07-12, same day)** — F2 (differ now diffs `interactions[]`), F9 (Builder detects a stale `proposals.json`), F6 (offline extractor no longer misses `data-qa-anchor`), F11 (extraction truncation now recorded, schema 1.5→1.6, additive), F12 (`--from-report` closes the report/map shape footgun). See audit doc §3.1.
+
+**Next: decide the next milestone** — check [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for candidates. **B17** and **F18** are now the natural next candidates per the audit's own sequencing table — both are ⚠ schema/contract-affecting, and either needs its own spec cycle with live re-validation before implementation, not a quick patch. The only items left below that class are F3 and F8 (Orders 2 and 5), both small and individually optional. Confirm with Jorge before starting new brainstorm/spec work, per the working agreement.
 
 See [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) for the full list of lower-priority open items.
 
