@@ -3,10 +3,13 @@ import { acceptConsent } from '../support/consent';
 import type { TestUser } from '../data/users';
 
 /**
- * DES login is the multi-step "BERSHKA MMBRS" flow:
- *   home -> entry gates -> /es/logon.html -> "Continuar con e-mail" -> e-mail+password form.
+ * DES login is the "BERSHKA MMBRS" flow:
+ *   home -> entry gates -> /es/logon.html -> e-mail+password form.
  * Reaching /es/logon.html requires the entry gates (cookie + gender) to have been passed,
- * otherwise it redirects back to the locale home.
+ * otherwise it redirects back to the locale home. As of 2026-07 the e-mail+password form
+ * renders directly on /es/logon.html — the earlier "Continuar con e-mail" method-choice
+ * interstitial no longer appears (confirmed live, backlog A6/findings §19; live-reproduced
+ * 2/2 fresh sessions before this fix landed).
  */
 export class LoginPage extends BasePage {
   async open(): Promise<void> {
@@ -19,7 +22,6 @@ export class LoginPage extends BasePage {
   }
 
   async login(user: TestUser): Promise<void> {
-    await this.page.getByRole('button', { name: /continuar con e-?mail/i }).click();
     const email = this.page.getByRole('textbox', { name: /e-?mail/i });
     await email.waitFor({ state: 'visible' });
     await email.fill(user.username);
