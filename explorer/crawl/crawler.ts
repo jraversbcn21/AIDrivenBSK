@@ -113,7 +113,12 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
           path: normalizePath(href, deps.baseURL),
           session,
           depth: item.depth + 1,
-          discoveredVia: item.path,
+          // Resolved parent path, not the requested `item.path`: children are discovered on
+          // the page as it actually resolved (`extraction.meta.path` = page.url()), and
+          // buildMap indexes parents under their resolved meta.path. Using the requested path
+          // truncates every chain rooted at a redirecting seed (audit F4, unmasked by F18's
+          // drop of the non-redirecting `/` seed). Inert when requested === resolved.
+          discoveredVia: extraction.meta.path,
         } satisfies FrontierItem);
       }
     } catch (err) {

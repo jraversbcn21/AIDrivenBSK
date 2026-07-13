@@ -15,7 +15,10 @@ import { diffMaps, formatDiff, hasChanges } from './diff/differ';
 import type { FunctionalMap } from './map/schema';
 import type { Session } from './types';
 
-const SEEDS = ['/', '/es/', '/es/search'];
+// `/` dropped (F18): the bare, non-localized home is an artifact no spec or real ES user
+// enters through, and rooting flows there broke coverage matching against the `/es/`-rooted
+// suite. `/es/` server-resolves (gender gate) to the real localized entry `/es/h-woman.html`.
+const SEEDS = ['/es/', '/es/search'];
 
 async function main(): Promise<void> {
   dotenv.config();

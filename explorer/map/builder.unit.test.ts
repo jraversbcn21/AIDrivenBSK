@@ -136,4 +136,37 @@ describe('buildMap', () => {
     const m = buildMap({ classified: [], environment: 'des' });
     expect(m.interactions).toEqual([]);
   });
+
+  it('reconstructs the full chain when a redirecting seed root is recorded under its resolved path (F4/F18)', () => {
+    // Post-fix crawler output: the `/es/` seed server-resolves (gender gate) to
+    // `/es/h-woman.html`, so the page is recorded under its RESOLVED path with
+    // discoveredVia 'seed', and its child carries that resolved path as discoveredVia
+    // (the F4 fix). The chain must reconstruct root->leaf, not truncate.
+    const m = buildMap({
+      classified: [
+        { extraction: page('/es/h-woman.html', 'seed'), classification: { pageType: 'Home', confidence: 0.7 } },
+        { extraction: page('/es/shop-cart.html', '/es/h-woman.html'), classification: { pageType: 'Cart', confidence: 0.8 } },
+      ],
+      environment: 'des',
+    });
+    const cartFlow = m.flows.find((f) => f.type === 'Cart');
+    expect(cartFlow?.steps).toEqual(m.pages.map((p) => p.id));
+    expect(cartFlow?.name).toBe('/es/h-woman.html -> /es/shop-cart.html');
+  });
+
+  it('truncates the chain when a child references the requested (pre-redirect) seed path — the F4 bug this fixes', () => {
+    // Pre-fix crawler output: children of the redirected `/es/` seed carried the
+    // REQUESTED path `/es` as discoveredVia, but the parent is indexed under its
+    // resolved `/es/h-woman.html`. The lookup misses and the chain truncates to one
+    // step. Documents exactly why the crawler must emit the resolved parent path.
+    const m = buildMap({
+      classified: [
+        { extraction: page('/es/h-woman.html', 'seed'), classification: { pageType: 'Home', confidence: 0.7 } },
+        { extraction: page('/es/shop-cart.html', '/es'), classification: { pageType: 'Cart', confidence: 0.8 } },
+      ],
+      environment: 'des',
+    });
+    const cartFlow = m.flows.find((f) => f.type === 'Cart');
+    expect(cartFlow?.steps).toHaveLength(1); // truncated — parent `/es` is not a page in the map
+  });
 });
