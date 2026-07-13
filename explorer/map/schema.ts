@@ -2,7 +2,7 @@ import type {
   Session, SelectorHints, ElementType, ComponentKind, ExtractedFormField,
 } from '../types';
 
-export const SCHEMA_VERSION = '1.6';
+export const SCHEMA_VERSION = '1.7';
 
 export type PageType =
   | 'Home' | 'PLP' | 'PDP' | 'Cart' | 'Checkout' | 'Account' | 'Wishlist' | 'Search' | 'Other';
@@ -36,6 +36,7 @@ export interface MapElement {
   destructive: boolean;
   component?: ComponentKind; // shared-chrome provenance (B14); absent = page-specific
   revealedBy?: string; // MapInteraction id; present when this element was discovered via interaction (M8)
+  count?: number; // occurrences collapsed by content-dedup (B17); absent = 1
 }
 
 export interface MapInteraction {

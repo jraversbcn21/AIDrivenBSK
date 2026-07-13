@@ -24,7 +24,7 @@ describe('buildMap', () => {
   it('produces a schema-versioned map with stable, deterministic ids', () => {
     const a = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
     const b = buildMap({ classified, environment: 'des', now: '2026-01-01T00:00:00Z' });
-    expect(a.schemaVersion).toBe('1.6');
+    expect(a.schemaVersion).toBe('1.7');
     expect(a.pages[0].pageType).toBe('PDP');
     expect(a.pages[0].routePattern).toBe('/es/abc-c0p{id}.html');
     expect(a).toEqual(b); // fully deterministic
@@ -119,7 +119,7 @@ describe('buildMap', () => {
 
     const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PDP', confidence: 1 } }], environment: 'des' });
 
-    expect(m.schemaVersion).toBe('1.6');
+    expect(m.schemaVersion).toBe('1.7');
     expect(m.interactions).toHaveLength(1);
     const inter = m.interactions[0];
     const mapPage = m.pages[0];
@@ -168,5 +168,37 @@ describe('buildMap', () => {
     });
     const cartFlow = m.flows.find((f) => f.type === 'Cart');
     expect(cartFlow?.steps).toHaveLength(1); // truncated — parent `/es` is not a page in the map
+  });
+
+  it('gives distinct ids to elements sharing role/label/type but diverging in content (B17)', () => {
+    const ex: PageExtraction = {
+      meta: { path: '/es/plp', url: 'u', title: 'PLP', session: 'anon', discoveredVia: 'seed' },
+      landmarkRoles: [], textSummary: '', links: [], componentKinds: [], forms: [],
+      elements: [
+        { type: 'button', label: 'Guardar', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'wishA' } }, destructive: false },
+        { type: 'button', label: 'Guardar', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'wishB' } }, destructive: false },
+      ],
+    };
+    const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PLP', confidence: 1 } }], environment: 'des' });
+    const ids = m.elements.filter((e) => e.label === 'Guardar').map((e) => e.id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2); // distinct, not colliding
+  });
+
+  it('copies ExtractedElement.count straight through to MapElement.count (B17)', () => {
+    const ex: PageExtraction = {
+      meta: { path: '/es/plp', url: 'u', title: 'PLP', session: 'anon', discoveredVia: 'seed' },
+      landmarkRoles: [], textSummary: '', links: [], componentKinds: [], forms: [],
+      elements: [
+        { type: 'button', label: 'Guardar', role: 'button', selectorHints: { role: { type: 'button', name: 'Guardar' } }, destructive: false, count: 27 },
+      ],
+    };
+    const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PLP', confidence: 1 } }], environment: 'des' });
+    expect(m.elements[0].count).toBe(27);
+  });
+
+  it('leaves MapElement.count unset when the source element had none (B17)', () => {
+    const m = buildMap({ classified, environment: 'des' });
+    expect(m.elements[0].count).toBeUndefined();
   });
 });

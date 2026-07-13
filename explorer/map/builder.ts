@@ -51,28 +51,47 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
     pages.push(mapPage);
     nodeByKey.set(`${ex.meta.session}:${ex.meta.path}`, { id: pageId, path: ex.meta.path, discoveredVia: ex.meta.discoveredVia });
 
+    // B17: fold a per-(role,label,type) occurrence index into the id so residual rows that
+    // dedup left sharing those fields but diverging in hints/component (the audit's 127
+    // divergent cases) still get distinct ids. Index 0 for the common singleton case.
+    const elemOccurrence = new Map<string, number>();
     ex.elements.forEach((el) => {
+      const occKey = `${el.role} ${el.label} ${el.type}`;
+      const idx = elemOccurrence.get(occKey) ?? 0;
+      elemOccurrence.set(occKey, idx + 1);
       const mapEl: MapElement = {
-        id: makeId('elem', pageId, el.role, el.label, el.type),
+        id: makeId('elem', pageId, el.role, el.label, el.type, String(idx)),
         pageId, type: el.type, label: el.label, role: el.role,
         selectorHints: el.selectorHints, destructive: el.destructive,
       };
       if (el.component !== undefined) mapEl.component = el.component;
+      if (el.count !== undefined) mapEl.count = el.count;
       elements.push(mapEl);
     });
 
     (ex.interactions ?? []).forEach((it) => {
-      const triggerElementId = makeId('elem', pageId, it.trigger.role, it.trigger.label, it.trigger.type);
+      // B17 follow-on: the passive loop above now appends an occurrence index to every
+      // element id, so this independent hash must match it. `MapInteraction.trigger` only
+      // carries role/label/type (no unique instance pointer), so a repeated trigger label
+      // can't be disambiguated here — resolve to the first occurrence ("0"), consistent
+      // with the project's existing "any exemplar opens the overlay" trigger policy
+      // (builder/select.ts, M9 design §4: .first() on a possibly-repeated trigger testId).
+      const triggerElementId = makeId('elem', pageId, it.trigger.role, it.trigger.label, it.trigger.type, '0');
       const interactionId = makeId('inter', pageId, triggerElementId);
       const revealedElementIds: string[] = [];
+      const revealedOccurrence = new Map<string, number>();
       it.revealedElements.forEach((el) => {
+        const occKey = `${el.role} ${el.label} ${el.type}`;
+        const idx = revealedOccurrence.get(occKey) ?? 0;
+        revealedOccurrence.set(occKey, idx + 1);
         const mapEl: MapElement = {
-          id: makeId('elem', interactionId, el.role, el.label, el.type),
+          id: makeId('elem', interactionId, el.role, el.label, el.type, String(idx)),
           pageId, type: el.type, label: el.label, role: el.role,
           selectorHints: el.selectorHints, destructive: el.destructive,
           revealedBy: interactionId,
         };
         if (el.component !== undefined) mapEl.component = el.component;
+        if (el.count !== undefined) mapEl.count = el.count;
         elements.push(mapEl);
         revealedElementIds.push(mapEl.id);
       });
