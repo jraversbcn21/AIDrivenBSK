@@ -76,7 +76,9 @@ function loadedSignalFor(map: FunctionalMap, leaf: MapPage): Strategy | null {
     const t = e.selectorHints.testId;
     if (t !== undefined && typeof t === 'object' && t !== null) {
       const k = `${t.attr}=${t.value}`;
-      testIdCounts.set(k, (testIdCounts.get(k) ?? 0) + 1);
+      // Sum count, not rows (audit F7): B17 dedup collapses N identical testId-bearing
+      // elements into one row with count:N, so counting rows would misread it as unique.
+      testIdCounts.set(k, (testIdCounts.get(k) ?? 0) + (e.count ?? 1));
     }
   }
   const candidates = map.elements.filter((e) => e.pageId === leaf.id && !e.destructive && e.revealedBy === undefined);

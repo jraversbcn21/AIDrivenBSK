@@ -195,6 +195,18 @@ describe('selectJourneys', () => {
     // violation live resolves against the DOM, not against our candidate filter.
     expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Filtrar' } });
   });
+  it('F7: a single deduped row whose testId repeats (count>1) is not eligible; falls to role', () => {
+    const dupedMap: FunctionalMap = {
+      ...map,
+      elements: [
+        { id: 'w1', pageId: 'pPlp', type: 'button', label: 'Guardar', role: 'button', selectorHints: { testId: { attr: 'data-qa-anchor', value: 'productItemWishlist' }, role: { type: 'button', name: 'Guardar en lista' } }, destructive: false, count: 38 },
+      ],
+    };
+    const r = selectJourneys(report([['pRoot', 'pPlp']]), dupedMap, 5);
+    // count 38 means the DOM has 38 of this testId — a strict-mode violation live — so the
+    // testId tier is skipped and the element's own role hint wins.
+    expect(r.journeys[0].loadedSignal).toEqual({ role: { type: 'button', name: 'Guardar en lista' } });
+  });
 });
 
 const MUST = [/^añadir a (la )?cesta/i];
