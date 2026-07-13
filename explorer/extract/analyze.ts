@@ -4,6 +4,7 @@ import type {
 } from '../types';
 import { isDestructive } from './destructive';
 import { hintsFor, roleOf } from './hints';
+import { sameExtractedElement } from './dedup';
 
 function text(el: Element): string {
   return (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().replace(/\s+/g, ' ');
@@ -53,7 +54,11 @@ export function analyzePage(html: string, meta: PageMeta): PageExtraction {
     };
     const component = componentFor(el, label);
     if (component !== undefined) entry.component = component;
-    elements.push(entry);
+    // B17: collapse content-identical repeats into one row with a count (same predicate as
+    // the aria path — F6 parity). The DOM path has no per-page cap, so no cap interaction.
+    const existing = elements.find((e) => sameExtractedElement(e, entry));
+    if (existing) existing.count = (existing.count ?? 1) + 1;
+    else elements.push(entry);
   };
 
   // Ordered highest-priority-first: an element matching multiple passes is

@@ -17,6 +17,7 @@ export interface ExtractedElement {
   selectorHints: SelectorHints;
   destructive: boolean;
   component?: ComponentKind; // shared-chrome provenance (B14); absent = page-specific
+  count?: number; // occurrences collapsed by content-dedup (B17); absent = 1
 }
 
 export interface ExtractedFormField {

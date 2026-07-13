@@ -2,6 +2,7 @@ import type {
   PageExtraction, PageMeta, ExtractedElement, ExtractedForm, ExtractedFormField, ElementType, ComponentKind,
 } from '../types';
 import { isDestructive } from './destructive';
+import { sameExtractedElement } from './dedup';
 import type { AriaNode } from './aria';
 
 const MAX_ELEMENTS_PER_PAGE = 60;
@@ -62,18 +63,24 @@ export function analyzeAriaNodes(nodes: AriaNode[], meta: PageMeta): PageExtract
 
     const type = elementTypeFor(node);
     if (type) {
-      if (elements.length < MAX_ELEMENTS_PER_PAGE) {
-        const el: ExtractedElement = {
-          type,
-          label: name,
-          role: node.role,
-          selectorHints: name ? { role: { type: node.role, name } } : {},
-          destructive: isDestructive(name),
-        };
-        // Cart-named chrome inside the banner is the header cart affordance (MiniCart) —
-        // the regex is scoped to the banner so page-body "Añadir a la cesta" stays untagged.
-        const component = nextChrome === 'Header' && /cesta|cart/i.test(name) ? 'MiniCart' : nextChrome;
-        if (component !== undefined) el.component = component;
+      const el: ExtractedElement = {
+        type,
+        label: name,
+        role: node.role,
+        selectorHints: name ? { role: { type: node.role, name } } : {},
+        destructive: isDestructive(name),
+      };
+      // Cart-named chrome inside the banner is the header cart affordance (MiniCart) —
+      // the regex is scoped to the banner so page-body "Añadir a la cesta" stays untagged.
+      const component = nextChrome === 'Header' && /cesta|cart/i.test(name) ? 'MiniCart' : nextChrome;
+      if (component !== undefined) el.component = component;
+
+      // B17: collapse content-identical repeats into one row with a count, BEFORE the cap —
+      // so duplicates never consume a cap slot that unique content later in the tree needs.
+      const existing = elements.find((e) => sameExtractedElement(e, el));
+      if (existing) {
+        existing.count = (existing.count ?? 1) + 1;
+      } else if (elements.length < MAX_ELEMENTS_PER_PAGE) {
         elements.push(el);
       } else {
         truncated = true;

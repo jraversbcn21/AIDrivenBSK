@@ -89,4 +89,33 @@ describe('analyzeAriaNodes', () => {
   it('leaves truncated unset when a page has fewer elements than the cap (F11)', () => {
     expect(extraction.truncated).toBeUndefined();
   });
+
+  it('collapses content-identical elements into one row with a count (B17)', () => {
+    const dupes = Array.from({ length: 4 }, () => '  - button "Guardar"').join('\n');
+    const ex = analyzeAriaNodes(parseAriaSnapshot(`- main:\n${dupes}`), meta);
+    const guardar = ex.elements.filter((e) => e.label === 'Guardar');
+    expect(guardar).toHaveLength(1);
+    expect(guardar[0].count).toBe(4);
+  });
+
+  it('keeps elements that share role/label/type but diverge in content as separate rows (B17)', () => {
+    // Same role+label+type, different component provenance (banner vs body) — must not merge.
+    const snapshot = `- banner:\n  - button "Ver cesta"\n- main:\n  - button "Ver cesta"`;
+    const ex = analyzeAriaNodes(parseAriaSnapshot(snapshot), meta);
+    const verCesta = ex.elements.filter((e) => e.label === 'Ver cesta');
+    expect(verCesta).toHaveLength(2);
+    expect(verCesta.every((e) => e.count === undefined)).toBe(true);
+  });
+
+  it('dedup frees cap slots for unique content that repeats would have crowded out (B17)', () => {
+    const repeats = Array.from({ length: 65 }, () => '  - button "Repeat"').join('\n');
+    const uniques = Array.from({ length: 5 }, (_, i) => `  - button "Unique ${i}"`).join('\n');
+    const ex = analyzeAriaNodes(parseAriaSnapshot(`- main:\n${repeats}\n${uniques}`), meta);
+    // Without dedup: 60 "Repeat" rows + truncated, all 5 uniques lost. With dedup: 1 "Repeat"
+    // (count 65) + 5 uniques = 6 rows, nothing truncated.
+    expect(ex.elements).toHaveLength(6);
+    expect(ex.elements.find((e) => e.label === 'Repeat')?.count).toBe(65);
+    expect(ex.elements.filter((e) => e.label.startsWith('Unique'))).toHaveLength(5);
+    expect(ex.truncated).toBeUndefined();
+  });
 });

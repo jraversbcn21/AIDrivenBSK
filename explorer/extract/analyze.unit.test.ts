@@ -69,4 +69,17 @@ describe('analyzePage', () => {
     expect(byLabel('Ayuda')?.component).toBe('Footer');
     expect(byLabel('Añadir a la cesta')?.component).toBeUndefined();
   });
+
+  it('collapses content-identical elements into one row with a count (B17)', () => {
+    const html = `
+<html><body><main>
+  <button>Guardar</button>
+  <button>Guardar</button>
+  <button>Guardar</button>
+</main></body></html>`;
+    const r = analyzePage(html, meta);
+    const guardar = r.elements.filter((e) => e.label === 'Guardar');
+    expect(guardar).toHaveLength(1);
+    expect(guardar[0].count).toBe(3);
+  });
 });
