@@ -87,7 +87,10 @@ The contract has held: `TemplateGenerator` emits nothing a hand-written page obj
 
 Each finding cites file/line or the doc section it engages with, and states risk, complexity, and whether a fix would change documented behavior (⚠ = STOP, needs human review before any spec).
 
-### F1. [Nuevo — root-caused here] Duplicate `MapElement.id`: id generation has no occurrence discriminator
+### F1. [Nuevo — root-caused here] Duplicate `MapElement.id`: id generation has no occurrence discriminator — **RESOLVED by B17 (2026-07-13)**
+
+> **Resolved 2026-07-13 (backlog B17, findings §21).** Fix direction (a) shipped: extraction-time content dedup with a `MapElement.count` field (`explorer/extract/dedup.ts`, both extraction paths) plus occurrence-discriminated ids in `buildMap` (schema 1.6 → 1.7). Live re-crawl: 4,222/4,222 unique ids (zero duplicates), 4,222 rows down from 4,809, 484 rows carry `count > 1`. F7 closed in the same milestone (see below). The residual trigger-disambiguation gap (≥2 eligible same-role+label+type elements) is documented as accepted scope, predating B17.
+
 
 **The open observation from findings §17, now root-caused.** `explorer/map/builder.ts:54`:
 
@@ -131,7 +134,10 @@ Findings §9/§12/§13/§15/§16/§17 all attribute the `0/N flows covered` resu
 
 `src/support/locators.ts:5-8` declares the three-attribute list as *shared* "so producer and resolver can never disagree." The aria producer honors it (`enrichTestIds.ts:21` iterates `TESTID_ATTRS`), but the offline DOM producer does not: `explorer/extract/hints.ts:24-27` probes only `data-testid` and `data-qa` — **`data-qa-anchor` is missing**, which is the one attribute confirmed live as DES's dominant test-id carrier (§12). Impact today is offline-only (`dom` mode never runs against DES), but this is a concrete instance of the standing maintainability risk of the dual extraction path: two parallel implementations of the same heuristics (`analyze.ts` vs `analyzeAria.ts`, `hintsFor` vs `enrichTestIds`, two `componentFor` implementations) with no shared conformance test. **Fix:** iterate `TESTID_ATTRS` in `hintsFor` (trivial), plus one shared unit test asserting both producers emit the same hint for the same logical element (small). **Changes documented behavior:** no.
 
-### F7. [Ya documentado — en desacuerdo parcial con el cierre de B16] The uniqueness check is bounded by extraction truncation
+### F7. [Ya documentado — en desacuerdo parcial con el cierre de B16] The uniqueness check is bounded by extraction truncation — **RESOLVED by B17 (2026-07-13)**
+
+> **Resolved 2026-07-13 (backlog B17, findings §21, commit `0e4057f`).** As predicted here, F1's dedup + `count` field made this exact for free: `builder/select.ts`'s `loadedSignalFor` uniqueness check now sums each row's `count` (real DOM occurrence count) instead of counting map rows, so a testId collapsed into one deduped row with `count: 38` is correctly read as non-unique. The extraction-cap undercount is also removed because dedup now runs before the 60-element cap.
+
 
 B16's fix (`builder/select.ts:73-81`) counts a testId's occurrences *among the map's elements for the page* and requires exactly 1. Two mechanisms make that count an undercount of the live DOM: the 60-element extraction cap (8/149 pages are saturated, and duplicates burn slots — F1), and crawl-time hydration variance (the aria tree at extraction may show one exemplar of a grid that renders 38 live). A testId that repeats in the DOM but survives into the map exactly once passes the `=== 1` check, and the original strict-mode violation recurs. **Not reopening B16** — the shipped fix was correct and live-validated for the observed case; this is its honest residual envelope, worth one line in the backlog rather than silence. Note that F1's fix direction (a) (dedup + `count` field) makes this exact for free — another reason to prefer it. **Complexity:** absorbed by F1. **Changes documented behavior:** no (tightens an existing guard).
 
