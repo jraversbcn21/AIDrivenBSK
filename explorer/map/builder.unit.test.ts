@@ -132,6 +132,41 @@ describe('buildMap', () => {
     expect(inter.revealedElementIds).toEqual([revealed?.id]);
   });
 
+  it('resolves triggerElementId to the real (later, non-destructive) occurrence, not a destructive earlier duplicate (B17 review)', () => {
+    const base = page('/es/prod-c0p1.html', 'seed');
+    const ex: PageExtraction = { ...base, meta: { ...base.meta, session: 'auth' } };
+    ex.elements.push(
+      // Index 0: a destructive element sharing role/label/type with the real trigger below.
+      // The crawler's eligible()/selectCandidates would never pick this one as a trigger, but
+      // the passive-loop occurrence counter (which doesn't filter by destructive) still gives
+      // it index 0 — exactly the divergence this fix closes.
+      { type: 'button', label: 'Añadir a cesta', role: 'button', selectorHints: { role: { type: 'button', name: 'Añadir a cesta' } }, destructive: true },
+      // Index 1: the real, non-destructive element the crawler actually clicked.
+      { type: 'button', label: 'Añadir a cesta', role: 'button', selectorHints: { role: { type: 'button', name: 'Añadir a cesta' } }, destructive: false },
+    );
+    ex.interactions = [{
+      trigger: { role: 'button', label: 'Añadir a cesta', type: 'button' },
+      outcome: 'overlay',
+      revealedElements: [{
+        type: 'button', label: 'Talla S', role: 'button',
+        selectorHints: { role: { type: 'button', name: 'Talla S' } }, destructive: false,
+      }],
+      revealedLinks: [],
+    }];
+
+    const m = buildMap({ classified: [{ extraction: ex, classification: { pageType: 'PDP', confidence: 1 } }], environment: 'des' });
+
+    const addToCartEls = m.elements.filter((e) => e.label === 'Añadir a cesta');
+    expect(addToCartEls).toHaveLength(2);
+    const destructiveEl = addToCartEls.find((e) => e.destructive === true);
+    const eligibleEl = addToCartEls.find((e) => e.destructive === false);
+    expect(destructiveEl?.id).not.toBe(eligibleEl?.id);
+
+    const inter = m.interactions[0];
+    expect(inter.triggerElementId).toBe(eligibleEl?.id);
+    expect(inter.triggerElementId).not.toBe(destructiveEl?.id);
+  });
+
   it('interactions[] is always present (empty when no extraction has any)', () => {
     const m = buildMap({ classified: [], environment: 'des' });
     expect(m.interactions).toEqual([]);

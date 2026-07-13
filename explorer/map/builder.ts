@@ -70,13 +70,24 @@ export function buildMap(input: { classified: ClassifiedPage[]; environment: str
     });
 
     (ex.interactions ?? []).forEach((it) => {
-      // B17 follow-on: the passive loop above now appends an occurrence index to every
-      // element id, so this independent hash must match it. `MapInteraction.trigger` only
-      // carries role/label/type (no unique instance pointer), so a repeated trigger label
-      // can't be disambiguated here — resolve to the first occurrence ("0"), consistent
-      // with the project's existing "any exemplar opens the overlay" trigger policy
-      // (builder/select.ts, M9 design §4: .first() on a possibly-repeated trigger testId).
-      const triggerElementId = makeId('elem', pageId, it.trigger.role, it.trigger.label, it.trigger.type, '0');
+      // B17: resolve the trigger's real occurrence index rather than assuming '0'. A trigger
+      // is only ever chosen from *eligible* candidates (explorer/crawl/interact.ts's
+      // eligible(): !destructive + clickable type + named role), and selectCandidates always
+      // picks the first eligible match in ex.elements order — so walk ex.elements counting
+      // every same-(role,label,type) element (destructive or not, matching the passive loop's
+      // own counting scheme above) and stop at the first non-destructive one. This resolves
+      // the concrete destructive-vs-eligible divergence risk this task's id scheme introduced.
+      // Residual, pre-existing ambiguity if TWO OR MORE eligible elements share the same key
+      // (ExtractedInteraction.trigger never carried a unique instance pointer, even before
+      // B17) is unchanged — same "any exemplar" tolerance the project already accepts
+      // elsewhere for a repeated trigger (builder/generate/TemplateGenerator.ts's .first()).
+      let triggerIdx = 0;
+      for (const e of ex.elements) {
+        if (e.role !== it.trigger.role || e.label !== it.trigger.label || e.type !== it.trigger.type) continue;
+        if (!e.destructive) break;
+        triggerIdx++;
+      }
+      const triggerElementId = makeId('elem', pageId, it.trigger.role, it.trigger.label, it.trigger.type, String(triggerIdx));
       const interactionId = makeId('inter', pageId, triggerElementId);
       const revealedElementIds: string[] = [];
       const revealedOccurrence = new Map<string, number>();
