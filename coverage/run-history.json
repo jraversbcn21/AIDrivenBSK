@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1.0",
+  "entries": [
+    {
+      "recordedAt": "2026-07-14T09:02:43.138Z",
+      "failureReportGeneratedAt": "2026-07-14T09:02:40.352Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-13T19:05:50.552Z",
+      "totals": {
+        "tests": 4,
+        "passed": 4,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": []
+    }
+  ]
+}

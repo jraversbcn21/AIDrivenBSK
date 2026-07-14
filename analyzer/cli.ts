@@ -4,6 +4,8 @@ import { parseAnalyzeArgs } from './args';
 import { analyzeFailures, type ResultsInput } from './failures/analyze';
 import { buildRiskReport } from './risk/score';
 import { diffMaps, hasChanges } from '../explorer/diff/differ';
+import { historicalFlowFailures } from '../learning/aggregate';
+import type { RunHistory } from '../learning/types';
 import type { FunctionalMap } from '../explorer/map/schema';
 import type { FailureCategory } from './types';
 
@@ -54,8 +56,26 @@ async function main(): Promise<void> {
       console.log('Risk: no changes between the baseline and current map — nothing to score.');
       return;
     }
+    // Phase 8: multi-run failure history, when recorded. A missing history file just means
+    // the signal is limited to the current run; a corrupt one is warned about and skipped
+    // (read-only consumer — protecting the file on WRITE is `pnpm learn`'s job).
+    let history: RunHistory | null = null;
+    try {
+      history = JSON.parse(await readFile(args.history, 'utf8')) as RunHistory;
+    } catch {
+      history = null;
+    }
+    if (history !== null && !Array.isArray(history.entries)) {
+      console.warn(`Warning: ${args.history} has no entries[] — ignoring history for this run.`);
+      history = null;
+    }
+    const aggregate = historicalFlowFailures(history);
+    if (aggregate.window > 0) {
+      console.log(`History: weighting risk with ${aggregate.window} recorded run(s) from ${args.history}.`);
+    }
     const riskReport = buildRiskReport(diff, baseline, map, failureReport.affectedFlowIds, {
       now: new Date().toISOString(),
+      ...(aggregate.window > 0 ? { history: aggregate } : {}),
     });
     await writeJson(RISK_REPORT_PATH, riskReport);
     console.log(`Risk: ${riskReport.totals.high} high / ${riskReport.totals.med} med / ${riskReport.totals.low} low across ${riskReport.entries.length} diff entries.`);

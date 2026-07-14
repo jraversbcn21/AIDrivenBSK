@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 import { parsePlanArgs } from './args';
 import { annotateCoverage } from './coverage/annotate';
 import { buildPlanReport } from './propose/propose';
+import { historicalDriftEvents } from '../learning/aggregate';
+import type { RunHistory } from '../learning/types';
 import type { FunctionalMap } from '../explorer/map/schema';
 import type { RouteEvidence } from './types';
 
@@ -26,8 +28,25 @@ async function main(): Promise<void> {
   const map = await readJson<FunctionalMap>(args.map, 'pnpm explore --update');
   const evidence = await readJson<RouteEvidence>(args.evidence, 'pnpm test');
 
+  // Phase 8: drift-aware ranking when a run history exists. Read-only consumer — a missing
+  // or unparseable file just means no drift signal (protecting the file is `pnpm learn`'s job).
+  let history: RunHistory | null = null;
+  try {
+    const parsed = JSON.parse(await readFile(args.history, 'utf8')) as RunHistory;
+    if (Array.isArray(parsed.entries)) history = parsed;
+  } catch {
+    history = null;
+  }
+  const drift = historicalDriftEvents(history);
+  if (drift.byId.size > 0) {
+    console.log(`History: ranking proposals with drift from ${history?.entries.length} recorded run(s) in ${args.history}.`);
+  }
+
   const annotated = annotateCoverage(map, evidence);
-  const report = buildPlanReport(annotated, evidence.generatedAt, new Date().toISOString());
+  const report = buildPlanReport(
+    annotated, evidence.generatedAt, new Date().toISOString(),
+    history !== null ? drift.byId : undefined,
+  );
   await writeJson(PROPOSALS_PATH, report);
 
   const passedCount = evidence.tests.filter((t) => t.status === 'passed').length;

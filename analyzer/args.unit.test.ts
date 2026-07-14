@@ -6,14 +6,16 @@ describe('parseAnalyzeArgs', () => {
     expect(parseAnalyzeArgs([])).toEqual({
       results: 'reports/results.json',
       map: 'coverage/functional-map.json',
+      history: 'coverage/run-history.json',
       top: 10,
     });
   });
 
-  it('accepts overrides for results, map and top', () => {
-    const args = parseAnalyzeArgs(['--results', 'r.json', '--map', 'm.json', '--top', '5']);
+  it('accepts overrides for results, map, history and top', () => {
+    const args = parseAnalyzeArgs(['--results', 'r.json', '--map', 'm.json', '--history', 'h.json', '--top', '5']);
     expect(args.results).toBe('r.json');
     expect(args.map).toBe('m.json');
+    expect(args.history).toBe('h.json');
     expect(args.top).toBe(5);
   });
 

@@ -160,6 +160,57 @@ describe('buildRiskReport', () => {
     expect(report.entries[0].band).toBe('high');
   });
 
+  it('fires failure history from the multi-run window with a k-of-n reason (Phase 8)', () => {
+    const current = makeMap({
+      pages: [makePage('p-pdp', 'PDP')],
+      flows: [makeFlow('f-hist', { steps: ['p-pdp'] })],
+    });
+    const diff = emptyDiff();
+    diff.changed.push({ kind: 'flow', id: 'f-hist', summary: 'changed flow f-hist' });
+    const report = buildRiskReport(diff, makeMap(), current, [], {
+      ...OPTS, history: { byFlow: new Map([['f-hist', 3]]), window: 5 },
+    });
+    // 0.35 + 0.20 + 0.10 (PDP) + 0.15 (history) = 0.80
+    expect(report.entries[0].score).toBe(0.8);
+    expect(report.entries[0].reasons).toEqual(expect.arrayContaining([
+      expect.stringContaining('failed in 3 of last 5 recorded runs'),
+    ]));
+  });
+
+  it('propagates historical failures to pages stepped by the failing flow', () => {
+    const current = makeMap({
+      pages: [makePage('p-x', 'Other')],
+      flows: [makeFlow('f-y', { steps: ['p-x'] })],
+    });
+    const diff = emptyDiff();
+    diff.changed.push({ kind: 'page', id: 'p-x', summary: 'changed page p-x' });
+    const report = buildRiskReport(diff, makeMap(), current, [], {
+      ...OPTS, history: { byFlow: new Map([['f-y', 2]]), window: 10 },
+    });
+    // 0.35 + 0.15 (page) + 0 (Other) + 0.15 (history) = 0.65
+    expect(report.entries[0].score).toBe(0.65);
+    expect(report.entries[0].reasons).toEqual(expect.arrayContaining([
+      expect.stringContaining('failed in 2 of last 10 recorded runs'),
+    ]));
+  });
+
+  it('does not double-apply the weight when a flow is affected both this run and historically', () => {
+    const current = makeMap({
+      pages: [makePage('p-pdp', 'PDP')],
+      flows: [makeFlow('f-both', { steps: ['p-pdp'] })],
+    });
+    const diff = emptyDiff();
+    diff.changed.push({ kind: 'flow', id: 'f-both', summary: 'changed flow f-both' });
+    const report = buildRiskReport(diff, makeMap(), current, ['f-both'], {
+      ...OPTS, history: { byFlow: new Map([['f-both', 1]]), window: 4 },
+    });
+    // same 0.80 as history-only: the 0.15 weight fires exactly once
+    expect(report.entries[0].score).toBe(0.8);
+    expect(report.entries[0].reasons).toEqual(expect.arrayContaining([
+      expect.stringContaining('failed in 1 of last 4 recorded runs'),
+    ]));
+  });
+
   it('carries map timestamps and band totals in the report envelope', () => {
     const baseline = makeMap({ generatedAt: '2026-07-10T00:00:00.000Z' });
     const current = makeMap({ generatedAt: '2026-07-14T00:00:00.000Z', pages: [makePage('p', 'Other')] });

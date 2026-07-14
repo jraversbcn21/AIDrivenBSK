@@ -1,5 +1,6 @@
 import type { DiffEntry, DiffKind, MapDiff } from '../../explorer/diff/differ';
 import type { FunctionalMap, PageType, Priority } from '../../explorer/map/schema';
+import type { FlowFailureAggregate } from '../../learning/aggregate';
 import type { RiskBand, RiskEntry, RiskReport } from '../types';
 
 /**
@@ -70,10 +71,18 @@ function resolvePageId(kind: DiffKind, id: string, idx: MapIndex): string | unde
   return undefined;
 }
 
+/** Multi-run failure history (Phase 8): per-flow and per-page k-counts over the recorded window. */
+interface HistoricalFailures {
+  flowK: ReadonlyMap<string, number>;
+  pageK: ReadonlyMap<string, number>;
+  window: number;
+}
+
 function scoreEntry(
   change: Change, entry: DiffEntry,
   current: MapIndex, baseline: MapIndex,
   affectedFlowIds: ReadonlySet<string>, affectedPageIds: ReadonlySet<string>,
+  historical: HistoricalFailures,
 ): RiskEntry {
   // Removed entities only exist in the baseline map; everything else resolves current-first.
   const idx = change === 'removed' ? baseline : current;
@@ -101,12 +110,22 @@ function scoreEntry(
     reasons.push(`${flow.priority}-priority flow`);
   }
 
-  const hasHistory = entry.kind === 'flow'
+  // The failure-history weight fires at most once — Phase 8 upgraded its DATA (multi-run
+  // window instead of single-run), not its magnitude; the historical reason wins when both
+  // sources apply because it carries the k-of-n evidence.
+  const currentRunHit = entry.kind === 'flow'
     ? affectedFlowIds.has(entry.id)
     : pageId !== undefined && affectedPageIds.has(pageId);
-  if (hasHistory) {
+  const histK = entry.kind === 'flow'
+    ? historical.flowK.get(entry.id)
+    : pageId !== undefined ? historical.pageK.get(pageId) : undefined;
+  if (currentRunHit || histK !== undefined) {
     score += WEIGHTS.failureHistory;
-    reasons.push('failure history (recent failed/flaky spec touches it)');
+    reasons.push(histK !== undefined
+      ? entry.kind === 'flow'
+        ? `failure history (failed in ${histK} of last ${historical.window} recorded runs)`
+        : `failure history (page on a flow that failed in ${histK} of last ${historical.window} recorded runs)`
+      : 'failure history (recent failed/flaky spec touches it)');
   }
 
   if (entry.kind === 'element') {
@@ -125,25 +144,31 @@ export function buildRiskReport(
   baselineMap: FunctionalMap,
   currentMap: FunctionalMap,
   affectedFlowIds: string[],
-  opts: { now: string },
+  opts: { now: string; history?: FlowFailureAggregate },
 ): RiskReport {
   const baseline = indexMap(baselineMap);
   const current = indexMap(currentMap);
 
   // Failure history propagates from affected flows to the pages they step through,
   // in whichever map still knows the flow (a removed flow's steps live in the baseline).
+  const stepsOf = (id: string): string[] =>
+    current.flowById.get(id)?.steps ?? baseline.flowById.get(id)?.steps ?? [];
   const affectedFlows = new Set(affectedFlowIds);
   const affectedPages = new Set<string>();
-  for (const id of affectedFlows) {
-    for (const step of current.flowById.get(id)?.steps ?? baseline.flowById.get(id)?.steps ?? []) {
-      affectedPages.add(step);
-    }
+  for (const id of affectedFlows) for (const step of stepsOf(id)) affectedPages.add(step);
+
+  // Multi-run history (Phase 8): same propagation, carrying each flow's k-count to its pages.
+  const flowK = opts.history?.byFlow ?? new Map<string, number>();
+  const pageK = new Map<string, number>();
+  for (const [id, k] of flowK) {
+    for (const step of stepsOf(id)) pageK.set(step, Math.max(pageK.get(step) ?? 0, k));
   }
+  const historical: HistoricalFailures = { flowK, pageK, window: opts.history?.window ?? 0 };
 
   const entries: RiskEntry[] = [
-    ...diff.removed.map((e) => scoreEntry('removed', e, current, baseline, affectedFlows, affectedPages)),
-    ...diff.changed.map((e) => scoreEntry('changed', e, current, baseline, affectedFlows, affectedPages)),
-    ...diff.added.map((e) => scoreEntry('added', e, current, baseline, affectedFlows, affectedPages)),
+    ...diff.removed.map((e) => scoreEntry('removed', e, current, baseline, affectedFlows, affectedPages, historical)),
+    ...diff.changed.map((e) => scoreEntry('changed', e, current, baseline, affectedFlows, affectedPages, historical)),
+    ...diff.added.map((e) => scoreEntry('added', e, current, baseline, affectedFlows, affectedPages, historical)),
   ].sort((a, b) => b.score - a.score || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
 
   const totals: Record<RiskBand, number> = { high: 0, med: 0, low: 0 };

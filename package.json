@@ -16,6 +16,7 @@
     "build-tests": "tsx builder/cli.ts",
     "analyze": "tsx analyzer/cli.ts",
     "heal": "tsx healer/cli.ts",
+    "learn": "tsx learning/cli.ts",
     "test:generated": "playwright test --config playwright.generated.config.ts"
   },
   "devDependencies": {
