@@ -1,0 +1,28 @@
+# Tier 1 — offline gates on GitHub-hosted runners: every push/PR, no VPN needed.
+# The live tiers (qa-cycle.yml, explore.yml) run on the self-hosted runner instead —
+# GitHub's cloud runners can never reach DES (*.inditex.grp requires the corp VPN,
+# which lives on Jorge's machine). See docs/ci/github-selfhosted-runner.md.
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit

@@ -1,0 +1,55 @@
+# Tier 2 — the live QA cycle on the SELF-HOSTED runner (Jorge's machine, labels
+# [self-hosted, des-vpn]): the only place DES is reachable (corp VPN). Scheduled
+# weekday mornings + manual trigger. Fails fast with a clear message when the VPN
+# is down instead of a confusing e2e wall of red.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   BASE_URL, BERSHKA_USER, BERSHKA_PASS
+# Runner setup guide: docs/ci/github-selfhosted-runner.md
+name: qa-cycle
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-5' # weekdays 06:00 UTC (07:00/08:00 Madrid)
+  workflow_dispatch: {}
+
+jobs:
+  qa-cycle:
+    runs-on: [self-hosted, des-vpn]
+    timeout-minutes: 40
+    env:
+      ENVIRONMENT: des
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BERSHKA_USER: ${{ secrets.BERSHKA_USER }}
+      BERSHKA_PASS: ${{ secrets.BERSHKA_PASS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: DES reachability probe (VPN check)
+        shell: bash
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$BASE_URL" || echo "000")
+          if [ "$code" != "200" ]; then
+            echo "::error::DES unreachable (HTTP $code) — is GlobalProtect connected on the runner machine? Skipping the cycle cleanly."
+            exit 1
+          fi
+          echo "DES reachable (200)."
+      # No --with-deps: the runner is Windows (deps flag is Linux apt-only); browsers cache per-machine.
+      - run: pnpm exec playwright install chromium
+      - run: pnpm qa-cycle
+      - name: Upload cycle reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-cycle-reports-${{ github.run_number }}
+          path: |
+            reports/
+            test-results/
+          retention-days: 14

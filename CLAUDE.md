@@ -35,7 +35,8 @@ The platform-level roadmap (10-phase evolution toward the Agentic QA Platform, m
 - `pnpm qa-cycle` — Orchestrator CLI (`tsx orchestrator/cli.ts`); runs the full deterministic cycle test → analyze → learn → heal → plan and writes `reports/orchestrator/qa-cycle-report.json`; flags `--risk <baseline>` (passes to analyze), `--no-probe` (passes to heal), `--update-map` (opts in to `plan --update`, default OFF), `--top <n>`. Exit code = pipeline health, not suite health — a red suite is the report's content
 - `pnpm ask "<intención>"` — NL instruction interface (`tsx intent/cli.ts`, B-NL1); resolves natural language against the map's flows (deterministic, explainable) and generates that flow's draft spec via the Builder — bridging the ranking for one targeted request; flags `--flow <id>` (ambiguity follow-up), `--run` (also executes `pnpm test:generated`), `--top <n>`, `--map`. Ambiguous ⇒ top-N list + exit 0; no match ⇒ honest message (incl. the D15 checkout blind spot) + exit 1. Writes drafts WITHOUT pruning (targeted addition — F10's prune belongs to `build-tests`)
 - `pnpm test:generated` — runs only the generated drafts (excluded from `pnpm test` via `testIgnore`)
-- Package manager is **pnpm** (not pinned in `package.json`, but `pnpm-lock.yaml` + CI's `corepack enable` confirm it)
+- Package manager is **pnpm** (not pinned in `package.json`, but `pnpm-lock.yaml` confirms it)
+- CI is **GitHub Actions** (2026-07-14; `.gitlab-ci.yml` retired): `ci.yml` = offline gates on cloud runners per push; `qa-cycle.yml`/`explore.yml` = live jobs on a **self-hosted runner** (labels `[self-hosted, des-vpn]`, Jorge's machine — cloud runners can't reach DES). Runner setup + C11 closure steps: `docs/ci/github-selfhosted-runner.md`
 - Browser install: `pnpm exec playwright install --with-deps chromium` (not just `pnpm install`)
 
 ## Environment

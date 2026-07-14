@@ -1,0 +1,55 @@
+# Tier 2 — the Explorer diff gate on the SELF-HOSTED runner (migrated from the retired
+# .gitlab-ci.yml explore job, same intent and bounds): weekly re-crawl diffed against
+# the committed map, non-blocking (drift is surfaced for review, not gating merges —
+# the C12 disposition, unchanged). EXPLORER_MAX_PAGES matches the committed map's crawl
+# scope so diffs compare like-for-like; the 20-min budget covers the ~8.3s/page cost of
+# the PLP settle wait (findings §10).
+name: explore
+
+on:
+  schedule:
+    - cron: '0 5 * * 1' # Mondays 05:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  explore-diff:
+    runs-on: [self-hosted, des-vpn]
+    timeout-minutes: 60
+    continue-on-error: true # non-blocking by design (C12)
+    env:
+      ENVIRONMENT: des
+      BASE_URL: ${{ secrets.BASE_URL }}
+      BERSHKA_USER: ${{ secrets.BERSHKA_USER }}
+      BERSHKA_PASS: ${{ secrets.BERSHKA_PASS }}
+      EXPLORER_MAX_PAGES: '80'
+      EXPLORER_TIME_BUDGET_MS: '1200000'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: DES reachability probe (VPN check)
+        shell: bash
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$BASE_URL" || echo "000")
+          if [ "$code" != "200" ]; then
+            echo "::error::DES unreachable (HTTP $code) — is GlobalProtect connected on the runner machine?"
+            exit 1
+          fi
+      - run: pnpm exec playwright install chromium
+      # The auth-session crawl reads .auth/state.json directly (explorer/cli.ts) — a fresh
+      # checkout needs the Playwright setup project first, same as the old GitLab job.
+      - run: pnpm exec playwright test --project=setup
+      - run: pnpm explore --diff --fail-on-new
+      - name: Upload crawl reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: explore-reports-${{ github.run_number }}
+          path: reports/explorer/
+          retention-days: 14
