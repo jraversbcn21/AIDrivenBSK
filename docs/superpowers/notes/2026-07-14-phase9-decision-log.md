@@ -63,4 +63,4 @@
 ## Exit-gate status
 
 - Suite completa (fases 0–9 v1) en verde: **met** — 363/363 unit + the live qa-cycle above (which itself ran the full e2e suite 4/4).
-- Decision log revisado por el responsable humano: **pending Jorge's review.** Note for that review: this closes the roadmap's Phase 9 **orchestration core**; **B-NL1** (the NL interface) remains registered as the next candidate milestone with its own scope round — Phase 9's row stays "v1" until Jorge decides whether B-NL1 completes it or stands alone.
+- Decision log revisado por el responsable humano: **met — reviewed by Jorge (2026-07-14, same day), resolving both pending decisions:** (1) **B-NL1 is deferred** — Jorge wants to hands-on test the platform as built before implementing it; it stays registered as its own future milestone. (2) **Model routing stays on Fable 5** — the Opus/Sonnet split remains on standby (CLAUDE.md updated). **Gate closed.**
