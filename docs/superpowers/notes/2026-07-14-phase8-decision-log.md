@@ -85,4 +85,4 @@
 ## Exit-gate status
 
 - Suite completa (fases 0–8) en verde: **met** — 347/347 unit + 4/4 e2e live.
-- Decision log revisado por el responsable humano: **pending Jorge's review** — Phase 9 must not start before it.
+- Decision log revisado por el responsable humano: **met — reviewed and approved by Jorge (2026-07-14, same day: "La fase 8 esta aprobada si sigue el roadmap"). Gate closed; Phase 9 is unblocked.**
