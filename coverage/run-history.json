@@ -28,6 +28,33 @@
         "skipped": 0
       },
       "failures": []
+    },
+    {
+      "recordedAt": "2026-07-14T09:58:21.119Z",
+      "failureReportGeneratedAt": "2026-07-14T09:58:19.041Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-13T19:05:50.552Z",
+      "totals": {
+        "tests": 4,
+        "passed": 3,
+        "failed": 0,
+        "flaky": 1,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_5c335c37c325"
+          ]
+        }
+      ]
     }
   ]
 }
