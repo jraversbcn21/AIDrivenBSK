@@ -37,6 +37,20 @@ function playwrightDriver(page: Page, originalPath: string, baseURL: string): In
   };
 }
 
+/**
+ * Decide si una visita cuya URL resolvió a `path` debe saltarse como duplicada de path-resuelto.
+ * `alreadyConsidered` son los paths ya evaluados/marcados en esta misma visita (para no
+ * re-marcar un path que ya contamos y descartar por error una página válida — F3).
+ */
+export function isDuplicateResolution(
+  path: string,
+  alreadyConsidered: string[],
+  markSeen: (p: string) => boolean,
+): boolean {
+  if (alreadyConsidered.includes(path)) return false;
+  return !markSeen(path);
+}
+
 export interface CrawlError {
   path: string;
   session: Session;
@@ -69,6 +83,15 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
     try {
       await page.goto(item.path, { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
+
+      // F3: los duplicados por redirect resuelven a su URL final justo tras el consent — deduplica
+      // aquí, antes de pagar el settle wait + extracción aria + los probes de enrichTestIds. El
+      // path solicitado ya fue deduplicado por frontier.add(); solo re-chequea el path resuelto.
+      const resolvedPath = normalizePath(page.url(), deps.baseURL);
+      if (isDuplicateResolution(resolvedPath, [item.path], (p) => frontier.markSeen(session, p))) {
+        continue;
+      }
+
       // Product grids (PLP/category pages) hydrate client-side ~1-2s after this point —
       // extracting immediately missed them entirely (findings §8). Condition-based wait:
       // poll the aria tree until it stops changing, bounded so a page that never quite
@@ -82,11 +105,9 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
       }
       const extraction = await extract(page, session, item.discoveredVia, deps.baseURL);
 
-      // DES server-side redirects (e.g. the gender gate) can land two different queued
-      // paths on the same destination. The requested path was already deduped by add();
-      // only re-check when the resolved path differs, so a plain single-visit page isn't
-      // rejected against its own dedup entry.
-      if (extraction.meta.path !== item.path && !frontier.markSeen(session, extraction.meta.path)) {
+      // Salvaguarda: solo si la URL cambió durante el settle (raro), de modo que el path extraído
+      // difiere del que ya evaluamos arriba. `resolvedPath` e `item.path` ya fueron considerados.
+      if (isDuplicateResolution(extraction.meta.path, [item.path, resolvedPath], (p) => frontier.markSeen(session, p))) {
         continue;
       }
       extractions.push(extraction);
