@@ -12,6 +12,7 @@
 - **Chosen:** Follow Jorge's direct instruction; run everything on Fable 5. Recorded here as the goal requires ("inconsistencies are documented, not silently corrected"). CLAUDE.md's policy text is NOT rewritten autonomously — whether this is a one-off exception or a policy change is Jorge's call at review time.
 - **Reason:** direct user instruction supersedes repo doc defaults; changing the standing policy doc autonomously would overstep the goal's own inconsistency rule.
 - **Discarded:** (a) refusing and routing per CLAUDE.md — contradicts an explicit, informed instruction (the conflict was flagged to Jorge before the goal was set, and he proceeded); (b) silently editing the routing policy — policy changes need the human, not the agent.
+- **RESOLVED at gate review (2026-07-14, Jorge):** policy change, not a one-off exception — CLAUDE.md's routing policy is **neutralized until Phase 9 completes**: the full cycle runs on Fable 5. CLAUDE.md updated accordingly; the old split policy is suspended, to be re-evaluated at Phase 9's close.
 
 ## D2. Process: design doc + decision log, no separate plan doc
 
@@ -113,4 +114,4 @@
 ## Exit-gate status
 
 - Suite completa (fases 0–6) en verde: **met** — 297/297 unit (incl. Phase 6's own 34) + 4/4 e2e live.
-- Decision log revisado por el responsable humano: **pending Jorge's review** — this is the one gate item an agent cannot self-satisfy. Phase 7's /goal must not start until this review happens.
+- Decision log revisado por el responsable humano: **met — reviewed and approved by Jorge (2026-07-14, same day)**, with one resolution: D1 becomes a policy change (routing neutralized to Fable 5 until Phase 9 completes — CLAUDE.md updated). **Gate closed; Phase 7 is unblocked.**
