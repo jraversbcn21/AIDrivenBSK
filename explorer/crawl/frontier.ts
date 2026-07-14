@@ -56,8 +56,4 @@ export class Frontier {
     if (item) this.handedOut++;
     return item;
   }
-
-  get visitedCount(): number {
-    return this.handedOut;
-  }
 }

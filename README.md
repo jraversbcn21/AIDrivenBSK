@@ -1,91 +1,79 @@
-# AIDriven Bershka QA — Framework Foundation (Phase 0)
+# AIDrivenBsk — Agentic QA Platform for Bershka DES
 
-Playwright + TypeScript test framework using Page Object / Component Object models with multi-environment config. Foundation for a later agentic QA platform.
+Playwright + TypeScript. What started as a Page-Object test framework is now a complete agentic QA platform: it **discovers** the site, **plans** coverage, **writes** its own tests, **runs** them, **classifies** failures, **remembers** across runs, **proposes** selector fixes, **orchestrates** the whole loop in one command — and **takes instructions in natural language**. Every mutation of committed code or knowledge stays gated by a human.
+
+**All ten roadmap phases are implemented and live-validated** (2026-07-14). Full history: `docs/roadmap/2026-07-02-platform-roadmap.md`.
+
+## The nine sub-projects
+
+| Dir | Agent | Command |
+|---|---|---|
+| `src/` + `tests/` | Foundation (POM/COM, act→verify→retry doctrine) | `pnpm test` |
+| `explorer/` | Knowledge Engine — crawls DES into a versioned functional map | `pnpm explore` |
+| `planner/` | Coverage Planner — evidence-based `coveredBy` + drift-aware proposals | `pnpm plan` |
+| `builder/` | Builder Engine — generates specs from proposals | `pnpm build-tests` |
+| `analyzer/` | Risk Analysis — classifies failures, risk-scores map diffs | `pnpm analyze` |
+| `healer/` | Selector Healing — live-validated fix proposals (propose-only) | `pnpm heal` |
+| `learning/` | Continuous Learning — cross-run memory (`coverage/run-history.json`) | `pnpm learn` |
+| `orchestrator/` | Deterministic full cycle: test→analyze→learn→heal→plan | `pnpm qa-cycle` |
+| `intent/` | Natural-language interface | `pnpm ask "..."` |
 
 ## Setup
+
 ```bash
 pnpm install
-pnpm exec playwright install --with-deps chromium
-cp .env.example .env   # fill in BASE_URL + credentials
+pnpm exec playwright install chromium   # behind the corp proxy: NODE_TLS_REJECT_UNAUTHORIZED=0 pnpm exec playwright install chromium
+cp .env.example .env                    # ENVIRONMENT=des, BASE_URL, BERSHKA_USER, BERSHKA_PASS
 ```
 
-## Run
+Live anything (e2e, crawl, probing) needs the corp VPN (GlobalProtect) connected. `ENVIRONMENT` ∈ `prod | des | local`; no hardcoded URLs anywhere. Checkout is gated by `checkoutAllowed` (never on prod).
+
+## Daily use
+
 ```bash
-# Local run against DES (values via .env or inline)
-ENVIRONMENT=des BASE_URL=... BERSHKA_USER=... BERSHKA_PASS=... pnpm test
-pnpm test:unit       # unit tests (config, selector strategy)
+pnpm qa-cycle                 # the whole loop in one command (~5 min); consolidated report in reports/orchestrator/
+pnpm ask "prueba el carrito"  # resolve an intent to a flow and generate its draft spec (--run executes it too)
+```
+
+`qa-cycle` flags: `--risk <old-map.json>` scores map drift · `--update-map` lets plan annotate the committed map (default OFF) · `--top <n>`.
+
+## Growing coverage (generate → review → promote)
+
+```bash
+pnpm plan                  # ranked uncovered flows (drift-aware when run history exists)
+pnpm build-tests --top 3   # drafts into gitignored tests/generated/ (prunes previous generations; --no-prune keeps)
+pnpm test:generated        # run ONLY the drafts
+# like one? move it into tests/<domain>/ and commit — nothing is promoted automatically
+```
+
+## When something breaks
+
+```bash
+pnpm analyze               # failures classified (7 signature-anchored categories + flaky/persistent)
+pnpm heal                  # selector-drift failures get live-probed replacement proposals (never auto-applied)
+pnpm exec playwright show-report reports/html   # videos/screenshots/traces of failures
+```
+
+## The knowledge (committed, versioned)
+
+- `coverage/functional-map.json` — what the platform knows about DES (pages/elements/flows/interactions, schema 1.7)
+- `coverage/run-history.json` — what it remembers across runs (feeds analyzer risk-scores and planner ranking)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha (§1–§22)
+
+## Explorer details
+
+Aria-tree extraction by default (`EXPLORER_EXTRACTION=aria` — DES renders through `bds-` shadow-DOM components invisible to light-DOM parsing). Bounds: `EXPLORER_MAX_PAGES`, `EXPLORER_TIME_BUDGET_MS` (a full crawl runs ~30–40 min: real per-page settle waits). Interaction discovery (`EXPLORER_INTERACTIONS=on`) opens non-destructive overlays; `EXPLORER_MUST_CAPTURE` (semicolon-separated regexes, default `^añadir a (la )?cesta`) guarantees deterministic capture. Classifier: `EXPLORER_MODE=rules|llm|auto` (default `rules`; `llm` needs `ANTHROPIC_API_KEY`). `pnpm explore --update` writes the canonical map (refuses empty crawls); `--diff --fail-on-new` is the drift gate.
+
+## CI (GitHub Actions, two tiers)
+
+- `ci.yml` — unit/typecheck/lint on cloud runners, every push/PR.
+- `qa-cycle.yml` (weekday mornings) + `explore.yml` (Mondays) — live jobs on a **self-hosted runner** (`[self-hosted, des-vpn]`) on a machine with the VPN; both fail fast with a clear message when DES is unreachable. Setup guide: `docs/ci/github-selfhosted-runner.md`.
+
+## Development
+
+```bash
+pnpm test:unit    # 389 unit tests across all nine sub-projects (vitest)
 pnpm typecheck && pnpm lint
 ```
 
-## Environments
-Set via env vars only — no hardcoded URLs. `ENVIRONMENT` ∈ `prod | des | local`.
-Checkout/payment tests are gated by `checkoutAllowed` (disabled for `prod`).
-
-## Structure
-- `src/config` — typed, validated multi-env config
-- `src/pages` — Page Objects (intent-level methods)
-- `src/components` — Component Objects (rooted at a Locator)
-- `src/fixtures/test.ts` — injects env + page objects
-- `tests/` — reference specs
-
-## Explorer Agent
-
-Crawls the site and emits a versioned functional map.
-
-```bash
-# Build the map (both sessions) and write the canonical file
-ENVIRONMENT=des BASE_URL=... pnpm explore --update
-
-# Re-run and show what changed vs the committed map
-ENVIRONMENT=des BASE_URL=... pnpm explore --diff
-
-# CI gate: fail if new uncovered flows appear
-ENVIRONMENT=des BASE_URL=... pnpm explore --diff --fail-on-new
-```
-
-Classifier mode via `EXPLORER_MODE=rules|llm|auto` (default `rules`). The `llm`/`auto`
-modes use `ANTHROPIC_API_KEY` and are optional. The canonical map lives at
-`coverage/functional-map.json`; per-run artifacts go to `reports/explorer/`.
-The live crawl needs corp VPN access to DES + browser binaries.
-
-Extraction is accessibility-tree-driven by default (`EXPLORER_EXTRACTION=aria`) because DES
-renders through `bds-` shadow-DOM components that light-DOM parsing cannot see; `dom` keeps the
-offline linkedom path. Crawls are bounded by `EXPLORER_MAX_PAGES` and `EXPLORER_TIME_BUDGET_MS`.
-Per-run artifacts in `reports/explorer/` have the shape `{ map, errors }`; the committed
-canonical map stays a plain functional map.
-
-Interaction discovery (`EXPLORER_INTERACTIONS=on|off`, default `on`; aria mode only) opens
-non-destructive overlays/dialogs during the crawl so the map records what they reveal.
-`EXPLORER_MUST_CAPTURE` (optional, M8b): semicolon-separated, case-insensitive regex patterns
-for trigger labels the crawl must capture deterministically — matching candidates are
-prioritized on every page until each pattern yields an overlay outcome once per crawl.
-Default: `^añadir a (la )?cesta`. Empty string disables.
-
-## Coverage Planner
-
-Annotates the functional map with journey coverage from real execution evidence and
-proposes what to validate next.
-
-```bash
-pnpm test                 # normal run; also writes reports/route-evidence.json
-pnpm plan                 # read-only: coverage summary + reports/planner/proposals.json
-pnpm plan --update        # additionally writes coveredBy into coverage/functional-map.json
-```
-
-A flow counts as covered when a passing test's visited routes contain the flow's steps as
-an ordered subsequence. Only passed tests count; `--update` refuses empty evidence.
-
-## Builder Engine
-
-Generates runnable Playwright navigation specs (+ minimal page objects imitating the
-POM/COM contracts) from the planner's top-ranked uncovered journeys.
-
-```bash
-pnpm plan                  # produces reports/planner/proposals.json
-pnpm build-tests --top 3   # writes drafts into tests/generated/ (gitignored)
-pnpm test:generated        # runs ONLY the drafts (excluded from pnpm test)
-```
-
-Drafts are deterministic (same inputs → identical files) and never join the suite
-automatically: review, run, then promote by moving into `tests/<domain>/` and committing.
-Checkout-looking routes are skipped by path.
+House rules: no `any` (error), no import cycles (error), selector priority `testId → role → label → placeholder`, every DES state-changing interaction goes through `actUntil` (`src/support/retry.ts`), agents propose — humans apply.
