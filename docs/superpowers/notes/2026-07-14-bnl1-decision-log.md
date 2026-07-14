@@ -70,4 +70,4 @@
 ## Exit-gate status
 
 - Suite completa en verde: **met** — 381/381 unit + the live `--run` above.
-- Decision log revisado por el responsable humano: **pending Jorge's review.**
+- Decision log revisado por el responsable humano: **met — reviewed and approved by Jorge (2026-07-14, same day: "El documento esta correcto"). Gate closed. With B-NL1 closed, the platform roadmap has no open gates and no registered milestones — use-and-maintain mode.**
