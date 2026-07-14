@@ -1,4 +1,4 @@
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { parseBuildArgs } from './args';
 import {
@@ -45,6 +45,20 @@ async function main(): Promise<void> {
     console.error('No specs generated: no eligible proposals or interactions (see skips above, or re-run `pnpm plan`).');
     process.exitCode = 1;
     return;
+  }
+
+  // F10 root fix: prune stale drafts BEFORE writing the new generation, and only now —
+  // after selection has produced at least one spec — so a failed run never leaves an
+  // emptied directory. Drafts generated against superseded maps rot (they can fail on
+  // long-fixed generator bugs, polluting exactly the signal `pnpm test:generated` exists
+  // to give — seen live 2026-07-13 and 2026-07-14). Deliberate accumulation: --no-prune.
+  if (args.prune) {
+    const stale = await readdir(args.out, { recursive: true }).catch(() => [] as string[]);
+    const staleFiles = stale.filter((f) => String(f).endsWith('.ts')).length;
+    if (staleFiles > 0) {
+      await rm(args.out, { recursive: true, force: true });
+      console.log(`Pruned ${staleFiles} stale draft file(s) from ${args.out}/ (previous generations; use --no-prune to keep them).`);
+    }
   }
 
   const generator = new TemplateGenerator();
