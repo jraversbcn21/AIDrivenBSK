@@ -2,6 +2,7 @@ import type { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 import { FiltersPanel } from '../components/FiltersPanel';
 import { ProductCard } from '../components/ProductCard';
+import { actUntil } from '../support/retry';
 
 export class SearchResultsPage extends BasePage {
   readonly filters: FiltersPanel;
@@ -50,20 +51,26 @@ export class SearchResultsPage extends BasePage {
    */
   async waitForResults(opts: { timeoutMs?: number } = {}): Promise<void> {
     const timeoutMs = opts.timeoutMs ?? 30_000;
-    const deadline = Date.now() + timeoutMs;
-    while (Date.now() < deadline) {
-      if (await this.firstProduct().isVisible().catch(() => false)) return;
-      await this.page.waitForTimeout(500);
-    }
-    // Deadline hit. A compatible (standard) product never appeared. Distinguish the two causes so
-    // the failure is actionable: a rendered grid with only incompatible variants is NOT a dead load.
-    if (await this.productCards().first().isVisible().catch(() => false)) {
-      throw new Error(
-        `SearchResultsPage: results grid rendered but no standard-add-to-cart product found within ${timeoutMs}ms (all variants Personalizable or out-of-stock?)`,
-      );
-    }
-    throw new Error(
-      `SearchResultsPage: results grid did not render within ${timeoutMs}ms — dead /q/ load (DES pre-prod noise); the test-level retry re-runs the search`,
-    );
+    // Pure state polling (src/support/retry.ts, no act): check at t0, then every 500ms.
+    await actUntil({
+      verify: () => this.firstProduct().isVisible(),
+      deadlineMs: timeoutMs,
+      sleepMs: 500,
+      immediateFirstCheck: true,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      // Deadline hit. A compatible (standard) product never appeared. Distinguish the two causes
+      // so the failure is actionable: a rendered grid with only incompatible variants is NOT a
+      // dead load.
+      onTimeout: async () => {
+        if (await this.productCards().first().isVisible().catch(() => false)) {
+          throw new Error(
+            `SearchResultsPage: results grid rendered but no standard-add-to-cart product found within ${timeoutMs}ms (all variants Personalizable or out-of-stock?)`,
+          );
+        }
+        throw new Error(
+          `SearchResultsPage: results grid did not render within ${timeoutMs}ms — dead /q/ load (DES pre-prod noise); the test-level retry re-runs the search`,
+        );
+      },
+    });
   }
 }

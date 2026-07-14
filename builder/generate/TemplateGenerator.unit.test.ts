@@ -95,10 +95,12 @@ describe('TemplateGenerator.generateInteraction', () => {
     expect(spec.relPath).toBe('interaction-rebajas-n-f05b1c4b.spec.ts');
     expect(page.relPath).toBe('pages/MujerRopaRebajasNInteractionF05B1C4B.ts');
   });
-  it('clicks the trigger with .first() (repeated-grid semantics) inside an act->verify->retry loop', () => {
+  it('clicks the trigger with .first() (repeated-grid semantics) via the shared actUntil primitive (F8)', () => {
     expect(page.content).toContain(".first().click()");
     expect(page.content).toContain('dismissOnboardingTour');
-    expect(page.content).toContain('Date.now() + 20_000');
+    expect(page.content).toContain("import { actUntil } from '../../../src/support/retry';");
+    expect(page.content).toContain('await actUntil({');
+    expect(page.content).toContain('deadlineMs: 20_000');
   });
   it('asserts overlay-open via a baseline dialog-count diff when overlayIsDialog (live finding: DES keeps a second, persistent dialog-role nav-menu mounted on every page)', () => {
     expect(page.content).toContain('private dialogBaselineCount = 0;');

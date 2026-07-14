@@ -104,6 +104,7 @@ function interactionPageObjectFile(input: InteractionJourneyInput): GeneratedFil
   const content = `${headerFor('interaction', input.interactionId, input)}import { BasePage } from '../../../src/pages/BasePage';
 import { locate } from '../../../src/support/locators';
 import { dismissOnboardingTour } from '../../../src/support/consent';
+import { actUntil } from '../../../src/support/retry';
 
 export class ${className} extends BasePage {
 ${dialogBaselineField(input)}  /**
@@ -120,19 +121,22 @@ ${isLoadedBody(input)}
   }
 
   /**
-   * Act -> verify -> retry (CLAUDE.md standing rule): a fire-once click can be silently
-   * lost to Vue hydration lag. .first() on the trigger is deliberate — the testId may
-   * repeat across a product grid and any exemplar opens the overlay (M9 design §4).
+   * Act -> verify -> retry (src/support/retry.ts, the CLAUDE.md standing rule): a fire-once
+   * click can be silently lost to Vue hydration lag. .first() on the trigger is deliberate —
+   * the testId may repeat across a product grid and any exemplar opens the overlay (M9 §4).
    */
   async openOverlay(): Promise<void> {
-${dialogBaselineCapture(input)}    const deadline = Date.now() + 20_000;
-    while (Date.now() < deadline) {
-      await dismissOnboardingTour(this.page);
-      await locate(this.page, ${strategyLiteral(input.trigger)}).first().click().catch(() => undefined);
-      await this.page.waitForTimeout(500);
-      if (await this.isOverlayOpen().catch(() => false)) return;
-    }
-    throw new Error('${className}: the overlay did not open within the deadline');
+${dialogBaselineCapture(input)}    await actUntil({
+      act: async () => {
+        await dismissOnboardingTour(this.page);
+        await locate(this.page, ${strategyLiteral(input.trigger)}).first().click();
+      },
+      verify: () => this.isOverlayOpen(),
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('${className}: the overlay did not open within the deadline'); },
+    });
   }
 
   async isOverlayOpen(): Promise<boolean> {
@@ -140,13 +144,14 @@ ${dialogBaselineCapture(input)}    const deadline = Date.now() + 20_000;
   }
 
   async closeOverlay(): Promise<void> {
-    const deadline = Date.now() + 20_000;
-    while (Date.now() < deadline) {
-      await this.page.keyboard.press('Escape').catch(() => undefined);
-      await this.page.waitForTimeout(500);
-      if (!(await this.isOverlayOpen().catch(() => false))) return;
-    }
-    throw new Error('${className}: the overlay did not close on Escape within the deadline');
+    await actUntil({
+      act: () => this.page.keyboard.press('Escape'),
+      verify: async () => !(await this.isOverlayOpen().catch(() => false)),
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('${className}: the overlay did not close on Escape within the deadline'); },
+    });
   }
 }
 `;
