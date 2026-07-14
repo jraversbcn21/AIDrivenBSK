@@ -472,3 +472,23 @@ Design: `docs/superpowers/specs/2026-07-13-b17-element-id-dedup-design.md`. Plan
 **Code-review findings — all resolved within the branch, none carried forward.** Task 2's review found and fixed the `triggerElementId` occurrence-index gap described above (plus a citation nit). Task 4's review surfaced two narrative-only Minors — the initial report didn't mention the mid-crawl rate-limit interruption (now recorded here), and a small breakdown-arithmetic slip in the `test:generated` count reconciliation (the 26/26 total was still correct). Neither affects the deliverable; neither needs its own backlog entry.
 
 **B17 closed.** Both remaining ⚠ schema/contract-affecting audit items (B17 = F1, F18 = F5) are now done. Per the audit's own §3 sequencing the next table item is F8 (centralizing the act→verify→retry idiom), but it is rated ⚠ ("touches every live-validated interaction path... mandates a full live re-validation pass... human call on whether the consolidation is worth it now") — so it is a candidate, not an auto-declared next milestone, alongside F3 (Order-2, small, output-identical) and the lower-priority C11/C13/D15. Confirm with Jorge before starting brainstorm/spec work, per the standing working agreement.
+
+---
+
+## 22. D15 phase 1 — the real DES checkout, reached for the first time (2026-07-14)
+
+**Backlog:** §D, item D15 (phase 1: reach + capture knowledge; payment/shipping forms deliberately deferred to a future phase 2, per Jorge's scope decision). Probe run live via a temporary `tests/_probe/d15-checkout-probe.spec.ts` (deleted after this section, same lifecycle as the A5 probe §18).
+
+**Captured live — the knowledge that was missing since B13:**
+- **The real checkout URL is `/es/checkout.html`** (title: "Checkout | Bershka"). First time any part of this project has reached it — the crawler never can (link-following only; checkout sits behind a cart with items).
+- **The entry affordance is "Tramitar pedido"** on `/es/shop-cart.html`.
+- **B13's Checkout path-hint list is now VALIDATED against reality:** the classifier's `/checkout|order|pago|payment/i` requirement (recorded in §13 as "a best guess to confirm against the real DES checkout URL when one is first reached — D15") matches `checkout.html` directly. The best guess was right; no classifier change needed.
+- The probe's first attempt hit the documented add-to-cart environment noise (size dialog not closing, §14/§16/§18) — the retry captured everything. The cart's `<main>`-scoped aria snapshot was empty at +5s (skeleton still rendering) while the page-level "Tramitar pedido" locator resolved fine — consistent with §5's "cart-page content renders as a slow skeleton" finding.
+
+**Permanent spec shipped: `tests/checkout/checkout-reach.spec.ts`** — walks the full UI path (search → PDP → add → cart → "Tramitar pedido") and verifies `/es/checkout.html` loads (URL + title). Guards: `test.skip(!env.checkoutAllowed)` — never runs where checkout is disallowed (prod). Never fills payment, never places an order. Uses F8's `actUntil` for the checkout click (act→verify→retry — the click can be lost to the cart skeleton's late hydration, observed on the spec's own first live attempt: no navigation within 30s, retry passed; the same documented noise class as §14/§16/§18).
+
+**Deliberately NOT done (phase 2 material, needs its own scope round):** checkout's inner structure (shipping/payment forms) — the probe's post-navigation body snapshot came back essentially empty at +5s (checkout SPA hydrates slowly; a dedicated settle/probe pass is needed); whether `/es/checkout.html` is server-routable (the spec walks the UI path on purpose); test payment methods on DES (unknown — do not guess).
+
+**Also unblocked:** `pnpm ask "prueba el checkout"` still answers no-match honestly — the *map* has no Checkout flow (the crawler still can't reach it). The knowledge captured here lives in this doc and the spec; feeding a checkout flow into the map (e.g. a must-capture-style seeded route) is phase-2 material.
+
+**Known cosmetic side effect (pre-existing):** probe + spec runs add items to the shared test account's cart; no cleanup fixture exists (§7's open lead, unchanged).
