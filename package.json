@@ -18,6 +18,7 @@
     "heal": "tsx healer/cli.ts",
     "learn": "tsx learning/cli.ts",
     "qa-cycle": "tsx orchestrator/cli.ts",
+    "ask": "tsx intent/cli.ts",
     "test:generated": "playwright test --config playwright.generated.config.ts"
   },
   "devDependencies": {

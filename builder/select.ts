@@ -107,6 +107,42 @@ export function mapIsStale(report: PlanReport, map: FunctionalMap): boolean {
   return report.mapGeneratedAt !== map.generatedAt;
 }
 
+/** Shared per-flow journey construction (chain, checkout guard, loaded signal) — used by
+ *  the ranking path (selectJourneys) and the by-flowId injection (selectJourneyByFlowId,
+ *  the backlog §E seam). Same checks, same reasons, one implementation (decision log
+ *  2026-07-14-bnl1 D5). */
+function journeyFromSteps(
+  map: FunctionalMap,
+  pageById: Map<string, MapPage>,
+  flowId: string,
+  journeyName: string,
+  session: JourneyInput['session'],
+  steps: string[],
+): { journey: JourneyInput | null; reason?: string } {
+  const pages = steps.map((id) => pageById.get(id));
+  if (pages.length === 0) {
+    return { journey: null, reason: 'proposal has an empty steps array — nothing to walk' };
+  }
+  if (pages.some((p) => p === undefined)) {
+    return { journey: null, reason: 'references a page id missing from the map (stale proposals? re-run pnpm plan)' };
+  }
+  const chain = (pages as MapPage[]).map((p) => ({ path: p.path, routePattern: p.routePattern, title: p.title }));
+  if (chain.some((s) => CHECKOUT_ROUTE.test(s.path))) {
+    return { journey: null, reason: 'checkout-looking route, skipped by path guard' };
+  }
+  const leaf = (pages as MapPage[])[pages.length - 1];
+  return {
+    journey: {
+      flowId,
+      journeyName,
+      session,
+      chain,
+      loadedSignal: loadedSignalFor(map, leaf),
+      mapGeneratedAt: map.generatedAt,
+    },
+  };
+}
+
 export function selectJourneys(report: PlanReport, map: FunctionalMap, top: number): Selection {
   const pageById = new Map(map.pages.map((p) => [p.id, p]));
   const journeys: JourneyInput[] = [];
@@ -114,32 +150,30 @@ export function selectJourneys(report: PlanReport, map: FunctionalMap, top: numb
 
   for (const proposal of report.proposals) {
     if (journeys.length >= top) break;
-    const pages = proposal.steps.map((id) => pageById.get(id));
-    if (pages.length === 0) {
-      skipped.push({ flowId: proposal.flowId, reason: 'proposal has an empty steps array — nothing to walk' });
+    const { journey, reason } = journeyFromSteps(map, pageById, proposal.flowId, proposal.name, proposal.session, proposal.steps);
+    if (journey === null) {
+      skipped.push({ flowId: proposal.flowId, reason: reason ?? 'unbuildable journey' });
       continue;
     }
-    if (pages.some((p) => p === undefined)) {
-      skipped.push({ flowId: proposal.flowId, reason: 'references a page id missing from the map (stale proposals? re-run pnpm plan)' });
-      continue;
-    }
-    const chain = (pages as MapPage[]).map((p) => ({ path: p.path, routePattern: p.routePattern, title: p.title }));
-    if (chain.some((s) => CHECKOUT_ROUTE.test(s.path))) {
-      skipped.push({ flowId: proposal.flowId, reason: 'checkout-looking route, skipped by path guard' });
-      continue;
-    }
-    const leaf = (pages as MapPage[])[pages.length - 1];
-    journeys.push({
-      flowId: proposal.flowId,
-      journeyName: proposal.name,
-      session: proposal.session,
-      chain,
-      loadedSignal: loadedSignalFor(map, leaf),
-      mapGeneratedAt: map.generatedAt,
-    });
+    journeys.push(journey);
   }
 
   return { journeys, skipped };
+}
+
+/** The B-NL1 injection point (backlog §E, verified 2026-07-05): build one journey directly
+ *  by flowId, bypassing the planner's ranking for a targeted request — bridging it, not
+ *  replacing it. Same construction and the same checkout safety guard as the ranking path. */
+export function selectJourneyByFlowId(
+  map: FunctionalMap,
+  flowId: string,
+): { journey: JourneyInput | null; reason?: string } {
+  const flow = map.flows.find((f) => f.id === flowId);
+  if (flow === undefined) {
+    return { journey: null, reason: `flow ${flowId} not found in the map — check the id against coverage/functional-map.json` };
+  }
+  const pageById = new Map(map.pages.map((p) => [p.id, p]));
+  return journeyFromSteps(map, pageById, flow.id, flow.name, flow.session, flow.steps);
 }
 
 export interface InteractionSelection {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  selectJourneys, selectInteractionJourneys, unsatisfiedMustCapture, mapIsStale,
+  selectJourneys, selectJourneyByFlowId, selectInteractionJourneys, unsatisfiedMustCapture, mapIsStale,
 } from './select';
 import type { FunctionalMap, MapPage } from '../explorer/map/schema';
 import type { PlanReport } from '../planner/propose/propose';
@@ -234,6 +234,45 @@ const interMap: FunctionalMap = {
   flows: [flow('fPlp', ['pRoot', 'pHub', 'pPlp'])],
   interactions: [inter('i1', 'pPlp', 'eTrig', { revealedElementIds: ['eDlg'] })],
 };
+
+describe('selectJourneyByFlowId (B-NL1 injection point)', () => {
+  const flowMap: FunctionalMap = {
+    ...map,
+    flows: [
+      { id: 'flow_ask_ok', name: '/ -> /es/h-woman.html -> /es/mujer/ropa/camisetas-n4365.html', type: 'PLP', session: 'anon', priority: 'high', steps: ['pRoot', 'pHub', 'pPlp'] },
+      { id: 'flow_ask_pay', name: '/ -> /es/checkout/payment.html', type: 'Other', session: 'auth', priority: 'high', steps: ['pRoot', 'pPay'] },
+      { id: 'flow_ask_ghost', name: 'ghost', type: 'Other', session: 'anon', priority: 'low', steps: ['pRoot', 'pMissing'] },
+    ],
+  };
+
+  it('builds the same journey shape as the ranking path, keyed by flowId', () => {
+    const { journey, reason } = selectJourneyByFlowId(flowMap, 'flow_ask_ok');
+    expect(reason).toBeUndefined();
+    expect(journey?.flowId).toBe('flow_ask_ok');
+    expect(journey?.chain.map((s) => s.path)).toEqual(['/', '/es/h-woman.html', '/es/mujer/ropa/camisetas-n4365.html']);
+    expect(journey?.session).toBe('anon');
+    expect(journey?.loadedSignal).toEqual({ testId: { attr: 'data-qa-anchor', value: 'quick-add' } });
+    expect(journey?.mapGeneratedAt).toBe(map.generatedAt);
+  });
+
+  it('returns a reason for an unknown flowId', () => {
+    const { journey, reason } = selectJourneyByFlowId(flowMap, 'flow_nope');
+    expect(journey).toBeNull();
+    expect(reason).toMatch(/not found in the map/);
+  });
+
+  it('an explicit ask cannot bypass the checkout route guard', () => {
+    const { journey, reason } = selectJourneyByFlowId(flowMap, 'flow_ask_pay');
+    expect(journey).toBeNull();
+    expect(reason).toMatch(/checkout-looking route/);
+  });
+
+  it('returns a reason when the flow references a missing page id', () => {
+    const { journey, reason } = selectJourneyByFlowId(flowMap, 'flow_ask_ghost');
+    expect(journey).toBeNull();
+    expect(reason).toMatch(/page id missing/);
+  });
+});
 
 describe('selectInteractionJourneys', () => {
   it('generates for an overlay interaction whose trigger matches a must-capture pattern, inheriting chain and session from the flow ending at its page', () => {
