@@ -26,9 +26,10 @@ GitHub → `jraversbcn21/AIDrivenBSK` → **Settings → Secrets and variables �
    - *name*: Enter (default) o `jorge-laptop`.
    - **labels: escribe `des-vpn`** ← imprescindible — los workflows seleccionan el runner por `runs-on: [self-hosted, des-vpn]`.
    - *work folder*: Enter (default).
+   - *run as service*: si quieres el modo servicio (ver abajo), responde `Y` aquí — **pero solo funciona si la PowerShell está elevada** (abierta como Administrador); en una consola normal falla con `Needs Administrator privileges for configuring runner as windows service` y deja el runner configurado pero sin servicio.
 4. Arrancarlo. Dos opciones:
-   - **Como servicio de Windows (recomendado):** durante `config.cmd` responde `Y` a "run as service" (o después: `./svc.cmd install` + `./svc.cmd start`). Sobrevive reinicios.
-   - **Manual:** `./run.cmd` en una consola que dejes abierta (se para al cerrarla).
+   - **Manual (más simple, sin admin):** `./run.cmd` en una consola que dejes abierta. Se conecta al instante (aparece **Idle** en GitHub → Settings → Actions → Runners). Se para al cerrar la consola y no sobrevive reinicios — hay que relanzarlo a mano.
+   - **Como servicio de Windows (sobrevive reinicios):** en Windows el servicio lo instala el **propio `config.cmd` desde una PowerShell elevada** respondiendo `Y` a "run as service" — **NO existe `svc.cmd` en Windows** (eso es de Linux/macOS, `svc.sh`; el paquete Windows solo trae `config.cmd` y `run.cmd`). Si el runner ya está configurado sin servicio, para pasar a servicio: (a) GitHub → Settings → Actions → Runners → tu runner → **Remove** (copia el token de removal); (b) PowerShell **como Administrador**: `cd C:\actions-runner ; ./config.cmd remove --token <TOKEN_REMOVAL>`; (c) obtén un token de registro nuevo en **New self-hosted runner** y re-ejecuta `./config.cmd --url ... --token ...` (misma label `des-vpn`), respondiendo `Y` a "run as service".
 
 **Prerequisitos en la máquina** (ya los tienes todos): Node 18+, pnpm, Chromium de Playwright (el workflow lo instala/cachea solo), y GlobalProtect.
 
