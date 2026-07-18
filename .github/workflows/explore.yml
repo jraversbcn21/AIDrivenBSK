@@ -33,14 +33,18 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # shell: powershell (not bash) — same rationale as qa-cycle.yml: the runner service
+      # account (NETWORK SERVICE) has no Git Bash on its PATH.
       - name: DES reachability probe (VPN check)
-        shell: bash
+        shell: powershell
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$BASE_URL" || echo "000")
-          if [ "$code" != "200" ]; then
-            echo "::error::DES unreachable (HTTP $code) — is GlobalProtect connected on the runner machine?"
+          $code = & "$env:SystemRoot\System32\curl.exe" -s -o NUL -w "%{http_code}" --max-time 20 "$env:BASE_URL"
+          if (-not $code) { $code = '000' }
+          if ("$code" -ne '200') {
+            Write-Output "::error::DES unreachable (HTTP $code) - is GlobalProtect connected on the runner machine?"
             exit 1
-          fi
+          }
+          Write-Output "DES reachable (200)."
       - run: pnpm exec playwright install chromium
       # The auth-session crawl reads .auth/state.json directly (explorer/cli.ts) — a fresh
       # checkout needs the Playwright setup project first, same as the old GitLab job.

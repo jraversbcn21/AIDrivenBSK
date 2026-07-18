@@ -32,15 +32,19 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # shell: powershell (not bash) — the runner service account (NETWORK SERVICE) has no
+      # Git Bash on its PATH; Windows PowerShell 5.1 exists for every account. curl.exe is
+      # the System32 native binary (the bare name would hit PS 5.1's Invoke-WebRequest alias).
       - name: DES reachability probe (VPN check)
-        shell: bash
+        shell: powershell
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$BASE_URL" || echo "000")
-          if [ "$code" != "200" ]; then
-            echo "::error::DES unreachable (HTTP $code) — is GlobalProtect connected on the runner machine? Skipping the cycle cleanly."
+          $code = & "$env:SystemRoot\System32\curl.exe" -s -o NUL -w "%{http_code}" --max-time 20 "$env:BASE_URL"
+          if (-not $code) { $code = '000' }
+          if ("$code" -ne '200') {
+            Write-Output "::error::DES unreachable (HTTP $code) - is GlobalProtect connected on the runner machine? Skipping the cycle cleanly."
             exit 1
-          fi
-          echo "DES reachable (200)."
+          }
+          Write-Output "DES reachable (200)."
       # No --with-deps: the runner is Windows (deps flag is Linux apt-only); browsers cache per-machine.
       - run: pnpm exec playwright install chromium
       - run: pnpm qa-cycle
