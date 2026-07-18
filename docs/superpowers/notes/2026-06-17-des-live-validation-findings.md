@@ -1,6 +1,6 @@
 # DES Live-Validation Findings
 
-**Date:** 2026-06-17 (created), last updated 2026-07-13 (earlier, 2026-07-06: PLP-grid extraction gap closed; Builder Engine M6b live-validated; testId attribute-provenance fix M7 closes B15; Checkout/PDP classifier gap closed, M7b closes B13; shared-element deprioritization closes the remaining scope of B14, §14; interaction-aware crawl M8 live-validated, closes the last open row of backlog B9, §15; deterministic must-capture interactions M8b live-validated, closes the M9 prerequisite, §16; Builder interaction-spec generation M9 live-validated and closes B16, §17; 2026-07-12: A5's Personalizable-product fix shipped and live-validated, closing backlog A5, §18; 2026-07-12, later: A6's login-flow-drift fix shipped and live-validated, closing backlog A6, §19; 2026-07-13: F18 coverage-matching re-root live-validated, §20; 2026-07-13, later: B17 element-id dedup live-validated, closing B17 and audit findings F1/F7, schema 1.6→1.7, §21).
+**Date:** 2026-06-17 (created), last updated 2026-07-13 (earlier, 2026-07-06: PLP-grid extraction gap closed; Builder Engine M6b live-validated; testId attribute-provenance fix M7 closes B15; Checkout/PDP classifier gap closed, M7b closes B13; shared-element deprioritization closes the remaining scope of B14, §14; interaction-aware crawl M8 live-validated, closes the last open row of backlog B9, §15; deterministic must-capture interactions M8b live-validated, closes the M9 prerequisite, §16; Builder interaction-spec generation M9 live-validated and closes B16, §17; 2026-07-12: A5's Personalizable-product fix shipped and live-validated, closing backlog A5, §18; 2026-07-12, later: A6's login-flow-drift fix shipped and live-validated, closing backlog A6, §19; 2026-07-13: F18 coverage-matching re-root live-validated, §20; 2026-07-13, later: B17 element-id dedup live-validated, closing B17 and audit findings F1/F7, schema 1.6→1.7, §21; 2026-07-14: D15 phase 1 reaches the real checkout, §22 — the header line missed that update, caught now; 2026-07-18: D15 phase 2 Task 1 probes checkout inner structure/settle/routability, §23 — checkout IS server-routable, branch C; plus four live drift/degradation observations recorded in §23, including the login interstitial's RETURN, which reopens §19's premise).
 **Status:** Foundation fully validated live — login, search, PLP/PDP, filters, and cart all pass reliably in isolation **and as a serialized full suite** (`pnpm test` 4/4, no `--no-deps` workaround needed — confirmed §19). A5's catalog-drift gap in `add-to-cart.spec.ts` is fixed and live-validated (§18). A6's login-flow drift (`/es/logon.html` rendering the e-mail+password form directly, no "Continuar con e-mail" interstitial — found during A5's probe, contradicted §4's recorded recipe) is fixed and live-validated (§19) — `LoginPage.login()` now matches the real, current flow. All known interaction-reliability bugs found live have been fixed (§7). The Explorer Agent is DES-ready with a first live crawl committed (§8). The Coverage Planner is live-validated with a first evidence-annotated map committed (§9). The Builder Engine (M6b) generates navigation specs that pass live against DES (§11); the testId/`locate()` gap it surfaced is now closed (§12, M7) — generated specs assert on real, page-specific testIds again. The Checkout/PDP classifier gap (§10) is closed (§13, B13). B14's remaining scope (leaf pages with no testId-bearing element picking a generic shared header signal) is closed (§14) — the map now tags Header/Footer/MiniCart provenance on elements and the Builder deprioritizes them. The crawler now opens overlays/dialogs during the crawl (M8, §15) — the map records trigger→outcome→revealed-elements (schema 1.5), closing the last open row of backlog B9 ("nav menus/overlays... opened during crawl"). The crawl now deterministically captures the "Añadir a la cesta" → "Tallas" interaction in the committed canonical map (M8b, §16), closing the M9 prerequisite. The Builder now generates interaction specs from that capture (M9, §17) — live-validated 5/5, closing B16 (non-unique testId as loaded-signal) along the way, and surfacing/fixing a genuine live bug in the overlay-open signal itself (a persistent chrome dialog broke `getByRole('dialog')` uniqueness). Coverage matching is restored (F18, §20) — `coveredBy` links evidence to map flows live again. The duplicate-`MapElement.id` observation surfaced in §17 is now fixed (B17, §21, schema 1.7 — zero duplicate ids). Residual, non-blocking environment noise and forward-looking leads remain open — see the "Open leads" callouts in §7/§8 and the map-completeness consequence in §9.
 **Environment:** DES (`https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/`)
 **Test account:** `jorge@esqa.com` (in local `.env`, gitignored).
@@ -492,3 +492,103 @@ Design: `docs/superpowers/specs/2026-07-13-b17-element-id-dedup-design.md`. Plan
 **Also unblocked:** `pnpm ask "prueba el checkout"` still answers no-match honestly — the *map* has no Checkout flow (the crawler still can't reach it). The knowledge captured here lives in this doc and the spec; feeding a checkout flow into the map (e.g. a must-capture-style seeded route) is phase-2 material.
 
 **Known cosmetic side effect (pre-existing):** probe + spec runs add items to the shared test account's cart; no cleanup fixture exists (§7's open lead, unchanged).
+
+---
+
+## 23. D15 phase 2 — checkout inner structure, settle profile, routability (2026-07-18)
+
+**Task:** D15 phase 2, Task 1 (plan: `docs/superpowers/plans/2026-07-18-d15-phase2-checkout-inner.md`; design: `docs/superpowers/specs/2026-07-18-d15-phase2-checkout-inner-design.md`). Temporary probe `tests/_probe/d15-checkout-inner-probe.spec.ts` (deleted after this section, same lifecycle as §18/§22). **Strict read-only inside checkout honored throughout: nothing on `/es/checkout.html` was ever focused, filled, or clicked** — all structure below comes from `ariaSnapshot()` of the page as it renders.
+
+### Headline results
+
+- **`/es/checkout.html` IS server-routable with a non-empty cart.** Direct `goto` lands on it — no redirect. Confirmed three independent times this session (a standalone spike + the probe's entry navigation + the probe's Q3 re-check). **Branch decision: C (routable).**
+- Settle profile measured (Q1 below); **`CHECKOUT_SETTLE` derived: `{ minWaitMs: 13_000, maxWaitMs: 26_000, pollIntervalMs: 500 }`** (first stable Q1 mark +12s, +1s margin; ceiling 2×).
+- The read-only entry state exposes **only the shipping-method step** — no shipping address form and **no payment methods anywhere in the tree**. Payment knowledge requires selecting a shipping method (a click — out of scope under the strict read-only rule; a future phase decision for Jorge, do not guess).
+
+### Environment turbulence found on the way (RIGOR Regla 7 — none of this is smoothed over)
+
+The brief's verbatim probe (UI priming: search → PDP → add → cart → "Tramitar pedido") was **unrunnable tonight** (evening session, 2026-07-18, consistent with §7's service-quality-varies-within-a-day pattern). Four distinct, live-confirmed causes, in discovery order:
+
+1. **The login interstitial is BACK — §19's premise is reopened.** `auth.setup` failed 2/2 (120s timeout each): `/es/logon.html` again renders the pre-A6 **"Continuar con e-mail" / "Continuar con Facebook"** method-choice screen (§4's original recipe), which the post-A6 `LoginPage.login()` (direct e-mail form, §19) cannot pass. This confirms §19's explicitly-unruled-out hypothesis: the flow is server-side variant-switched (A/B or config), not permanently drifted. The stored `.auth/state.json` had also expired (member-hub redirected to logon). A fresh session was minted via a temporary scratchpad script handling BOTH variants; notably, the interstitial button needed **one plain actionability-waiting `click()` after a ~5s settle** — rapid `force: true` clicks at 1s cadence were ALL silently lost (57 clicks/60s, form never opened): §7's hydration-lag doctrine confirmed again, and a reminder that `force: true` retry loops are not automatically safer. **`LoginPage.login()` needs a dual-variant fix (tolerate both the interstitial and the direct form) — NOT shipped here (outside Task 1's file list); recorded as an open item for Jorge.**
+2. **`/es/q/` search results served dead loads persistently:** 5 consecutive dead `/q/camiseta` loads across two independent contexts over ~30 min (grid never rendered; §7's documented noise class, but tonight sustained, not intermittent). Search-based cart priming was abandoned after discrimination probes, per §7's own doctrine.
+3. **Category URL scheme drift (real catalog drift, not noise):** the old `-n{digits}.html` category URLs — including `/es/mujer/ropa/camisetas-n4365.html`, §10's own probe page — now render a SPA 404 ("Oh no… esto es un 404") with the degraded generic title "Bershka | Bershka". The store home is healthy (133 anchors, correct title) and its category links now use **`-c{digits}.html`** (e.g. `/es/mujer/ropa/tops-y-bodies-c1010193220.html`, which rendered 10 product cards + 10 per-card quick-adds cleanly). Consequences: the committed map's category routes are stale until the next re-crawl; the PDP pattern `-c0p<digits>.html` is unaffected (category ids observed all start `c1…`, no `0p`).
+4. **The cart page's content service was down:** `/es/shop-cart.html`'s `<main>` stayed an EMPTY skeleton for 60+ seconds in a clean independent context (and across 6 reload rounds in probe attempts), so "Tramitar pedido" never existed to click — while the header tab read "Cesta (3)", proving the cart items are real server-side. §5's "slow skeleton" finding, degraded to "never renders" tonight. **Phase 1's `checkout-reach.spec.ts` would fail tonight for this reason** — environment, not regression. Even the tab's "(N)" count intermittently failed to hydrate (observed bare "Cesta" for 50+s in one probe attempt; "Cesta (5)" within the poll budget in the passing run).
+
+### Probe shape actually run (deviation from the brief, recorded honestly)
+
+Because of (2)+(4), the passing probe run primed nothing itself: the cart already held the items added **earlier this same session** via the working path — category PLP (`-c1010193220.html`) → first standard card (A5's predicate: has quick-add, not Personalizable) → PDP → `ProductPage.selectFirstSize()`/`addToCart()` (the proven Tallas recipe, which worked fine tonight) — during earlier probe attempts (cart grew 3→5 items across runs; §7's no-cleanup accumulation, unchanged). The probe then: verified the cart tab (best-effort observation, `"Cesta (5)"`, count hydrated), entered checkout by **direct `goto`** (the same entry branch C's crawler seeding will use — so Q1's numbers measure exactly what Tasks 4C/5 will consume), ran Q1/Q2 verbatim, then Q3 verbatim. **PASS, attempt 1, 1.0m, no retries.**
+
+### Q1 — settle profile (real console output, passing run)
+
+| mark | len | changed |
+|---|---|---|
+| +2000ms | 144 | true |
+| +5000ms | 378 | true |
+| +8000ms | 994 | true |
+| +12000ms | 994 | **false** ← first stable mark |
+| +20000ms | 994 | false |
+
+Corroborating spike run (same session, minutes earlier): `+2s len=378`, `+5s len=378 changed=false`, `+8s len=994 changed=true`, `+12s/+20s len=994 stable` — i.e. **checkout exhibits §10's false-stable plateau**: the 378-length shell can sit unchanged across consecutive reads before content arrives ~+8s. A naive two-identical-reads poll without a floor would lock onto the shell — `CHECKOUT_SETTLE`'s `minWaitMs` floor exists for exactly this (same design as `DEFAULT_SETTLE`, §10). Derived numbers: **`minWaitMs: 13_000`** (first stable mark 12s + 1s margin), **`maxWaitMs: 26_000`** (2×), **`pollIntervalMs: 500`**.
+
+### Q2 — inner structure (verbatim aria dump, entry state, read-only)
+
+```yaml
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- status
+- main "Contenido principal":
+  - navigation:
+    - heading "Método de envío" [level=1]
+    - button "Cerrar"
+  - heading "Método de envío" [level=2]
+  - list:
+    - listitem:
+      - paragraph:
+        - button "Recógelo en 4 horas"
+      - paragraph: Disponible en alguna de nuestras tiendas Gratis
+      - img
+    - listitem:
+      - paragraph:
+        - button "Recoger en tienda"
+      - paragraph: Recíbelo entre Lunes 20 - Miércoles 22
+      - paragraph: Gratis
+      - img
+    - listitem:
+      - paragraph:
+        - button "Envío estándar a domicilio"
+      - paragraph: Recíbelo entre Lunes 20 - Jueves 23
+      - paragraph: Antes 3,95 € Gratis
+      - img
+  - text: Total
+  - link "(Impuestos, en su caso, incluidos)":
+    - /url: https://static.bershka.net/4/static/itxwebstandard/docs/termsandconditions/terms_and_conditions_es_ES.pdf?t=20260718015333
+  - text: 119,95 €
+  - button "Ver detalle de costes"
+```
+
+**Structural summary:**
+- **Checkout steps seen:** exactly one — **shipping-method selection** ("Método de envío"). The SPA's entry state is a method chooser, not a form.
+- **Shipping-form fields:** **none exist in the entry state** — no address inputs, no textboxes at all. (Do not guess what a later step renders.)
+- **Payment methods listed:** **none are exposed in the read-only tree.** Reaching the payment step requires clicking a shipping method — forbidden by this phase's strict read-only rule. Recorded plainly: **the payment-method inventory D15 wanted is NOT obtainable read-only from the entry state**; it needs a future, explicitly-scoped interaction decision with Jorge.
+- Shipping options (buttons, exact accessible names): `"Recógelo en 4 horas"`, `"Recoger en tienda"`, `"Envío estándar a domicilio"`.
+- The checkout page renders **no store header/footer chrome** (no search pill, no cart tab, no nav drawer in the tree) — every element above is page-specific, which is good news for loaded-signal selection.
+- Strict-mode hazard for Task 5: `"Método de envío"` appears as **two headings** (level 1 inside `navigation`, level 2 in `main`) — a bare `getByRole('heading', { name: 'Método de envío' })` will hit a strict-mode violation; scope or pick a level.
+
+**Two most page-specific, stable-looking structural signals for Task 5's spec (chosen from the dump; none are header/chrome — the page has none):**
+1. **Shipping-side:** `role: button`, name **`"Envío estándar a domicilio"`** (unique; the standard-shipping option is the least likely of the three to vary by store/campaign).
+2. **Payment-side: not available read-only** (see above). Recorded substitute, cost-summary side: `role: button`, name **`"Ver detalle de costes"`** (unique, page-specific, part of the order-total block). Task 5 must treat this as the second signal *in lieu of* a payment element, not as evidence a payment element exists.
+
+### Q3 — routability (raw verdict)
+
+- Probe run: `[Q3] attempt 1: goto /es/checkout.html landed on https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/checkout.html` — routable on the first attempt, second attempt not needed per the probe's own loop rule.
+- Standalone spike (independent context, minutes earlier): the same direct `goto` landed on `/es/checkout.html`, title `"Checkout | Bershka"`.
+- The probe's own entry navigation was a third successful direct `goto`.
+
+**Branch decision: C (routable).** §22's open question ("whether `/es/checkout.html` is server-routable") is now answered: yes, with a non-empty cart and an authenticated session. Not tested (out of scope, do not assume): direct `goto` with an EMPTY cart, or anonymous.
+
+### Open items handed forward
+
+- **`LoginPage.login()` dual-variant fix** (the interstitial is back — item 1 above): needed before any suite run that depends on `auth.setup`; decide with Jorge whether it lands inside this phase's tasks or as its own item.
+- **Map/category staleness** from the `-n{digits}` → `-c{digits}` category URL drift (item 3): the next `pnpm explore --update` re-crawl will re-root category knowledge; until then the committed map's PLP routes 404.
+- **Payment-step capture** needs a scoped interaction decision (click one shipping method, read-only beyond that?) — future phase, Jorge's call.
+- Cart accumulation grew to 5 items on the shared account (§7's cleanup-fixture lead, unchanged, cosmetic).
