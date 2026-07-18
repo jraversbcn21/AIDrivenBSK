@@ -12,6 +12,7 @@ describe('loadExplorerConfig', () => {
     delete process.env.EXPLORER_INTERACTIONS;
     delete process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE;
     delete process.env.EXPLORER_MUST_CAPTURE;
+    delete process.env.EXPLORER_SEED_CHECKOUT;
   });
   afterEach(() => { process.env = { ...saved }; });
 
@@ -124,6 +125,21 @@ describe('loadExplorerConfig', () => {
   it('rejects an invalid EXPLORER_MUST_CAPTURE regex', () => {
     process.env.EXPLORER_MUST_CAPTURE = '([';
     expect(() => loadExplorerConfig()).toThrow(/EXPLORER_MUST_CAPTURE/);
+  });
+
+  it('seedCheckout defaults to false', () => {
+    delete process.env.EXPLORER_SEED_CHECKOUT;
+    expect(loadExplorerConfig().seedCheckout).toBe(false);
+  });
+
+  it('EXPLORER_SEED_CHECKOUT=on enables seedCheckout', () => {
+    process.env.EXPLORER_SEED_CHECKOUT = 'on';
+    expect(loadExplorerConfig().seedCheckout).toBe(true);
+  });
+
+  it('rejects invalid EXPLORER_SEED_CHECKOUT values', () => {
+    process.env.EXPLORER_SEED_CHECKOUT = 'yes';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_SEED_CHECKOUT/);
   });
 });
 
