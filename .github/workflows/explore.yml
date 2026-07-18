@@ -45,7 +45,12 @@ jobs:
             exit 1
           }
           Write-Output "DES reachable (200)."
-      - run: pnpm exec playwright install chromium
+      # NODE_TLS_REJECT_UNAUTHORIZED=0 scoped to this step only — same corp-proxy
+      # download-cert rationale as qa-cycle.yml.
+      - name: Install Playwright Chromium
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        run: pnpm exec playwright install chromium
       # The auth-session crawl reads .auth/state.json directly (explorer/cli.ts) — a fresh
       # checkout needs the Playwright setup project first, same as the old GitLab job.
       - run: pnpm exec playwright test --project=setup

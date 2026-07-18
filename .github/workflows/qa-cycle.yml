@@ -46,7 +46,14 @@ jobs:
           }
           Write-Output "DES reachable (200)."
       # No --with-deps: the runner is Windows (deps flag is Linux apt-only); browsers cache per-machine.
-      - run: pnpm exec playwright install chromium
+      # NODE_TLS_REJECT_UNAUTHORIZED=0 scoped to this step only: the corp proxy TLS-intercepts
+      # the CDN download (SELF_SIGNED_CERT_IN_CHAIN — the documented corp-network gotcha). The
+      # service account's cache starts empty, unlike the user profile where run.cmd mode found
+      # a pre-installed browser and never actually downloaded.
+      - name: Install Playwright Chromium
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: '0'
+        run: pnpm exec playwright install chromium
       - run: pnpm qa-cycle
       - name: Upload cycle reports
         if: always()
