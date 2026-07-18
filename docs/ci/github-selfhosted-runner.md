@@ -4,8 +4,9 @@
 
 ## Estado
 
-- ✅ Workflows listos y pusheados: `ci.yml` (offline, cloud, ya activo en cada push), `qa-cycle.yml` y `explore.yml` (live, esperan el runner).
-- ⬜ **Pendiente (manual, tuyo):** instalar el runner + crear los secrets. C11 se cierra el día que el primer `qa-cycle` salga verde en Actions.
+- ✅ Workflows listos y pusheados: `ci.yml` (offline, cloud, ya activo en cada push), `qa-cycle.yml` y `explore.yml` (live, en el runner self-hosted).
+- ✅ **C11 cerrado (2026-07-17):** runner instalado + secrets creados + primer `qa-cycle` verde en Actions.
+- ✅ **Modo servicio (2026-07-18):** el runner corre como **servicio de Windows** (`actions.runner.jraversbcn21-AIDrivenBSK.jorge-laptop`, cuenta `NETWORK SERVICE`, arranque automático retardado) — sobrevive reinicios sin consola abierta. Verificado con un `qa-cycle` verde end-to-end ([run 29638531264](https://github.com/jraversbcn21/AIDrivenBSK/actions/runs/29638531264)). Ver "Gotchas de la cuenta de servicio" abajo — dos pasos de los workflows necesitaron arreglo al cambiar de cuenta.
 
 ## Paso 1 — Secrets del repo (una vez)
 
@@ -40,8 +41,16 @@ GitHub → `jraversbcn21/AIDrivenBSK` → **Settings → Secrets and variables �
 3. Mira el job: el primer paso real es el **probe de alcanzabilidad** — si la VPN está caída, falla ahí con el mensaje claro `DES unreachable — is GlobalProtect connected...` (nunca una pared de rojo confusa). Con VPN, sigue el ciclo entero (~10-15 min la primera vez por la descarga de Chromium; ~6-8 min después).
 4. **Primer run verde = C11 cerrado.** Anótalo en el backlog (o pídemelo y lo cierro yo).
 
+## Gotchas de la cuenta de servicio (2026-07-18, ambos encontrados y arreglados en vivo)
+
+Al pasar de `run.cmd` (tu usuario) a servicio (`NETWORK SERVICE`), dos pasos de los workflows fallaron porque el entorno de la cuenta de servicio no es el tuyo:
+
+1. **`shell: bash` no existe para el servicio** — Git Bash resuelve por el PATH *de usuario*; el primer run en modo servicio murió con `bash: command not found` en el probe. Fix (`366175a`): los probes de `qa-cycle.yml`/`explore.yml` van en Windows PowerShell llamando explícitamente a `curl.exe` de System32 (el nombre pelado `curl` es el alias de `Invoke-WebRequest` en PS 5.1). Regla general: **ningún paso de estos workflows debe asumir bash ni el PATH de tu usuario.**
+2. **La caché de Playwright del servicio empieza vacía** — bajo tu usuario `playwright install chromium` era un no-op (navegador pre-instalado a mano en su día); bajo `NETWORK SERVICE` descargó de verdad por primera vez en CI y chocó con el cert del proxy corporativo (`SELF_SIGNED_CERT_IN_CHAIN`, el gotcha documentado en CLAUDE.md). Fix (`a9bd57d`): `NODE_TLS_REJECT_UNAUTHORIZED=0` **solo en el paso de descarga**. La caché del servicio vive en `C:\Windows\ServiceProfiles\NetworkService\AppData\Local\ms-playwright`.
+- **Verruga cosmética conocida:** el post-step de caché de pnpm (`setup-node`) avisa `Failed to save` (usa `tar.exe` de Git, misma familia de PATH) — el job queda verde; solo se pierde el ahorro de caché entre runs.
+
 ## Condiciones operativas (honestas)
 
-- Los jobs programados (qa-cycle L-V 07:00/08:00 Madrid; explore lunes) solo corren si **tu máquina está encendida y el runner activo**; si además la VPN está caída, el probe los corta limpio en segundos. Un job programado que dispara con la máquina apagada queda `queued` hasta ~24h y expira — sin efectos secundarios.
+- Los jobs programados (qa-cycle L-V 07:00/08:00 Madrid; explore lunes) corren desatendidos: el runner es un servicio con arranque automático — solo hace falta que **la máquina esté encendida y la VPN GlobalProtect conectada** (la VPN sigue siendo por-sesión tuya: sin tu login + GlobalProtect, el probe corta limpio en segundos). Un job programado que dispara con la máquina apagada queda `queued` hasta ~24h y expira — sin efectos secundarios.
 - Los reports de cada ciclo quedan como **artifacts** del run (14 días) — la memoria committeada (`coverage/run-history.json`) NO se actualiza desde CI (el runner hace checkout limpio y no pushea; grabar el aprendizaje sigue siendo un acto local/humano — coherente con la doctrina de la plataforma).
 - Consideración a tu criterio: el runner ejecuta contra el pre-prod corporativo desde un repo GitHub personal con secrets de una cuenta de test. Es tu setup y tu decisión (ya elegida); solo queda dicho.
