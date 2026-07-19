@@ -3,6 +3,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { parseAskArgs } from './args';
 import { resolveIntent, type IntentMatch } from './resolve';
+import { groupSessionTwins, type MatchEntry } from './group';
 import { selectJourneyByFlowId } from '../builder/select';
 import { TemplateGenerator } from '../builder/generate/TemplateGenerator';
 import type { FunctionalMap } from '../explorer/map/schema';
@@ -20,6 +21,25 @@ function printMatch(m: IntentMatch, marker: string): void {
   console.log(`  ${marker} [${m.score}] ${m.flowId} (${m.type}, ${m.steps} step${m.steps === 1 ? '' : 's'})${covered}`);
   console.log(`      ${m.name}`);
   console.log(`      why: ${m.reasons.join('; ')}`);
+}
+
+function printEntry(entry: MatchEntry, marker: string): void {
+  // 'kind' in entry alone is the discriminant: TwinGroup is the only MatchEntry member
+  // declaring 'kind' (always 'twin-group'), IntentMatch never has it. Adding
+  // `&& entry.kind === 'twin-group'` here defeats TS's negative-branch narrowing on the
+  // fallthrough `printMatch(entry, ...)` below (verified: tsc 5.9.3 does not propagate the
+  // compound-condition narrowing through the if/return), so it's intentionally omitted.
+  if ('kind' in entry) {
+    const [a, b] = entry.members;
+    const covered = [...new Set([...a.coveredBy, ...b.coveredBy])];
+    const coveredSuffix = covered.length > 0 ? ` — ALREADY COVERED by ${covered.join(', ')}` : '';
+    console.log(`  ${marker} [${a.score}] ${a.type}, ${a.steps} step${a.steps === 1 ? '' : 's'} — session variants: ${a.session} + ${b.session}${coveredSuffix}`);
+    console.log(`      ${a.name}`);
+    console.log(`      flowIds: ${a.flowId} (${a.session}), ${b.flowId} (${b.session})`);
+    console.log(`      why: ${a.reasons.join('; ')}`);
+    return;
+  }
+  printMatch(entry, marker);
 }
 
 async function main(): Promise<void> {
@@ -41,14 +61,14 @@ async function main(): Promise<void> {
       }
       if (r.suggestions.length > 0) {
         console.error('Nearest sub-threshold candidates:');
-        for (const s of r.suggestions) printMatch(s, '·');
+        for (const entry of groupSessionTwins(r.suggestions)) printEntry(entry, '·');
       }
       process.exitCode = 1;
       return;
     }
     if (r.outcome === 'ambiguous') {
       console.log(`"${args.query}" is ambiguous — ${r.matches.length} flows qualify. Top ${Math.min(args.top, r.matches.length)}:`);
-      for (const m of r.matches.slice(0, args.top)) printMatch(m, '·');
+      for (const entry of groupSessionTwins(r.matches.slice(0, args.top))) printEntry(entry, '·');
       console.log('Re-run with --flow <id> to pick one, e.g.:');
       console.log(`  pnpm ask --flow ${r.matches[0].flowId}`);
       return; // exit 0: a successful conversation step (decision log D7)
