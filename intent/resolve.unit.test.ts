@@ -2,9 +2,12 @@ import { describe, it, expect } from 'vitest';
 import type { FunctionalMap, MapFlow } from '../explorer/map/schema';
 import { resolveIntent, WEIGHTS } from './resolve';
 
-function flow(id: string, name: string, type: string, steps: number, coveredBy: string[] = []): MapFlow {
+function flow(
+  id: string, name: string, type: string, steps: number,
+  coveredBy: string[] = [], session: 'anon' | 'auth' = 'auth',
+): MapFlow {
   return {
-    id, name, type, session: 'auth', priority: 'high',
+    id, name, type, session, priority: 'high',
     steps: Array.from({ length: steps }, (_, i) => `p-${id}-${i}`),
     coveredBy,
   };
@@ -84,5 +87,16 @@ describe('resolveIntent', () => {
     expect(WEIGHTS.typeHit).toBe(40);
     expect(WEIGHTS.minScore).toBe(25);
     expect(WEIGHTS.clearWinnerRatio).toBe(1.5);
+  });
+
+  it("carries each match's session, sourced from its flow", () => {
+    const soloMap: FunctionalMap = {
+      schemaVersion: '1.7', generatedAt: '2026-07-14T00:00:00.000Z', environment: 'des',
+      pages: [], components: [], elements: [], forms: [], interactions: [],
+      flows: [flow('f-cart-anon', '/es/h-woman.html -> /es/shop-cart.html', 'Cart', 2, [], 'anon')],
+    };
+    const r = resolveIntent('prueba el carrito', soloMap);
+    expect(r.outcome).toBe('picked');
+    expect(r.pick?.session).toBe('anon');
   });
 });

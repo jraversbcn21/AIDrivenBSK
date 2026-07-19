@@ -1,4 +1,5 @@
 import type { FunctionalMap } from '../explorer/map/schema';
+import type { Session } from '../explorer/types';
 
 /**
  * Deterministic NL→flow resolution weights (design §3, decision log D2/D3). One exported
@@ -74,6 +75,7 @@ export interface IntentMatch {
   score: number;
   reasons: string[];
   coveredBy: string[];
+  session: Session;
 }
 
 export interface Resolution {
@@ -132,6 +134,7 @@ export function resolveIntent(query: string, map: FunctionalMap): Resolution {
     return {
       flowId: flow.id, name: flow.name, type: flow.type, steps: flow.steps.length,
       score, reasons, coveredBy: flow.coveredBy ?? [],
+      session: flow.session,
     };
   }).sort((a, b) => b.score - a.score || a.steps - b.steps || a.name.localeCompare(b.name));
 
