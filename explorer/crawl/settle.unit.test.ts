@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { waitForSettle } from './settle';
+import { waitForSettle, settleFor, DEFAULT_SETTLE, type SettleOverride } from './settle';
 
 describe('waitForSettle', () => {
   it('stops as soon as two consecutive snapshots are identical after the floor', async () => {
@@ -54,5 +54,21 @@ describe('waitForSettle', () => {
     await waitForSettle(snapshot, wait, { minWaitMs: 3500, pollIntervalMs: 500, maxWaitMs: 10000 }, now);
 
     expect(t).toBe(4500); // floor(3500) -> 'transitioning', +500 -> 'grid', +500 -> 'grid' (stable)
+  });
+});
+
+describe('settleFor', () => {
+  const CHECKOUT: SettleOverride = { pattern: /\/checkout\.html$/i, opts: { minWaitMs: 9000, pollIntervalMs: 500, maxWaitMs: 16000 } };
+
+  it('settleFor returns the matching override', () => {
+    expect(settleFor('/es/checkout.html', [CHECKOUT])).toEqual(CHECKOUT.opts);
+  });
+
+  it('settleFor falls back to DEFAULT_SETTLE when nothing matches', () => {
+    expect(settleFor('/es/h-woman.html', [CHECKOUT])).toBe(DEFAULT_SETTLE);
+  });
+
+  it('settleFor tolerates undefined overrides', () => {
+    expect(settleFor('/es/checkout.html', undefined)).toBe(DEFAULT_SETTLE);
   });
 });

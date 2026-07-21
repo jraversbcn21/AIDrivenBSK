@@ -8,6 +8,8 @@ import { parseArgs } from './args';
 import { DEFAULT_ROUTE_RULES } from './url';
 import { crawlSession, type CrawlError } from './crawl/crawler';
 import { InteractionLedger } from './crawl/interact';
+import { primeCart, playwrightPrimeCartDriver } from './crawl/primeCart';
+import type { SettleOptions } from './crawl/settle';
 import { buildPageContext } from './classify/context';
 import { makeClassifier } from './classify/factory';
 import { buildMap, type ClassifiedPage } from './map/builder';
@@ -19,6 +21,14 @@ import type { Session } from './types';
 // enters through, and rooting flows there broke coverage matching against the `/es/`-rooted
 // suite. `/es/` server-resolves (gender gate) to the real localized entry `/es/h-woman.html`.
 const SEEDS = ['/es/', '/es/search'];
+
+// D15-f2 branch C: checkout is server-routable with a non-empty cart + auth session
+// (findings §23) — prime the cart, then crawl checkout as an ordinary auth-session seed.
+const CHECKOUT_SEED = '/es/checkout.html';
+// Findings §23: checkout hydrates far slower than the PLP-grid default — its shell holds a
+// false-plateau at ~+5s and the aria tree first stabilizes at ~+12s, past DEFAULT_SETTLE's
+// ceiling. Floor past the plateau; ceiling doubled proportionally.
+const CHECKOUT_SETTLE: SettleOptions = { minWaitMs: 13_000, pollIntervalMs: 500, maxWaitMs: 26_000 };
 
 async function main(): Promise<void> {
   dotenv.config();
@@ -49,10 +59,26 @@ async function main(): Promise<void> {
           baseURL: env.baseURL,
           ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
         });
+        let seeds = SEEDS;
+        if (session === 'auth' && cfg.seedCheckout) {
+          const primePage = await context.newPage();
+          const primed = await primeCart(playwrightPrimeCartDriver(primePage));
+          await primePage.close();
+          if (primed === 'failed') {
+            console.warn('primeCart failed — skipping the checkout seed this crawl (non-fatal, M8b precedent).');
+          } else {
+            seeds = [...SEEDS, CHECKOUT_SEED];
+          }
+        }
         const result = await crawlSession(
-          { context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger },
+          {
+            context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger,
+            // Passed unconditionally: the override only fires on checkout paths, which only
+            // exist in the frontier when the seed was actually added above.
+            settleOverrides: [{ pattern: /\/checkout\.html$/i, opts: CHECKOUT_SETTLE }],
+          },
           session,
-          SEEDS,
+          seeds,
         );
         errors.push(...result.errors);
         for (const ex of result.extractions) {

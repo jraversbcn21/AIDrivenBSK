@@ -12,6 +12,20 @@ export interface SettleOptions {
 // minWaitMs is a floor that skips past it before the stability check starts.
 export const DEFAULT_SETTLE: SettleOptions = { minWaitMs: 3500, pollIntervalMs: 500, maxWaitMs: 10000 };
 
+/** Per-path settle override: pages whose hydration profile differs from the PLP-grid default
+ *  (e.g. `/es/checkout.html`, findings §23 — its shell false-plateau sits at ~+5s and the tree
+ *  first stabilizes at ~+12s, well past DEFAULT_SETTLE's floor). */
+export interface SettleOverride {
+  pattern: RegExp;
+  opts: SettleOptions;
+}
+
+/** Resolves the settle options for a resolved page path: first matching override wins,
+ *  DEFAULT_SETTLE otherwise (including when no overrides were configured at all). */
+export function settleFor(path: string, overrides: SettleOverride[] | undefined): SettleOptions {
+  return overrides?.find((o) => o.pattern.test(path))?.opts ?? DEFAULT_SETTLE;
+}
+
 /**
  * Waits out `minWaitMs` (skipping a known early false-plateau, see DEFAULT_SETTLE), then
  * polls `snapshot()` until two consecutive reads are identical or `maxWaitMs` (from

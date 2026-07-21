@@ -2,7 +2,7 @@ import type { BrowserContext, Page } from '@playwright/test';
 import type { PageExtraction, Session } from '../types';
 import type { CrawlBounds, ExtractionMode, InteractionsConfig } from '../config';
 import { Frontier, type FrontierItem } from './frontier';
-import { waitForSettle, DEFAULT_SETTLE } from './settle';
+import { waitForSettle, settleFor, type SettleOverride } from './settle';
 import { extractorFor } from '../extract/fromPage';
 import { normalizePath, isSameOrigin, type RouteRules } from '../url';
 import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
@@ -18,6 +18,9 @@ export interface CrawlDeps {
   /** Per-crawl-global, shared by both sessions (M8b fix a): chrome dedupe and
    *  must-capture satisfaction span the whole crawl, not one session. */
   ledger: InteractionLedger;
+  /** Per-path settle overrides (D15-f2): pages with a slower hydration profile than the
+   *  PLP-grid default (e.g. checkout, findings §23) get their own floor/ceiling. */
+  settleOverrides?: SettleOverride[];
 }
 
 function playwrightDriver(page: Page, originalPath: string, baseURL: string): InteractionDriver {
@@ -100,7 +103,7 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
         await waitForSettle(
           () => page.locator('body').ariaSnapshot(),
           (ms) => page.waitForTimeout(ms),
-          DEFAULT_SETTLE,
+          settleFor(resolvedPath, deps.settleOverrides),
         );
       }
       const extraction = await extract(page, session, item.discoveredVia, deps.baseURL);

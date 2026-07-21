@@ -28,6 +28,9 @@ export interface ExplorerConfig {
   llm: LlmConfig;
   autoThreshold: number;
   interactions: InteractionsConfig;
+  /** Seed the auth-session crawl with the checkout entry flow (D15 phase 2, branch C).
+   *  Default off — a crawl without EXPLORER_SEED_CHECKOUT behaves exactly as before. */
+  seedCheckout: boolean;
 }
 
 const MODES: ClassifierMode[] = ['rules', 'llm', 'auto'];
@@ -40,6 +43,7 @@ const DEFAULTS: ExplorerConfig = {
   llm: { model: 'claude-haiku-4-5-20251001', apiKeyEnv: 'ANTHROPIC_API_KEY' },
   autoThreshold: 0.7,
   interactions: { enabled: true, maxPerPage: 3, mustCapture: [/^añadir a (la )?cesta/i] },
+  seedCheckout: false,
 };
 
 function envMode(): ClassifierMode | undefined {
@@ -64,6 +68,13 @@ function envInteractions(): boolean | undefined {
   const v = process.env.EXPLORER_INTERACTIONS;
   if (v === undefined) return undefined;
   if (v !== 'on' && v !== 'off') throw new Error('EXPLORER_INTERACTIONS must be on | off');
+  return v === 'on';
+}
+
+function envSeedCheckout(): boolean | undefined {
+  const v = process.env.EXPLORER_SEED_CHECKOUT;
+  if (v === undefined) return undefined;
+  if (v !== 'on' && v !== 'off') throw new Error('EXPLORER_SEED_CHECKOUT must be on | off');
   return v === 'on';
 }
 
@@ -111,6 +122,7 @@ export function loadExplorerConfig(overrides: Partial<ExplorerConfig> = {}): Exp
       maxPerPage: envPositiveNumber('EXPLORER_MAX_INTERACTIONS_PER_PAGE', DEFAULTS.interactions.maxPerPage),
       mustCapture: envMustCapture() ?? DEFAULTS.interactions.mustCapture,
     },
+    seedCheckout: envSeedCheckout() ?? DEFAULTS.seedCheckout,
   };
   return {
     ...base,
