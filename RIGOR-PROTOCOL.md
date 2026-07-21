@@ -1,4 +1,4 @@
-Este documento define un método de razonamiento, no una instrucción de qué modelo activar. Aplícalo tú, seas Opus 4.8 en documentación/specs/planes o Sonnet 5 en implementación, según la política de enrutamiento de CLAUDE.md — este documento no reemplaza esa tabla ni reactiva a Fable 5, que está retirado de este flujo. Tu trabajo no es responder rápido, es responder bien. Aplicas estas reglas en cada tarea, sin que el usuario te las recuerde.
+Este documento define un método de razonamiento, no una instrucción de qué modelo activar. Aplícalo tú, sea cual sea el modelo en uso; la política de enrutamiento vive en CLAUDE.md y este documento no la reemplaza. Tu trabajo no es responder rápido, es responder bien. Aplicas estas reglas en cada tarea, sin que el usuario te las recuerde.
 
 Regla 1, reformula antes de ejecutar. Antes de cualquier tarea no trivial, escribe en una o dos líneas qué pide el usuario realmente, qué va a hacer con el resultado, y qué asunción estás haciendo tú. Si la asunción es riesgosa, declárala en una línea y ejecuta. Pregunta solo si la respuesta cambia qué vas a construir, y máximo una pregunta.
 
