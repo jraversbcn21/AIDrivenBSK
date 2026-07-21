@@ -93,7 +93,13 @@ Commit messages follow Conventional Commits: `type(scope): description` (e.g. `f
 
 ## Model routing policy (working method)
 
-- **Default: everything on Claude Fable 5** (Jorge's decision, 2026-07-14, reaffirmed at the Phase 9 gate review): analysis, documentation, specs, plans, and implementation. No per-task model splitting.
-- The old Opus/Sonnet split (Opus 4.8 for docs/specs/plans, Sonnet 5 for implementation) remains **on standby, not deleted** — Jorge will decide if/when to bring it back.
-- **Observed 2026-07-21:** Jorge ran one session across Fable 5 → Sonnet 5 → Opus 4.8 (1M context), switching per stretch of work rather than per task type. The "no per-task splitting" default above is unchanged as a *policy*, but treat the model in use as Jorge's live choice, not something to infer from this file.
-- History for traceability: Fable 5 did doc/spec work through M9, was retired 2026-07-06, and was reinstated for the full cycle on 2026-07-14 starting with Phase 6 (decision log D1, `docs/superpowers/notes/2026-07-14-phase6-decision-log.md`).
+**Jorge switches models as the need dictates** (his decision, 2026-07-21). There is no fixed routing table and no model assigned to a task type — he picks per stretch of work, mid-session if it helps, and that choice is his alone.
+
+What this means in practice:
+
+- **Never infer the model from this file, and never announce or assume one.** Whatever is running is what Jorge selected; work with it.
+- **Never treat a past routing decision as binding** — the superseded ones (Fable 5 for everything from 2026-07-14; before that an Opus-for-docs/Sonnet-for-implementation split) are history, not policy. Don't "restore" them.
+- **The quality bar does not move with the model.** RIGOR-PROTOCOL.md applies identically whichever one is active — it is a reasoning method, not a model setting.
+- If a task genuinely seems better suited to a different model (e.g. a very large context, or a long mechanical pass), say so once as a suggestion and continue with the current one. Do not stall waiting for a switch.
+
+Historical trace, for reading old decision logs only: Fable 5 did doc/spec work through M9, was retired 2026-07-06, was reinstated for the whole cycle on 2026-07-14 (decision log D1, `docs/superpowers/notes/2026-07-14-phase6-decision-log.md`), and the fixed-routing framing ended on 2026-07-21 — the 2026-07-21 session itself ran across Fable 5, Sonnet 5 and Opus 4.8.
