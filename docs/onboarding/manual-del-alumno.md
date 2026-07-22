@@ -10,8 +10,8 @@
 |---|---|---|
 | 1 | Introducción a AIDrivenBsk (filosofía, arquitectura, ciclo completo) | ✅ Completada |
 | 2 | Preparación del entorno | ✅ Completada |
-| 3 | Primer contacto: estructura del proyecto | Pendiente |
-| 4 | Comandos esenciales | Pendiente |
+| 3 | Primer contacto: estructura del proyecto | ✅ Completada |
+| 4 | Comandos esenciales | ⏭️ Próxima sesión — empezar aquí |
 | 5 | Automatización | Pendiente |
 | 6 | Debugging | Pendiente |
 | 7 | Nivel intermedio | Pendiente |
@@ -19,6 +19,14 @@
 | 9 | Proyecto final | Pendiente |
 
 ---
+
+## 🔖 Dónde retomar (para la próxima sesión)
+
+**Siguiente paso: Fase 4 — Comandos esenciales.** Es la fase más larga: se explican TODOS los scripts de `package.json` (`test`, `test:unit`, `typecheck`, `lint`, `explore`, `plan`, `build-tests`, `analyze`, `heal`, `learn`, `qa-cycle`, `ask`, `test:generated`) con sintaxis, flags, cuándo usarlos y resultado esperado. El ejercicio ancla es el primer run **live** contra DES: `pnpm test` (suite esperada 7/7) + leer `reports/route-evidence.json`. Requiere VPN activa.
+
+**Nivel del alumno confirmado hasta ahora:** buena intuición conceptual; dos correcciones importantes ya hechas y que no deben repetirse:
+- El **mapa funcional lo genera el Explorer**, no el Planner (el Planner solo lo *anota* con evidencia de cobertura).
+- Los **selectores viven en los Page/Component Objects** (`src/pages/`, `src/components/`), nunca en los `.spec.ts` — esa es la esencia del patrón POM que hace que un cambio de UI en DES solo obligue a tocar un archivo.
 
 ## Conceptos aprendidos
 
@@ -55,6 +63,19 @@
 - **Salvaguarda de código, no solo convención:** `checkoutAllowed` es `false` automáticamente cuando `ENVIRONMENT=prod` — ningún test puede tocar checkout/pago en producción.
 - `ANTHROPIC_API_KEY` solo hace falta si activas `EXPLORER_MODE=llm|auto` (por defecto es `rules`, 100% offline) — no es necesaria para el uso normal del día a día.
 
+### Fase 3 — Estructura del proyecto
+
+- **Page Object** = clase que representa **una página completa** (`src/pages/`: `LoginPage`, `ProductPage`, `HomePage`, `SearchResultsPage`, `BasePage` como base común con el `goto()` que pasa por `consent.ts`).
+- **Component Object** = clase que representa **una pieza de UI reutilizable entre páginas** (`src/components/`: `Header`, `SearchBar`, `FiltersPanel`, `ProductCard`, `CartTab`, `BaseComponent`).
+- **Regla de oro del POM, confirmada con ejercicio real:** los selectores viven en el Page/Component Object, **nunca** en el `.spec.ts`. El spec solo llama a métodos (`loginPage.login(user, pass)`). Si DES cambia un texto/selector, se toca **un solo archivo** — el Page Object correspondiente — y todos los specs que lo usan siguen funcionando.
+- **`src/support/`:** `locators.ts` (resuelve `Strategy` testId/role/label a un locator real), `retry.ts` (helpers act→verify→retry), `consent.ts` (gates de entrada a DES: cookies, gender gate, onboarding tour).
+- **`src/fixtures/test.ts`:** el `test`/`expect` que casi todos los specs importan (en vez del `@playwright/test` crudo) — inyecta page objects listos (`homePage`, `loginPage`, `productPage`, `env`, etc.).
+- **`tests/generated/` está gitignorado Y excluido de `pnpm test`** (`testIgnore: ['**/tests/generated/**']` en `playwright.config.ts`) — son drafts del Builder que un humano debe revisar antes de "promoverlos" a un directorio permanente (ejemplo real ya en el repo: `tests/mujer/bombacho-barrel.spec.ts` nació generado y fue promovido).
+- **`coverage/functional-map.json` es un artefacto generado por el Explorer** (no se edita a mano) — contiene páginas/elementos/flujos descubiertos al crawlear, NO cobertura de tests. `coverage/run-history.json` es la memoria de runs pasados (usada por `analyzer --risk` y `planner`).
+- **`playwright.config.ts` usa `workers: 1` y `retries: 1` a propósito** (no por limitación técnica): DES comparte una única cuenta/sesión entre tests y correr en paralelo hizo fallar la suite completa 6/6 veces en pruebas reales (documentado en el propio archivo de config). `retries: 1` absorbe el ruido de entorno de DES (dead loads, shells degradados) con trace-on-first-retry como evidencia.
+- Dos proyectos Playwright: `setup` (hace login una vez, `auth.setup.ts`) → `chromium` (reutiliza la sesión vía `storageState: '.auth/state.json'`, depende de `setup`).
+- `playwright.generated.config.ts` es un config separado, solo para `tests/generated/`, usado por `pnpm test:generated`.
+
 ## Comandos
 
 ### Fase 2
@@ -68,7 +89,11 @@
 
 ## Buenas prácticas
 
-*(se rellena por fase)*
+### Fase 3
+
+- Nunca poner selectores sueltos dentro de un `.spec.ts` — siempre en el Page/Component Object correspondiente.
+- Nunca editar `coverage/functional-map.json` a mano — es un artefacto generado, se regenera con `pnpm explore --update`.
+- Tratar `tests/generated/` como material de revisión, no como suite ejecutable por defecto — promoverlo a un directorio permanente solo tras revisión humana.
 
 ## Errores frecuentes y soluciones
 
@@ -97,3 +122,7 @@ AIDrivenBsk es una plataforma de QA agéntica para el sitio DES de Bershka: 9 su
 ### Fase 2 — Preparación del entorno
 
 Requisitos: Node ≥18, pnpm, VPN corporativa, `.env` con credenciales de test. `pnpm install` trae paquetes; `pnpm exec playwright install` trae el navegador — son pasos separados. El error de certificado al instalar Chromium (proxy) y el error de VPN al ejecutar tests son problemas distintos, no confundir. `checkoutAllowed=false` en prod es una salvaguarda real de código. Entorno validado con `pnpm typecheck` + `pnpm test:unit` (405/405 tests, 50/50 archivos).
+
+### Fase 3 — Primer contacto: estructura del proyecto
+
+`src/` es la Foundation (Page Objects en `pages/`, Component Objects en `components/`, soporte en `support/`, fixture inyectado en `fixtures/test.ts`). `tests/` organiza specs por dominio (`auth/`, `cart/`, `checkout/`, `mujer/` como ejemplo de spec promovido) más `generated/` (gitignorado y excluido de `pnpm test`, drafts del Builder pendientes de revisión humana). `coverage/functional-map.json` (generado por el Explorer, nunca a mano) y `run-history.json` son el conocimiento acumulado versionado en git. `playwright.config.ts` corre en serie (`workers: 1`, `retries: 1`) a propósito por las limitaciones de cuenta compartida de DES. La esencia del POM quedó confirmada con un ejercicio real: los selectores viven en el Page Object, nunca en el spec.
