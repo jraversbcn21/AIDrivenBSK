@@ -55,6 +55,35 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-07-23T09:55:08.595Z",
+      "failureReportGeneratedAt": "2026-07-23T09:45:05.909Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-21T16:46:08.129Z",
+      "totals": {
+        "tests": 7,
+        "passed": 5,
+        "failed": 0,
+        "flaky": 2,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": []
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": []
+        }
+      ]
     }
   ]
 }
