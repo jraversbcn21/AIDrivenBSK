@@ -12,7 +12,7 @@
 | 2 | Preparación del entorno | ✅ Completada |
 | 3 | Primer contacto: estructura del proyecto | ✅ Completada |
 | 4 | Comandos esenciales | ✅ Completada |
-| 5 | Automatización | ⏭️ Próxima sesión — empezar aquí |
+| 5 | Automatización | ❌ No superada (2026-07-29) — repetir; ver "Dónde retomar" |
 | 6 | Debugging | Pendiente |
 | 7 | Nivel intermedio | Pendiente |
 | 8 | Nivel avanzado | Pendiente |
@@ -22,7 +22,12 @@
 
 ## 🔖 Dónde retomar (para la próxima sesión)
 
-**Siguiente paso: Fase 5 — Automatización.** Aún sin planificar en detalle; retomar decidiendo con el alumno qué cubre exactamente (candidatos: escribir un spec nuevo a mano siguiendo el patrón POM, promover un draft de `tests/generated/` a un directorio permanente, o profundizar en `src/support/retry.ts`'s act→verify→retry).
+**Siguiente paso: REPETIR la Fase 5 — Automatización (marcada como no superada el 2026-07-29).** Qué pasó, para que la repetición no tropiece con lo mismo:
+
+1. **Primer intento (inválido como formación):** el mentor resolvió el ejercicio elegido (spec de wishlist a mano, patrón POM) en solitario — el alumno no ejecutó ningún comando ni vio consola. Se descartó como fase y el trabajo técnico quedó aparcado en el stash `fase5-solo-attempt-2026-07-29` (auto-dismiss del modal promocional MMBRS en `consent.ts`, click acotado en `ProductCard.open()`, spec de wishlist). **Ojo:** todo eso se validó contra el layout MÓVIL — no reutilizar a ciegas.
+2. **Segundo intento (interactivo, interrumpido por un hallazgo mayor):** a mitad de la lección se descubrió que toda la suite llevaba desde su origen probando el layout **móvil** de DES — el equipo prueba siempre desktop, que requiere `?device=desktop` en cada navegación (decisión server-side, sin cookie ni persistencia). Eso convirtió la sesión en trabajo de mantenimiento (migración a desktop), no de formación.
+
+**La repetición debe:** (a) partir de la base desktop ya estabilizada, (b) ser 100 % interactiva — el mentor explica en pasos cortos y el ALUMNO ejecuta cada comando y lee la consola (regla ya registrada tras la Fase 4), (c) re-probear en desktop cualquier selector heredado del stash antes de usarlo. Ejercicio candidato: el mismo (spec de wishlist a mano), ahora sobre terreno firme.
 
 **Nivel del alumno confirmado hasta ahora:** buena intuición conceptual; pide explícitamente aprender de forma interactiva (ver consola real, no solo teoría) — la Fase 4 se rehizo por completo en ese formato a petición suya. Correcciones importantes ya hechas y que no deben repetirse:
 - El **mapa funcional lo genera el Explorer**, no el Planner (el Planner solo lo *anota* con evidencia de cobertura).
