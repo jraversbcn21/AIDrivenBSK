@@ -217,8 +217,12 @@ describe('interactionScope', () => {
     expect(interactionScope('/es/hombre/ropa/vestidos-n5001.html')).toBe('-n{id}.html');
   });
 
-  it('keeps routePattern behavior for non-category paths', () => {
-    expect(interactionScope('/es/prod-c0p123.html')).toBe('/es/prod-c0p{id}.html');
+  it('collapses all PDPs into one shared scope (per-PDP slug scopes re-paid every dead candidate, 2026-07-29)', () => {
+    expect(interactionScope('/es/prod-c0p123.html')).toBe('-c0p{id}.html');
+    expect(interactionScope('/es/pantalón-parachute-técnico-c0p227381990.html')).toBe('-c0p{id}.html');
+  });
+
+  it('keeps routePattern behavior for other paths', () => {
     expect(interactionScope('/es/shop-cart.html')).toBe('/es/shop-cart.html');
   });
 });

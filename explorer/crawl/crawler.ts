@@ -31,7 +31,10 @@ function playwrightDriver(page: Page, originalPath: string, baseURL: string, dev
     snapshot: () => page.locator('body').ariaSnapshot(),
     // force: true per the DES hover-reveal precedent (SearchBar, findings §5); the
     // act→verify→retry loop in discoverInteractions is the real reliability layer.
-    click: (role, name) => page.getByRole(role as Parameters<Page['getByRole']>[0], { name, exact: true }).first().click({ force: true }),
+    // Bounded timeout (2026-07-29): a never-actionable candidate (desktop PDPs' "Pausar
+    // video") otherwise burns Playwright's default 30s before the skip — the page has
+    // already settled by this point, so 5s is actionability margin, not hydration wait.
+    click: (role, name) => page.getByRole(role as Parameters<Page['getByRole']>[0], { name, exact: true }).first().click({ force: true, timeout: 5_000 }),
     pressEscape: () => page.keyboard.press('Escape'),
     currentPath: () => normalizePath(page.url(), baseURL),
     recover: async () => {

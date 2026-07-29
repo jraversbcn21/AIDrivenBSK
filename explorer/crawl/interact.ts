@@ -15,12 +15,17 @@ export function labelClass(label: string, patterns: RegExp[]): string {
   return p !== undefined ? p.source : label;
 }
 
-/** Ledger-only scope: routePattern plus all category PLPs (`...-n{digits}.html`)
- *  collapsed into one shared scope. Deliberately NOT routePattern itself — that
- *  feeds the map schema and the differ (design §3.3). */
+/** Ledger-only scope: routePattern plus all category PLPs (`...-n{digits}.html`) AND all
+ *  PDPs (`...-c0p{id}.html`) each collapsed into one shared scope. Deliberately NOT
+ *  routePattern itself — that feeds the map schema and the differ (design §3.3). PDPs
+ *  joined 2026-07-29: routePattern keeps the product-name slug, so every PDP was its own
+ *  scope and a per-PDP dead candidate ("Pausar video" on desktop video carousels) was
+ *  re-claimed — and its click timeout re-paid — on every single product page crawled. */
 export function interactionScope(path: string): string {
   const p = routePattern(path);
-  return /-n\d+\.html$/i.test(p) ? '-n{id}.html' : p;
+  if (/-n\d+\.html$/i.test(p)) return '-n{id}.html';
+  if (/-c0p\{id\}\.html$/i.test(p)) return '-c0p{id}.html';
+  return p;
 }
 
 export class InteractionLedger {
