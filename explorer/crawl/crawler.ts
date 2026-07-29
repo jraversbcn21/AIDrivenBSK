@@ -4,7 +4,7 @@ import type { CrawlBounds, ExtractionMode, InteractionsConfig } from '../config'
 import { Frontier, type FrontierItem } from './frontier';
 import { waitForSettle, settleFor, type SettleOverride } from './settle';
 import { extractorFor } from '../extract/fromPage';
-import { normalizePath, isSameOrigin, type RouteRules } from '../url';
+import { normalizePath, isSameOrigin, withDevice, type RouteRules } from '../url';
 import { acceptConsent, suppressOnboardingTour } from '../../src/support/consent';
 import { selectCandidates, discoverInteractions, INTERACT_SETTLE, type InteractionDriver, type InteractionLedger } from './interact';
 
@@ -21,9 +21,12 @@ export interface CrawlDeps {
   /** Per-path settle overrides (D15-f2): pages with a slower hydration profile than the
    *  PLP-grid default (e.g. checkout, findings §23) get their own floor/ceiling. */
   settleOverrides?: SettleOverride[];
+  /** DES layout param for every navigation (findings §24) — '' disables. Recorded paths
+   *  are unaffected: normalizePath() strips the query string by construction. */
+  device: string;
 }
 
-function playwrightDriver(page: Page, originalPath: string, baseURL: string): InteractionDriver {
+function playwrightDriver(page: Page, originalPath: string, baseURL: string, device: string): InteractionDriver {
   return {
     snapshot: () => page.locator('body').ariaSnapshot(),
     // force: true per the DES hover-reveal precedent (SearchBar, findings §5); the
@@ -32,7 +35,7 @@ function playwrightDriver(page: Page, originalPath: string, baseURL: string): In
     pressEscape: () => page.keyboard.press('Escape'),
     currentPath: () => normalizePath(page.url(), baseURL),
     recover: async () => {
-      await page.goto(originalPath, { waitUntil: 'domcontentloaded' });
+      await page.goto(withDevice(originalPath, device), { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
       await waitForSettle(() => page.locator('body').ariaSnapshot(), (ms) => page.waitForTimeout(ms), INTERACT_SETTLE);
     },
@@ -84,13 +87,25 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
 
   for (let item = frontier.next(); item; item = frontier.next()) {
     try {
-      await page.goto(item.path, { waitUntil: 'domcontentloaded' });
+      await page.goto(withDevice(item.path, deps.device), { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
+
+      let resolvedPath = normalizePath(page.url(), deps.baseURL);
+      if (deps.device !== '' && resolvedPath !== item.path) {
+        // The server-side resolution (redirect and/or gender-gate click) navigated WITHOUT
+        // the device param, so the page on screen is the server-default (mobile) layout —
+        // confirmed live 2026-07-29: the /es/ seed's resolution to h-woman.html extracted
+        // mobile elements while directly-visited pages extracted desktop (findings §24).
+        // Re-enter the resolved path with the param before extracting. One attempt only:
+        // a gate re-trigger on this re-goto (rare, findings §8) is accepted as noise.
+        await page.goto(withDevice(resolvedPath, deps.device), { waitUntil: 'domcontentloaded' });
+        await acceptConsent(page);
+        resolvedPath = normalizePath(page.url(), deps.baseURL);
+      }
 
       // F3: los duplicados por redirect resuelven a su URL final justo tras el consent — deduplica
       // aquí, antes de pagar el settle wait + extracción aria + los probes de enrichTestIds. El
       // path solicitado ya fue deduplicado por frontier.add(); solo re-chequea el path resuelto.
-      const resolvedPath = normalizePath(page.url(), deps.baseURL);
       if (isDuplicateResolution(resolvedPath, [item.path], (p) => frontier.markSeen(session, p))) {
         continue;
       }
@@ -120,7 +135,7 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
           extraction.elements, extraction.meta.path, deps.ledger, deps.interactions.maxPerPage,
         );
         if (candidates.length > 0) {
-          const driver = playwrightDriver(page, extraction.meta.path, deps.baseURL);
+          const driver = playwrightDriver(page, extraction.meta.path, deps.baseURL, deps.device);
           extraction.interactions = await discoverInteractions(driver, candidates, extraction.meta);
           for (const it of extraction.interactions) {
             // Only an overlay capture satisfies a must-capture class — `none`/`navigated`

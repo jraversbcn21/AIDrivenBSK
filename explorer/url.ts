@@ -1,3 +1,15 @@
+/**
+ * Append DES's server-side layout param (`device=<value>`) for NAVIGATION only. Map paths
+ * stay param-free by construction — normalizePath() keeps pathname only — so this must wrap
+ * the raw page.goto() sites and never be persisted (findings §24: the param is per-request,
+ * no cookie, no persistence). Identity when `device` is empty (server default = mobile).
+ */
+export function withDevice(path: string, device: string): string {
+  if (device === '') return path;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}device=${device}`;
+}
+
 export function normalizePath(rawUrl: string, baseURL: string): string {
   const u = new URL(rawUrl, baseURL);
   let p = u.pathname;

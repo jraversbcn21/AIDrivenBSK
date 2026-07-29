@@ -31,6 +31,10 @@ export interface ExplorerConfig {
   /** Seed the auth-session crawl with the checkout entry flow (D15 phase 2, branch C).
    *  Default off — a crawl without EXPLORER_SEED_CHECKOUT behaves exactly as before. */
   seedCheckout: boolean;
+  /** DES server-side layout param appended to every crawl navigation (`device=<value>`,
+   *  findings §24). Default 'desktop' — the team's QA standard, matching BasePage.goto().
+   *  EXPLORER_DEVICE='' disables it (server default = mobile). */
+  device: string;
 }
 
 const MODES: ClassifierMode[] = ['rules', 'llm', 'auto'];
@@ -44,6 +48,7 @@ const DEFAULTS: ExplorerConfig = {
   autoThreshold: 0.7,
   interactions: { enabled: true, maxPerPage: 3, mustCapture: [/^añadir a (la )?cesta/i] },
   seedCheckout: false,
+  device: 'desktop',
 };
 
 function envMode(): ClassifierMode | undefined {
@@ -92,6 +97,15 @@ function envMustCapture(): RegExp[] | undefined {
   });
 }
 
+function envDevice(): string | undefined {
+  const v = process.env.EXPLORER_DEVICE;
+  if (v === undefined) return undefined;
+  // Empty string disables the param (same idiom as EXPLORER_MUST_CAPTURE=''): the server
+  // then serves its default layout (mobile). Token-validated — it lands in a URL.
+  if (!/^[a-z0-9_-]*$/i.test(v)) throw new Error('EXPLORER_DEVICE must match /^[a-z0-9_-]*$/i (e.g. "desktop", or empty to disable)');
+  return v;
+}
+
 function envPositiveNumber(name: string, fallback: number): number {
   const raw = process.env[name];
   if (raw === undefined) return fallback;
@@ -123,6 +137,7 @@ export function loadExplorerConfig(overrides: Partial<ExplorerConfig> = {}): Exp
       mustCapture: envMustCapture() ?? DEFAULTS.interactions.mustCapture,
     },
     seedCheckout: envSeedCheckout() ?? DEFAULTS.seedCheckout,
+    device: envDevice() ?? DEFAULTS.device,
   };
   return {
     ...base,

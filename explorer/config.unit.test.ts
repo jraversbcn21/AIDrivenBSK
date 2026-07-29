@@ -13,6 +13,7 @@ describe('loadExplorerConfig', () => {
     delete process.env.EXPLORER_MAX_INTERACTIONS_PER_PAGE;
     delete process.env.EXPLORER_MUST_CAPTURE;
     delete process.env.EXPLORER_SEED_CHECKOUT;
+    delete process.env.EXPLORER_DEVICE;
   });
   afterEach(() => { process.env = { ...saved }; });
 
@@ -140,6 +141,25 @@ describe('loadExplorerConfig', () => {
   it('rejects invalid EXPLORER_SEED_CHECKOUT values', () => {
     process.env.EXPLORER_SEED_CHECKOUT = 'yes';
     expect(() => loadExplorerConfig()).toThrow(/EXPLORER_SEED_CHECKOUT/);
+  });
+
+  it('device defaults to desktop (the team QA standard, findings §24)', () => {
+    expect(loadExplorerConfig().device).toBe('desktop');
+  });
+
+  it('EXPLORER_DEVICE overrides the device value', () => {
+    process.env.EXPLORER_DEVICE = 'tablet';
+    expect(loadExplorerConfig().device).toBe('tablet');
+  });
+
+  it('EXPLORER_DEVICE="" disables the param (server default layout)', () => {
+    process.env.EXPLORER_DEVICE = '';
+    expect(loadExplorerConfig().device).toBe('');
+  });
+
+  it('rejects an EXPLORER_DEVICE that is not a plain token (it lands in a URL)', () => {
+    process.env.EXPLORER_DEVICE = 'desktop&x=1';
+    expect(() => loadExplorerConfig()).toThrow(/EXPLORER_DEVICE/);
   });
 });
 

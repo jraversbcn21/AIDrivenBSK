@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizePath, routePattern, isAllowed, isDenied, DEFAULT_ROUTE_RULES, isSameOrigin } from './url';
+import { normalizePath, routePattern, isAllowed, isDenied, DEFAULT_ROUTE_RULES, isSameOrigin, withDevice } from './url';
 
 const BASE = 'https://des.example/es/';
 
@@ -12,6 +12,21 @@ describe('normalizePath', () => {
   });
   it('keeps root as "/"', () => {
     expect(normalizePath('https://des.example/', BASE)).toBe('/');
+  });
+});
+
+describe('withDevice', () => {
+  it('appends ?device=<value> to a bare path', () => {
+    expect(withDevice('/es/h-woman.html', 'desktop')).toBe('/es/h-woman.html?device=desktop');
+  });
+  it('appends with & when the path already has a query string', () => {
+    expect(withDevice('/es/list.html?page=2', 'desktop')).toBe('/es/list.html?page=2&device=desktop');
+  });
+  it('is the identity when device is empty (param disabled, server default layout)', () => {
+    expect(withDevice('/es/h-woman.html', '')).toBe('/es/h-woman.html');
+  });
+  it('round-trips cleanly through normalizePath (map paths stay param-free)', () => {
+    expect(normalizePath(withDevice('/es/h-woman.html', 'desktop'), BASE)).toBe('/es/h-woman.html');
   });
 });
 

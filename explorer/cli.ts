@@ -72,7 +72,7 @@ async function main(): Promise<void> {
         }
         const result = await crawlSession(
           {
-            context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger,
+            context, baseURL: env.baseURL, rules: DEFAULT_ROUTE_RULES, bounds: cfg.bounds, extraction: cfg.extraction, interactions: cfg.interactions, ledger, device: cfg.device,
             // Passed unconditionally: the override only fires on checkout paths, which only
             // exist in the frontier when the seed was actually added above.
             settleOverrides: [{ pattern: /\/checkout\.html$/i, opts: CHECKOUT_SETTLE }],
