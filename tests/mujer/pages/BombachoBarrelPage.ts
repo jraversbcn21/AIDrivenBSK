@@ -1,7 +1,6 @@
 // Promoted from a Builder-generated draft (flow flow_0e406081fa85, map generated
 // 2026-07-13). No longer auto-generated — maintained by hand from here on.
 import { BasePage } from '../../../src/pages/BasePage';
-import { locate } from '../../../src/support/locators';
 
 export class BombachoBarrelPage extends BasePage {
   /**
@@ -14,7 +13,14 @@ export class BombachoBarrelPage extends BasePage {
     await this.goto('/es/mujer/ropa/pantalones/bombacho-%7c-barrel-c1010868620.html');
   }
 
+  /**
+   * Page-specific signal (B14 doctrine): the page's own "Bombacho | Barrel" heading.
+   * The original generated signal (testId `searchBtn`) is unique on MOBILE but resolves
+   * to 4 elements on DESKTOP (strict-mode violation, findings doc §24) — testId uniqueness
+   * is layout-dependent. Desktop renders TWO headings with this name (confirmed live
+   * 2026-07-29) and either one proves the right page rendered, so `.first()` is safe here.
+   */
   async isLoaded(): Promise<boolean> {
-    return locate(this.page, { testId: { attr: 'data-qa-anchor', value: 'searchBtn' } }).isVisible();
+    return this.page.getByRole('heading', { name: 'Bombacho | Barrel' }).first().isVisible();
   }
 }
