@@ -55,12 +55,17 @@ async function main(): Promise<void> {
     errors = [];
     try {
       for (const session of sessions) {
+        // Phase-boundary logs (2026-07-29): the page heartbeat (crawler.ts) only brackets the
+        // page loop — a hang in primeCart, classification, or a close() would still read as
+        // ambiguous silence after the last page line. One line before each such await.
+        console.log(`[${session}] session start`);
         const context = await browser.newContext({
           baseURL: env.baseURL,
           ...(session === 'auth' ? { storageState: '.auth/state.json' } : {}),
         });
         let seeds = SEEDS;
         if (session === 'auth' && cfg.seedCheckout) {
+          console.log(`[${session}] primeCart: ensuring a non-empty cart for the checkout seed`);
           const primePage = await context.newPage();
           const primed = await primeCart(playwrightPrimeCartDriver(primePage));
           await primePage.close();
@@ -81,12 +86,15 @@ async function main(): Promise<void> {
           seeds,
         );
         errors.push(...result.errors);
+        console.log(`[${session}] crawl done: ${result.extractions.length} pages, ${result.errors.length} errors — classifying`);
         for (const ex of result.extractions) {
           classified.push({ extraction: ex, classification: await classifier.classifyPage(buildPageContext(ex)) });
         }
+        console.log(`[${session}] closing context`);
         await context.close();
       }
     } finally {
+      console.log('closing browser');
       await browser.close();
     }
 
