@@ -90,6 +90,9 @@ export async function crawlSession(deps: CrawlDeps, session: Session, seeds: str
 
   for (let item = frontier.next(); item; item = frontier.next()) {
     try {
+      // Progress heartbeat (2026-07-29): the crawler is otherwise silent between warnings,
+      // which made a real mid-crawl hang undiagnosable — the log brackets where it stops.
+      console.log(`[${session}] visiting ${item.path} (${extractions.length} done)`);
       await page.goto(withDevice(item.path, deps.device), { waitUntil: 'domcontentloaded' });
       await acceptConsent(page);
 
