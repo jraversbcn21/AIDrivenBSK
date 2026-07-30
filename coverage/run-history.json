@@ -84,6 +84,42 @@
           "flowsAffected": []
         }
       ]
+    },
+    {
+      "recordedAt": "2026-07-30T11:56:01.443Z",
+      "failureReportGeneratedAt": "2026-07-30T11:55:55.186Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 7,
+        "passed": 4,
+        "failed": 1,
+        "flaky": 2,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": []
+        },
+        {
+          "spec": "checkout/checkout-reach.spec.ts",
+          "title": "checkout: cart's \"Tramitar pedido\" reaches /es/checkout.html",
+          "outcome": "failed",
+          "category": "timeout",
+          "flowsAffected": []
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": []
+        }
+      ]
     }
   ]
 }
