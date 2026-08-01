@@ -8,12 +8,12 @@ export abstract class BasePage {
   }
 
   /** Navigate relative to the configured baseURL. `path` defaults to the locale root.
-   *  DES decides mobile/desktop layout SERVER-SIDE via the `device` query param (confirmed
-   *  live 2026-07-29: no cookie, no persistence — every server navigation needs it). The
-   *  team tests against desktop, so force it here, at the single navigation chokepoint. */
+   *  DES's desktop layout (`device=desktop` on every same-origin document load) is enforced
+   *  by the context-level interceptor in src/support/layout.ts — NOT here. goto() alone was
+   *  never a real chokepoint: click-driven document loads (the gender gate) bypassed it and
+   *  flipped the suite back to mobile (findings §24, design 2026-08-01). */
   async goto(path = ''): Promise<void> {
     await suppressOnboardingTour(this.page);
-    const sep = path.includes('?') ? '&' : '?';
-    await this.page.goto(`${path}${sep}device=desktop`, { waitUntil: 'domcontentloaded' });
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' });
   }
 }

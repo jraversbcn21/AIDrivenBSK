@@ -4,6 +4,7 @@ import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ProductPage } from '../pages/ProductPage';
+import { forceDesktopLayout, assertDesktopLayout } from '../support/layout';
 
 interface Fixtures {
   env: AppEnv;
@@ -12,6 +13,7 @@ interface Fixtures {
   searchResultsPage: SearchResultsPage;
   productPage: ProductPage;
   routeEvidence: void;
+  desktopLayout: void;
 }
 
 export const test = base.extend<Fixtures>({
@@ -32,6 +34,16 @@ export const test = base.extend<Fixtures>({
     });
     await use();
     await testInfo.attach('route-evidence', { body: JSON.stringify(urls), contentType: 'application/json' });
+  }, { auto: true }],
+  // Rewrites every same-origin document load to carry device=desktop (the SPA keeps the
+  // server-decided layout across client-side routing, so one uncovered document load flips
+  // the whole test to mobile — findings §24 + design spec 2026-08-01). The teardown guard
+  // only runs on passing tests: a real failure's diagnosis must never be polluted by a
+  // secondary layout error.
+  desktopLayout: [async ({ page }, use, testInfo) => {
+    await forceDesktopLayout(page.context());
+    await use();
+    if (testInfo.status === 'passed') await assertDesktopLayout(page);
   }, { auto: true }],
 });
 
