@@ -120,6 +120,28 @@
           "flowsAffected": []
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-01T20:17:23.649Z",
+      "failureReportGeneratedAt": "2026-08-01T20:17:20.305Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 7,
+        "passed": 6,
+        "failed": 1,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "checkout/checkout-reach.spec.ts",
+          "title": "checkout: cart's \"Tramitar pedido\" reaches /es/checkout.html",
+          "outcome": "failed",
+          "category": "timeout",
+          "flowsAffected": []
+        }
+      ]
     }
   ]
 }
