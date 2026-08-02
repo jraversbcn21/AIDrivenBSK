@@ -39,7 +39,9 @@ export class SearchBar extends BaseComponent {
    * The act therefore prefers the suggestion option when it appears (short wait) and falls
    * back to Enter (the proven mobile path). The verify additionally re-checks the URL after
    * a settle so a bounced /q/ is not counted as success, and the act can re-open the overlay
-   * if a bounce closed it.
+   * if a bounce closed it. NOTE: whether the MOBILE overlay also renders a matching
+   * suggestion option is unprobed — if it does, mobile silently uses suggestion-click too
+   * (also a supported navigation there); only the Enter path is mobile-live-validated.
    *
    * Both phases share ONE 40s deadline (src/support/retry.ts): phase 1 times out silently
    * (no onTimeout) and phase 2 spends whatever budget remains — the original composed shape.
@@ -85,7 +87,9 @@ export class SearchBar extends BaseComponent {
       act: async () => {
         if (!(await input.isVisible().catch(() => false))) {
           await dismissOnboardingTour(page);
-          await trigger.click({ force: true }).catch(() => undefined);
+          // 5s bound: on a degraded shell the trigger may not exist at all — an unbounded
+          // click would starve the deadline (no actionTimeout is configured).
+          await trigger.click({ force: true, timeout: 5_000 }).catch(() => undefined);
           return; // next iteration fills once the overlay is back
         }
         await input.fill(term).catch(() => undefined); // submit still attempted if fill throws
@@ -98,7 +102,10 @@ export class SearchBar extends BaseComponent {
       verify: async () => {
         const reached = await page.waitForURL(/\/q\//, { timeout: 2_000 }).then(() => true).catch(() => false);
         if (!reached) return false;
-        await page.waitForTimeout(1_500); // desktop bounce window observed at ~750-1000ms
+        // Desktop bounce window observed at ~750-1000ms; 2s settle gives 2x margin. If a
+        // bounce ever lands LATER than this, the failure signature downstream is
+        // waitForResults()'s "dead /q/ load" diagnostic on the home page — check here first.
+        await page.waitForTimeout(2_000);
         return /\/q\//.test(page.url());
       },
       deadlineMs: Math.max(0, deadline - Date.now()),

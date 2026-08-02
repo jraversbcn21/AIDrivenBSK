@@ -50,7 +50,7 @@ export class ProductPage extends BasePage {
       await actUntil({
         act: async () => {
           await dismissOnboardingTour(this.page);
-          await sizes.first().click({ force: true });
+          await sizes.first().click({ force: true, timeout: 5_000 });
         },
         verify: async () => (await group.getByRole('button', { pressed: true }).count()) > 0,
         deadlineMs: 20_000,
@@ -93,13 +93,20 @@ export class ProductPage extends BasePage {
       const group = this.sizeGroup();
       const addBtn = this.page.getByRole('button', { name: /^añadir a la cesta$/i }).first();
       const baseline = await this.page.getByRole('dialog').count();
+      // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
+      // unbounded click on a locator the SPA re-rendered away waits to the 150s test
+      // timeout, starving actUntil's own deadline (the exact hang mode root-caused in the
+      // checkout login gate, task 6 round 2 review).
       await actUntil({
         act: async () => {
+          // A slow confirmation (>1 cadence) must not trigger a second add — double-adds
+          // feed the shared-cart accumulation (§7) and can stray-click the drawer.
+          if ((await this.page.getByRole('dialog').count()) > baseline) return;
           await dismissOnboardingTour(this.page);
           if ((await group.getByRole('button', { pressed: true }).count()) === 0) {
-            await group.getByRole('button', { disabled: false }).first().click({ force: true }).catch(() => undefined);
+            await group.getByRole('button', { disabled: false }).first().click({ force: true, timeout: 5_000 }).catch(() => undefined);
           }
-          await addBtn.click({ force: true });
+          await addBtn.click({ force: true, timeout: 5_000 });
         },
         verify: async () => (await this.page.getByRole('dialog').count()) > baseline,
         deadlineMs: 20_000,
@@ -111,8 +118,9 @@ export class ProductPage extends BasePage {
       // stays open and intercepts any subsequent header click — close it before returning.
       const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).first();
       await actUntil({
-        act: () => closeBtn.click().catch(() => undefined),
+        act: () => closeBtn.click({ timeout: 5_000 }),
         verify: async () => (await this.page.getByRole('dialog').count()) <= baseline,
+        immediateFirstCheck: true, // an auto-closed drawer never enters the act
         deadlineMs: 10_000,
         sleepMs: 500,
         sleep: (ms) => this.page.waitForTimeout(ms),

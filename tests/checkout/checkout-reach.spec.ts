@@ -6,7 +6,7 @@
 // only confirmed-live route.
 import { test, expect } from '../../src/fixtures/test';
 import { actUntil } from '../../src/support/retry';
-import { primaryUser } from '../../src/data/users';
+import { completeLoginGateIfPresent } from '../../src/support/loginGate';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
 
@@ -28,28 +28,14 @@ test('checkout: cart\'s "Tramitar pedido" reaches /es/checkout.html', async ({ p
   // invalidates the setup-minted storageState session and "Tramitar pedido" opens a
   // `dialog "Inicia sesión o crea tu cuenta"` instead of navigating (isolated runs with a
   // fresh state pass; full-suite runs failed exactly at this gate; the mobile layout never
-  // gated here). The act completes the login in-dialog — both §23 variants tolerated.
+  // gated here). The act completes the login in-dialog via src/support/loginGate.ts (shared, single fix point — the login flow is DES's most drift-prone surface).
   const trigger = page.getByRole('button', { name: /tramitar pedido/i })
     .or(page.getByRole('link', { name: /tramitar pedido/i }))
     .first();
-  const loginGate = page.getByRole('dialog', { name: /inicia sesión o crea tu cuenta/i });
   await actUntil({
     act: async () => {
-      if (await loginGate.isVisible().catch(() => false)) {
-        const interstitial = loginGate.getByRole('button', { name: /continuar con e-?mail/i });
-        if (await interstitial.isVisible().catch(() => false)) {
-          await interstitial.click().catch(() => undefined);
-          return; // next iteration fills the revealed form
-        }
-        // Short timeouts + catch: the dialog can detach mid-act once the login lands
-        // (an unbounded fill on a detached locator hangs to the test timeout).
-        const { username, password } = primaryUser();
-        await loginGate.getByRole('textbox', { name: /e-mail/i }).fill(username, { timeout: 5_000 }).catch(() => undefined);
-        await loginGate.getByRole('textbox', { name: /contraseña/i }).fill(password, { timeout: 5_000 }).catch(() => undefined);
-        await loginGate.getByRole('button', { name: 'Iniciar sesión' }).click({ timeout: 5_000 }).catch(() => undefined);
-        return;
-      }
-      await trigger.click({ force: true });
+      if (await completeLoginGateIfPresent(page)) return;
+      await trigger.click({ force: true, timeout: 5_000 });
     },
     verify: () => page.waitForURL(/\/checkout\.html/, { timeout: 2_000 }).then(() => true).catch(() => false),
     deadlineMs: 60_000, // the login-gate path composes a full in-dialog login on top of the click
