@@ -11,14 +11,56 @@ export class ProductPage extends BasePage {
     this.header = new Header(page);
   }
 
+  /** Desktop PDPs render an INLINE size group; mobile PDPs render none (sizes live in the
+   * Tallas dialog) — the group's presence is the layout discriminator (confirmed live
+   * 2026-08-02, task 6 round 2 of the desktop-layout-interceptor plan). */
+  private sizeGroup() {
+    return this.page.getByRole('group', { name: /selecciona talla/i });
+  }
+
+  /** Poll until either the desktop size group or the mobile add trigger renders. */
+  private async detectAddFlow(): Promise<'desktop' | 'mobile'> {
+    const group = this.sizeGroup();
+    const mobileTrigger = this.page.getByRole('button', { name: 'Añadir a cesta' });
+    const deadline = Date.now() + 20_000;
+    for (;;) {
+      if (await group.isVisible().catch(() => false)) return 'desktop';
+      if (await mobileTrigger.isVisible().catch(() => false)) return 'mobile';
+      if (Date.now() > deadline) throw new Error('ProductPage: neither the desktop size group nor the mobile add-to-cart trigger rendered within the deadline');
+      await this.page.waitForTimeout(500);
+    }
+  }
+
   /**
-   * Opens the size-selection dialog. On this site, picking a size (addToCart) both selects and adds.
+   * Selects a size — dual-layout (2026-08-02 live probes):
+   * - Desktop: the PDP renders an inline `group "Selecciona talla"` with plain size-name
+   *   buttons (XXS…XL) exposing `aria-pressed`; clicking one selects it (verified via
+   *   [pressed]). The add itself is a separate "Añadir a la cesta" click (see addToCart).
+   * - Mobile: opens the size-selection dialog; picking a size there (addToCart) both selects
+   *   and adds (findings §5).
    * Act -> verify -> retry (src/support/retry.ts): a fire-once click can be silently lost to Vue
    * hydration lag (an element is visible/clickable before its handler is attached — confirmed live
-   * for search Enter and for the size click, findings doc §7), so keep clicking until the dialog
-   * is actually open.
+   * for search Enter and for the size click, findings doc §7), so keep clicking until the state
+   * change is actually observed.
    */
   async selectFirstSize(): Promise<void> {
+    if ((await this.detectAddFlow()) === 'desktop') {
+      const group = this.sizeGroup();
+      const sizes = group.getByRole('button', { disabled: false });
+      await actUntil({
+        act: async () => {
+          await dismissOnboardingTour(this.page);
+          await sizes.first().click({ force: true, timeout: 5_000 });
+        },
+        verify: async () => (await group.getByRole('button', { pressed: true }).count()) > 0,
+        deadlineMs: 20_000,
+        sleepMs: 500,
+        sleep: (ms) => this.page.waitForTimeout(ms),
+        onTimeout: () => { throw new Error('ProductPage: no size button became selected (aria-pressed) within the deadline'); },
+      });
+      return;
+    }
+
     const dialog = this.page.getByRole('dialog', { name: /tallas/i });
     const trigger = this.page.getByRole('button', { name: 'Añadir a cesta' });
 
@@ -42,6 +84,53 @@ export class ProductPage extends BasePage {
    * so retry until the dialog actually closes.
    */
   async addToCart(): Promise<void> {
+    // Desktop (inline size group present): the add is the "Añadir a la cesta" click, and the
+    // only observed confirmation is a NEW dialog appearing (count 0 -> 1 on a page with no
+    // permanent dialog — desktop has no mobile nav drawer; baseline-diff mirrors M9 §17).
+    // The act re-selects a size first if none is pressed (a lost click deselects nothing,
+    // but a re-rendered group can drop the selection). Layout re-discriminated via the
+    // POLLED detectAddFlow(), not a single-shot isVisible() — a transient re-render must
+    // not send a desktop PDP down the mobile branch with a misleading diagnostic.
+    if ((await this.detectAddFlow()) === 'desktop') {
+      const group = this.sizeGroup();
+      const addBtn = this.page.getByRole('button', { name: /^añadir a la cesta$/i }).first();
+      const baseline = await this.page.getByRole('dialog').count();
+      // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
+      // unbounded click on a locator the SPA re-rendered away waits to the 150s test
+      // timeout, starving actUntil's own deadline (the exact hang mode root-caused in the
+      // checkout login gate, task 6 round 2 review).
+      await actUntil({
+        act: async () => {
+          // A slow confirmation (>1 cadence) must not trigger a second add — double-adds
+          // feed the shared-cart accumulation (§7) and can stray-click the drawer.
+          if ((await this.page.getByRole('dialog').count()) > baseline) return;
+          await dismissOnboardingTour(this.page);
+          if ((await group.getByRole('button', { pressed: true }).count()) === 0) {
+            await group.getByRole('button', { disabled: false }).first().click({ force: true, timeout: 5_000 }).catch(() => undefined);
+          }
+          await addBtn.click({ force: true, timeout: 5_000 });
+        },
+        verify: async () => (await this.page.getByRole('dialog').count()) > baseline,
+        deadlineMs: 20_000,
+        sleepMs: 500,
+        sleep: (ms) => this.page.waitForTimeout(ms),
+        onTimeout: () => { throw new Error('ProductPage: no confirmation dialog appeared after "Añadir a la cesta" (add not confirmed)'); },
+      });
+      // The confirmation drawer (add-cart-success modal, holds "Ver cesta (N)"/"Cerrar")
+      // stays open and intercepts any subsequent header click — close it before returning.
+      const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).first();
+      await actUntil({
+        act: () => closeBtn.click({ timeout: 5_000 }),
+        verify: async () => (await this.page.getByRole('dialog').count()) <= baseline,
+        immediateFirstCheck: true, // an auto-closed drawer never enters the act
+        deadlineMs: 10_000,
+        sleepMs: 500,
+        sleep: (ms) => this.page.waitForTimeout(ms),
+        onTimeout: () => { throw new Error('ProductPage: the add-to-cart confirmation drawer did not close'); },
+      });
+      return;
+    }
+
     const dialog = this.page.getByRole('dialog', { name: /tallas/i });
     // disabled: false on getByRole, NOT filter({ hasNot: ':disabled' }): has/hasNot match
     // DESCENDANTS, so the old filter never excluded a disabled size button itself. Latent

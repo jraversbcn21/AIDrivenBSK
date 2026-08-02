@@ -363,3 +363,64 @@ the fixtures + auth.setup), with the mobile-fingerprint guard on passing tests.
 git add docs/superpowers/notes/2026-06-17-des-live-validation-findings.md CLAUDE.md
 git commit -m "docs: findings §24 correction - suite was still mobile after the migration; interceptor is the real chokepoint"
 ```
+
+---
+
+### Task 6: SearchBar desktop compatibility (added 2026-08-01 after Task 4's live discovery, approved by Jorge)
+
+**Why this task exists:** Task 4 proved the interceptor correct (guard held on every completed
+test; discriminator: unmodified master passes search while the worktree fails 8/8) and thereby
+surfaced the next layer of §24's original bug: the suite's search entry had only ever run
+against the MOBILE layout, and the desktop header's search button has a different accessible
+name — **`"Buscar aquí"`** (captured in the reproduction's error-context snapshot), not
+`"Buscar"`. `SearchBar.search()`'s trigger (`getByRole('button', { name: 'Buscar', exact: true })`)
+matches nothing on desktop; with no `actionTimeout` configured the click waits forever, phase 1
+never reaches its own deadline, and the test dies at the 150s global timeout. Four specs fail at
+exactly this point: `search-plp-pdp`, `add-to-cart`, `checkout-reach`, `checkout-structure`.
+
+**Files:**
+- Modify: `src/components/SearchBar.ts` (trigger + possibly input locator, doc comment)
+- Temporary: `tests/_probe/desktop-search-probe.spec.ts` (deleted after evidence lands in the report)
+
+**Interfaces:**
+- Consumes: the fixtures' auto-installed interceptor (Task 3) — the probe and the fix run on the true desktop layout.
+- Produces: a `SearchBar.search()` that works on BOTH layouts (mobile names stay supported — the map/crawler knowledge base remains layout-parameterized, and §23 proved DES serves variants server-side).
+
+- [ ] **Step 1: Probe the desktop search overlay (live, read-only)**
+
+Write `tests/_probe/desktop-search-probe.spec.ts` importing `test` from `../../src/fixtures/test`
+(so the interceptor is active). Navigate `homePage.open()`, click
+`page.getByRole('button', { name: 'Buscar aquí' }).first()` with the project's actUntil
+pattern, and dump `page.locator('body').ariaSnapshot()` once an input appears (or after 10s
+regardless). Capture in the report: the search input's placeholder/role on desktop, and how
+submission looks (button? Enter?). Run:
+`pnpm exec playwright test tests/_probe/desktop-search-probe.spec.ts --project=chromium --retries=0`
+
+- [ ] **Step 2: Fix `SearchBar.search()` for dual layout**
+
+Trigger: replace the exact-name locator with one accepting both layouts, e.g.
+`page.getByRole('button', { name: /^buscar( aquí)?$/i }).first()` — the regex must NOT match
+the distinct `"Buscar en tienda"` icon button. Input: keep `getByPlaceholder('Escribe aquí')`
+if the probe confirms it on desktop; otherwise compose both variants with `.or()`. Update the
+class doc comment: record the desktop name discovery, cite findings §24 and this plan, and
+state plainly that phase-1's hang mode (no actionTimeout → click on a non-matching locator
+waits forever) is why the deadline never fired.
+
+- [ ] **Step 3: Gates**
+
+Run: `pnpm typecheck && pnpm lint && pnpm test:unit`
+Expected: clean (no unit test asserts SearchBar's locator text; if one does, read it first).
+
+- [ ] **Step 4: Live validation — the four casualties + full suite**
+
+Run: `pnpm test` (full suite). Expected: 7/7 with the layout guard active (documented-noise
+retries acceptable). Then `pnpm build-tests --top 3` and `pnpm test:generated` — expected 4-5
+specs generated and passing (this also closes Task 4's vacuous-generated-run gap).
+
+- [ ] **Step 5: Delete the probe, commit**
+
+```bash
+git rm tests/_probe/desktop-search-probe.spec.ts 2>/dev/null || rm -f tests/_probe/desktop-search-probe.spec.ts
+git add src/components/SearchBar.ts
+git commit -m "fix(search/cart): SearchBar dual-layout trigger - desktop header names it 'Buscar aquí'"
+```

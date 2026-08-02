@@ -25,10 +25,12 @@ export class Header extends BaseComponent {
     return !(await login.first().isVisible().catch(() => false));
   }
 
-  /** There is no mini-cart drawer on this site: "Ir a la cesta" navigates to the full cart page. */
+  /** There is no mini-cart drawer on this site: the header cart link navigates to the full
+   * cart page. Its accessible name is layout-dependent — "Ir a la cesta" on mobile (§5),
+   * "Ver cesta" on desktop (2026-08-02 probes, task 6 round 2). */
   async goToCart(): Promise<void> {
     await dismissOnboardingTour(this.page); // the tour can (re)appear asynchronously and block this click
-    await this.root.getByRole('link', { name: 'Ir a la cesta', exact: true }).click();
+    await this.root.getByRole('link', { name: /^(ir a la|ver) cesta$/i }).click();
   }
 
   cartTab(): CartTab {
