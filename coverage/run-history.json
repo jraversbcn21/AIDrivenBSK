@@ -142,6 +142,20 @@
           "flowsAffected": []
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-02T10:27:07.112Z",
+      "failureReportGeneratedAt": "2026-08-02T10:27:02.784Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 7,
+        "passed": 7,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": []
     }
   ]
 }
