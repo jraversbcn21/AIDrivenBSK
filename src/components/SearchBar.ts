@@ -4,7 +4,14 @@ import { actUntil } from '../support/retry';
 
 export class SearchBar extends BaseComponent {
   /**
-   * The trigger is a CSS hover-revealed pill ("Buscar"). Two independent issues block it:
+   * The trigger is a CSS hover-revealed pill, named differently per layout — confirmed live:
+   * **"Buscar"** on mobile (findings §5) and **"Buscar aquí"** on desktop (2026-08-01 probe,
+   * design spec 2026-08-01-desktop-layout-interceptor, task 6). Matched with
+   * `/^buscar( aquí)?$/i` — anchored so it does NOT also match the distinct "Buscar en tienda"
+   * icon button. Before the fix this locator was the mobile exact-name string only: on desktop
+   * it matched nothing, and with no `actionTimeout` configured the `click()` waited forever —
+   * phase 1's own deadline never fired because `act`'s click, not `verify`, was the thing stuck
+   * (findings §24). Two more independent issues block the click even when the name matches:
    * (1) Vue's click listener isn't wired up the instant the trigger becomes actionable
    *     (hydration lag), so `force: true` alone isn't enough — it needs retrying.
    * (2) The driver.js onboarding tour can (re)appear asynchronously at any point and persists;
@@ -12,6 +19,11 @@ export class SearchBar extends BaseComponent {
    *     fixed screen coordinates, so if the tour's full-viewport overlay is on top, the click
    *     lands on the overlay, not the button — confirmed live via failure screenshots showing
    *     the tour still covering the page after many retries. Each attempt must re-dismiss it.
+   *
+   * The input is `getByPlaceholder('Escribe aquí')` on mobile (§5, a `bds-input` shadow-DOM
+   * component with no role) and a `role=searchbox` named "Buscar" on desktop (2026-08-01 probe:
+   * `search: - searchbox "Buscar"` inside the opened overlay's `dialog`). Composed with `.or()`
+   * so both layouts resolve to a single element regardless of which one rendered.
    *
    * Submission has the same hydration problem as the trigger: the input can be *visible*
    * before its Enter handler is attached, so a single fire-once press can be silently lost
@@ -23,8 +35,8 @@ export class SearchBar extends BaseComponent {
    */
   async search(term: string): Promise<void> {
     const page = this.root.page();
-    const trigger = page.getByRole('button', { name: 'Buscar', exact: true }).first();
-    const input = page.getByPlaceholder('Escribe aquí').first();
+    const trigger = page.getByRole('button', { name: /^buscar( aquí)?$/i }).first();
+    const input = page.getByPlaceholder('Escribe aquí').or(page.getByRole('searchbox', { name: 'Buscar' })).first();
 
     const start = Date.now();
     const deadline = start + 40_000;
