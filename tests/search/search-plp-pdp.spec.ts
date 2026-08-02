@@ -15,5 +15,9 @@ test('search, filter, and open a product detail page', async ({ homePage, search
 
   await searchResultsPage.firstProduct().open();
   await expect(productPage.page).toHaveURL(/-c0p\d+\.html/, { timeout: HYDRATION_TIMEOUT_MS });
-  await expect(page.getByRole('button', { name: 'Añadir a cesta' })).toBeVisible({ timeout: HYDRATION_TIMEOUT_MS });
+  // PDP add-to-cart button name is layout-dependent (confirmed live 2026-08-02): mobile
+  // "Añadir a cesta" (two-step Tallas dialog, §5), desktop "Añadir a la cesta" (inline
+  // size group "Selecciona talla"). Anchored regex excludes per-card grid quick-adds
+  // ("Añadir a la cesta {producto}").
+  await expect(page.getByRole('button', { name: /^añadir a (la )?cesta$/i }).first()).toBeVisible({ timeout: HYDRATION_TIMEOUT_MS });
 });

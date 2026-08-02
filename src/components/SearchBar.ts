@@ -25,10 +25,21 @@ export class SearchBar extends BaseComponent {
    * `search: - searchbox "Buscar"` inside the opened overlay's `dialog`). Composed with `.or()`
    * so both layouts resolve to a single element regardless of which one rendered.
    *
-   * Submission has the same hydration problem as the trigger: the input can be *visible*
-   * before its Enter handler is attached, so a single fire-once press can be silently lost
-   * (confirmed live: first Enter ignored, second navigated). Re-fill + re-press until the
-   * SPA actually navigates to the /q/{term} results URL, within the same wall-clock deadline.
+   * Submission differs per layout — confirmed live (2026-08-02 probes, task 6 round 2):
+   * - Mobile: Enter navigates to /q/{term} (client-side), with the known hydration problem —
+   *   the input can be *visible* before its Enter handler is attached, so a fire-once press
+   *   can be silently lost (first Enter ignored, second navigated). Re-fill + re-press.
+   * - Desktop: Enter reaches /q/{term} but the SPA router BOUNCES back to /es/h-woman.html
+   *   ~1s later — a pure client-side redirect (zero same-origin document requests observed;
+   *   reproduced identically with and without the layout interceptor, and with a single-shot
+   *   Enter, ruling out both the interceptor and our retry loop). The supported desktop flow
+   *   is clicking the typed term's entry in the suggestions list the overlay renders
+   *   (`option "Ir a {term}"`, list "Búsquedas recientes y sugerencias de búsqueda") — that
+   *   navigation lands on /q/{term} and STAYS, with the same listitem/-c0p grid as mobile.
+   * The act therefore prefers the suggestion option when it appears (short wait) and falls
+   * back to Enter (the proven mobile path). The verify additionally re-checks the URL after
+   * a settle so a bounced /q/ is not counted as success, and the act can re-open the overlay
+   * if a bounce closed it.
    *
    * Both phases share ONE 40s deadline (src/support/retry.ts): phase 1 times out silently
    * (no onTimeout) and phase 2 spends whatever budget remains — the original composed shape.
@@ -65,13 +76,31 @@ export class SearchBar extends BaseComponent {
       sleep: (ms) => page.waitForTimeout(ms),
     });
 
-    // Phase 2: submit until the SPA navigates. The verify carries its own 2s wait (waitForURL).
+    // Phase 2: submit until the SPA navigates AND stays on /q/ (desktop Enter bounces back
+    // home ~1s after reaching it — see the doc comment). Suggestion-click preferred, Enter
+    // fallback; a bounce closes the overlay, so the act re-opens it when the input is gone.
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const suggestion = page.getByRole('option', { name: new RegExp(`^ir a ${escaped}$`, 'i') }).first();
     await actUntil({
       act: async () => {
-        await input.fill(term).catch(() => undefined); // press still attempted if fill throws
-        await input.press('Enter');
+        if (!(await input.isVisible().catch(() => false))) {
+          await dismissOnboardingTour(page);
+          await trigger.click({ force: true }).catch(() => undefined);
+          return; // next iteration fills once the overlay is back
+        }
+        await input.fill(term).catch(() => undefined); // submit still attempted if fill throws
+        if (await suggestion.waitFor({ state: 'visible', timeout: 3_000 }).then(() => true).catch(() => false)) {
+          await suggestion.click().catch(() => undefined);
+        } else {
+          await input.press('Enter').catch(() => undefined);
+        }
       },
-      verify: () => page.waitForURL(/\/q\//, { timeout: 2_000 }).then(() => true).catch(() => false),
+      verify: async () => {
+        const reached = await page.waitForURL(/\/q\//, { timeout: 2_000 }).then(() => true).catch(() => false);
+        if (!reached) return false;
+        await page.waitForTimeout(1_500); // desktop bounce window observed at ~750-1000ms
+        return /\/q\//.test(page.url());
+      },
       deadlineMs: Math.max(0, deadline - Date.now()),
       sleep: (ms) => page.waitForTimeout(ms),
       onTimeout: () => { throw new Error(`SearchBar: search for "${term}" did not reach the /q/ results URL within the deadline`); },

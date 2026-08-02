@@ -19,6 +19,7 @@
 //   on a different profile. CHECKOUT_SETTLE_MS below is the plan-mandated poll ceiling.
 import { test, expect } from '../../src/fixtures/test';
 import { actUntil } from '../../src/support/retry';
+import { primaryUser } from '../../src/data/users';
 
 const CHECKOUT_SETTLE_MS = 20_000; // ceiling; expect.poll below returns as soon as signals hydrate (§23 profile)
 
@@ -33,22 +34,50 @@ test('checkout: inner structure renders (shipping + payment signals)', async ({ 
   await productPage.addToCart();
   await productPage.header.goToCart();
 
+  // Desktop checkout gates on a LIVE session — same in-dialog login handling as
+  // checkout-reach.spec (see its comment; confirmed live 2026-08-02, task 6 round 2).
   const trigger = page.getByRole('button', { name: /tramitar pedido/i })
     .or(page.getByRole('link', { name: /tramitar pedido/i }))
     .first();
+  const loginGate = page.getByRole('dialog', { name: /inicia sesión o crea tu cuenta/i });
   await actUntil({
-    act: () => trigger.click({ force: true }),
+    act: async () => {
+      if (await loginGate.isVisible().catch(() => false)) {
+        const interstitial = loginGate.getByRole('button', { name: /continuar con e-?mail/i });
+        if (await interstitial.isVisible().catch(() => false)) {
+          await interstitial.click().catch(() => undefined);
+          return; // next iteration fills the revealed form
+        }
+        // Short timeouts + catch: the dialog can detach mid-act once the login lands
+        // (an unbounded fill on a detached locator hangs to the test timeout).
+        const { username, password } = primaryUser();
+        await loginGate.getByRole('textbox', { name: /e-mail/i }).fill(username, { timeout: 5_000 }).catch(() => undefined);
+        await loginGate.getByRole('textbox', { name: /contraseña/i }).fill(password, { timeout: 5_000 }).catch(() => undefined);
+        await loginGate.getByRole('button', { name: 'Iniciar sesión' }).click({ timeout: 5_000 }).catch(() => undefined);
+        return;
+      }
+      await trigger.click({ force: true });
+    },
     verify: () => page.waitForURL(/\/checkout\.html/, { timeout: 2_000 }).then(() => true).catch(() => false),
-    deadlineMs: 30_000,
+    deadlineMs: 60_000, // the login-gate path composes a full in-dialog login on top of the click
     sleep: (ms) => page.waitForTimeout(ms),
     onTimeout: () => { throw new Error('checkout-structure: "Tramitar pedido" did not reach checkout'); },
   });
 
-  // Signals from findings §23 (exact recorded accessible names; both are buttons):
-  const shippingSignal = page.getByRole('button', { name: /envío estándar a domicilio/i });
-  // In-lieu-of substitute for the read-only-unreachable payment step (see header comment;
-  // name toggles with the disclosure's state — both variants accepted):
-  const paymentSignal = page.getByRole('button', { name: /(ver|ocultar) detalle de costes/i });
+  // Signals — dual-layout (mobile: findings §23 Q2, buttons; desktop: 2026-08-02 live run,
+  // task 6 round 2 of the desktop-layout-interceptor plan — the entry state is the same
+  // shipping-method chooser but shaped differently: options are `radio`s named
+  // "{método} {plazo} {precio}", a stepper `navigation "Pasos del checkout"` lists
+  // "Método de envío / Método de pago / Resumen", and NO cost-summary disclosure exists):
+  // NOTE the desktop radio inputs are visually hidden (bds pattern — the visible element is
+  // the option's text), so the desktop signal is the visible option text, not the radio role.
+  const shippingSignal = page.getByRole('button', { name: /envío estándar a domicilio/i })
+    .or(page.getByText('Envío estándar a domicilio', { exact: true }));
+  // In-lieu-of substitute for the read-only-unreachable payment step (see header comment).
+  // Mobile: the cost-summary disclosure (name toggles with its state — both accepted).
+  // Desktop: the stepper's "Método de pago" entry — direct evidence a payment step exists.
+  const paymentSignal = page.getByRole('button', { name: /(ver|ocultar) detalle de costes/i })
+    .or(page.getByRole('navigation', { name: /pasos del checkout/i }).getByText('Método de pago'));
 
   await expect.poll(() => shippingSignal.first().isVisible().catch(() => false), { timeout: CHECKOUT_SETTLE_MS }).toBe(true);
   await expect.poll(() => paymentSignal.first().isVisible().catch(() => false), { timeout: CHECKOUT_SETTLE_MS }).toBe(true);
