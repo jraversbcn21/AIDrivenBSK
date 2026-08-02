@@ -92,11 +92,14 @@ export class SearchBar extends BaseComponent {
           await trigger.click({ force: true, timeout: 5_000 }).catch(() => undefined);
           return; // next iteration fills once the overlay is back
         }
-        await input.fill(term).catch(() => undefined); // submit still attempted if fill throws
+        // 5s bounds throughout: the desktop bounce can detach the overlay between the
+        // isVisible() check above and these actions — an unbounded fill/click on a
+        // detached locator hangs past the deadline to the 150s test timeout.
+        await input.fill(term, { timeout: 5_000 }).catch(() => undefined); // submit still attempted if fill throws
         if (await suggestion.waitFor({ state: 'visible', timeout: 3_000 }).then(() => true).catch(() => false)) {
-          await suggestion.click().catch(() => undefined);
+          await suggestion.click({ timeout: 5_000 }).catch(() => undefined);
         } else {
-          await input.press('Enter').catch(() => undefined);
+          await input.press('Enter', { timeout: 5_000 }).catch(() => undefined);
         }
       },
       verify: async () => {

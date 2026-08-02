@@ -88,8 +88,10 @@ export class ProductPage extends BasePage {
     // only observed confirmation is a NEW dialog appearing (count 0 -> 1 on a page with no
     // permanent dialog — desktop has no mobile nav drawer; baseline-diff mirrors M9 §17).
     // The act re-selects a size first if none is pressed (a lost click deselects nothing,
-    // but a re-rendered group can drop the selection).
-    if (await this.sizeGroup().isVisible().catch(() => false)) {
+    // but a re-rendered group can drop the selection). Layout re-discriminated via the
+    // POLLED detectAddFlow(), not a single-shot isVisible() — a transient re-render must
+    // not send a desktop PDP down the mobile branch with a misleading diagnostic.
+    if ((await this.detectAddFlow()) === 'desktop') {
       const group = this.sizeGroup();
       const addBtn = this.page.getByRole('button', { name: /^añadir a la cesta$/i }).first();
       const baseline = await this.page.getByRole('dialog').count();

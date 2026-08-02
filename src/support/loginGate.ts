@@ -11,8 +11,10 @@ import { primaryUser } from '../data/users';
  * cuenta"` instead of navigating. (The mobile layout never gated here, which is why the
  * suite passed for months without hitting this.) The login flow is the single most
  * drift-prone surface on DES (findings §19/§23 — the method-choice interstitial comes and
- * goes server-side), so both known variants are tolerated, and this lives in ONE place so
- * the next variant flip is a one-file fix.
+ * goes server-side), so both known variants are tolerated, and this is the single place for
+ * the IN-DIALOG gate. NOTE: the page-level flow in `src/pages/LoginPage.ts` encodes the same
+ * variant knowledge (interstitial regex, field names) scoped to /es/logon.html — a variant
+ * flip is a two-file check until that knowledge is extracted to shared constants (backlog).
  *
  * Designed to be called from inside an actUntil act: it performs at most one gate step per
  * call (interstitial click OR form fill+submit) and relies on the caller's retry loop for
