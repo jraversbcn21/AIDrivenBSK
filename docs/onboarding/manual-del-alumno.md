@@ -12,7 +12,7 @@
 | 2 | Preparación del entorno | ✅ Completada |
 | 3 | Primer contacto: estructura del proyecto | ✅ Completada |
 | 4 | Comandos esenciales | ✅ Completada |
-| 5 | Automatización | ❌ No superada (2026-07-29) — repetir; ver "Dónde retomar" |
+| 5 | Automatización | ✅ Completada (2026-08-04) |
 | 6 | Debugging | Pendiente |
 | 7 | Nivel intermedio | Pendiente |
 | 8 | Nivel avanzado | Pendiente |
@@ -22,16 +22,11 @@
 
 ## 🔖 Dónde retomar (para la próxima sesión)
 
-**Siguiente paso: REPETIR la Fase 5 — Automatización (marcada como no superada el 2026-07-29).** Qué pasó, para que la repetición no tropiece con lo mismo:
+**Siguiente paso: empezar la Fase 6 — Debugging.** La Fase 5 (Automatización) se completó el 2026-08-04, a la tercera: 100% interactiva de principio a fin (el alumno ejecutó cada comando y leyó la consola real), sobre la base desktop ya estabilizada, con un bug real encontrado y arreglado por el camino (no solo "código que compila") — detalle completo en "Resumen Fase 5" más abajo y en findings §25.
 
-1. **Primer intento (inválido como formación):** el mentor resolvió el ejercicio elegido (spec de wishlist a mano, patrón POM) en solitario — el alumno no ejecutó ningún comando ni vio consola. Se descartó como fase y el trabajo técnico quedó aparcado en el stash `fase5-solo-attempt-2026-07-29` (auto-dismiss del modal promocional MMBRS en `consent.ts`, click acotado en `ProductCard.open()`, spec de wishlist). **Ojo:** todo eso se validó contra el layout MÓVIL — no reutilizar a ciegas.
-2. **Segundo intento (interactivo, interrumpido por un hallazgo mayor):** a mitad de la lección se descubrió que toda la suite llevaba desde su origen probando el layout **móvil** de DES — el equipo prueba siempre desktop, que requiere `?device=desktop` en cada navegación (decisión server-side, sin cookie ni persistencia). Eso convirtió la sesión en trabajo de mantenimiento (migración a desktop), no de formación.
+**Nivel del alumno confirmado hasta ahora:** buena intuición conceptual; pide explícitamente aprender de forma interactiva (ver consola real, no solo teoría) — la Fase 4 se rehizo por completo en ese formato a petición suya, y la Fase 5 se repitió dos veces hasta conseguirlo. En la Fase 5 propuso correctamente, sin ayuda: dónde vive el método nuevo (`ProductPage`, no un componente aparte), el par acción/consulta (`addToWishlist()`/`isInWishlist()`), y la idempotencia ("comprobar primero"). Cuando se le preguntó por qué el test fallaba pese a que el botón ya había cambiado de estado, no supo explicarlo — fue el mentor quien lo explicó (mecanismo de *strict mode* de Playwright + un `.catch` que disfraza el error real); normal para una primera exposición a ese concepto, no repetir la pregunta abierta la próxima vez que aparezca, ya se le puede dar como sabido.
 
-**La repetición debe:** (a) partir de la base desktop ya estabilizada, (b) ser 100 % interactiva — el mentor explica en pasos cortos y el ALUMNO ejecuta cada comando y lee la consola (regla ya registrada tras la Fase 4), (c) re-probear en desktop cualquier selector heredado del stash antes de usarlo. Ejercicio candidato: el mismo (spec de wishlist a mano), ahora sobre terreno firme.
-
-**✅ Precondición (a) CUMPLIDA (2026-08-02):** la base desktop es firme — el interceptor de layout se mergeó a master (`9a5d1f5`): la suite entera prueba el desktop REAL (7/7, guard anti-móvil en cada test que pasa) y las divergencias de selectores desktop/móvil están catalogadas en findings §24 (tabla al final de la sección). Relevante para el ejercicio de wishlist: el stash sigue siendo conocimiento MÓVIL (el modal promocional MMBRS llevaba `class="mobile"` — su comportamiento desktop es desconocido), así que la regla (c) aplica con más razón; y ojo con la sesión — el `.auth/state.json` caduca en horas y `login.spec` la invalida a mitad de suite (DES es single-session por cuenta; señal: "Iniciar sesión" en la cabecera de un run supuestamente autenticado).
-
-**Nivel del alumno confirmado hasta ahora:** buena intuición conceptual; pide explícitamente aprender de forma interactiva (ver consola real, no solo teoría) — la Fase 4 se rehizo por completo en ese formato a petición suya. Correcciones importantes ya hechas y que no deben repetirse:
+Correcciones importantes ya hechas y que no deben repetirse:
 - El **mapa funcional lo genera el Explorer**, no el Planner (el Planner solo lo *anota* con evidencia de cobertura).
 - Los **selectores viven en los Page/Component Objects** (`src/pages/`, `src/components/`), nunca en los `.spec.ts` — esa es la esencia del patrón POM que hace que un cambio de UI en DES solo obligue a tocar un archivo.
 
@@ -97,6 +92,14 @@
 - **El exit code de `qa-cycle` mide la salud del pipeline, no de la suite** — una suite con tests flaky/failed no rompe el exit code; lo que sí lo rompe es que un paso falle tan grave que el resto se salten (`status: 'skipped'`).
 - **`pnpm ask` agrupa "session-twins"** (v1.1): si el mismo flujo de negocio existe tanto en sesión `anon` como `auth` en el mapa, se muestra como una sola línea con ambos `flowId`s en vez de duplicar la entrada en la lista de ambigüedad.
 
+### Fase 5 — Automatización
+
+- **`actUntil` (`src/support/retry.ts`) es el primitivo centralizado del patrón act→verify→retry** — le pasas un `act` (el intento) y un `verify` (la condición de estado real), y reintenta hasta que `verify` sea `true` o expire `deadlineMs`. Ya lo usan `selectFirstSize()`/`addToCart()`; escribir un método nuevo que cambia estado en DES significa reutilizar esto, no reinventar un bucle a mano.
+- **Patrón de método en un Page/Component Object para una interacción con estado:** una **consulta** async que nunca lanza (`isXxx(): Promise<boolean>`, con `.catch(() => false)`) + una **acción** que primero comprueba con la consulta (idempotencia — no repetir la acción si el estado ya es el deseado) y usa esa misma consulta como `verify` de `actUntil`.
+- **El "modo estricto" (strict mode) de Playwright:** un locator basado en rol/nombre asume que identifica un único elemento. Si se resuelve a más de uno, métodos como `.isVisible()` o `.click()` **lanzan un error** en vez de elegir uno al azar. Un `.catch(() => false)` pensado para "el elemento no existe todavía" **también atrapa ese error real de ambigüedad** y lo disfraza del mismo `false` — un bug real puede parecer indistinguible de "aún no está listo".
+- **Un elemento repetido en la misma página puede aparecer más tarde de lo esperado.** Un carrusel de recomendaciones ("También te puede gustar") puede reutilizar el mismo texto/rol que el botón principal de la página, y si carga con retraso (lazy), el locator puede pasar de único a ambiguo *a mitad de un `actUntil`* — el mismo patrón de bug ya visto en el proyecto con testIds repetidos en grids de producto (findings B16/M8b). `.first()` (scoped al orden real del DOM, cuando el elemento de interés siempre precede al contenido repetido) es la solución ya usada en el propio framework para esta clase de problema.
+- **Nunca concluir "es ruido de entorno" sin mirar la evidencia real primero** (`error-context.md`/screenshot que genera Playwright al fallar) — un test que falla por timeout puede estar fallando por una razón completamente distinta a la que parece a simple vista (aquí: la acción SÍ había funcionado, el problema era cómo lo comprobábamos).
+
 ## Comandos
 
 ### Fase 2
@@ -123,6 +126,13 @@
 | `pnpm qa-cycle` | Orquesta test→analyze→learn→heal→plan en un comando | `--risk`, `--update-map`, `--top <n>` |
 | `pnpm ask "<intención>"` | Resuelve lenguaje natural → genera el draft de ese flujo | `--flow <id>` (desambiguar) |
 
+### Fase 5
+
+| Comando | Qué hace | Cuándo usarlo |
+|---|---|---|
+| `pnpm exec playwright codegen "<url>?device=desktop"` | Abre un navegador controlado + graba código Playwright mientras interactúas a mano | Para probar en vivo un selector nuevo antes de escribirlo en un Page/Component Object — nunca adivinar |
+| `pnpm exec playwright test <archivo> --project=chromium` | Corre un solo spec (dispara `setup` como dependencia si no hay sesión válida) | Validar un spec nuevo o recién arreglado sin esperar a la suite completa |
+
 ## Buenas prácticas
 
 ### Fase 3
@@ -137,6 +147,12 @@
 - El orden real del ciclo importa: `test → analyze → learn → heal → plan`, sin nada en medio que reescriba `reports/results.json` (ver el error frecuente de abajo).
 - `pnpm learn` sí escribe en un archivo versionado en git (`coverage/run-history.json`) — en modo *use-and-maintain* esto es uso normal y esperado (cada run real alimenta el histórico), no hace falta revertirlo.
 - Antes de correr `pnpm build-tests`, recordar que por defecto **prunea** `tests/generated/` (borra drafts previos) — es intencional (evita que specs obsoletos se acumulen), usar `--no-prune` solo si se quiere conservar una generación anterior a propósito.
+
+### Fase 5
+
+- Antes de escribir un método nuevo de acción/consulta, mirar si ya existe un método parecido en el mismo Page Object (aquí, `addToCart()` ya mostraba el patrón exacto a seguir para `addToWishlist()`) — copiar el patrón validado en vez de inventar uno nuevo.
+- Tras arreglar un test intermitente, no fiarse de una sola corrida verde — repetirlo 2-3 veces para distinguir "arreglado de verdad" de "esta vez tuvimos suerte".
+- Tras tocar un archivo compartido (un Page/Component Object que usan varios specs), correr la suite completa (`pnpm test`) antes de dar el cambio por bueno — no solo el spec nuevo.
 
 ## Errores frecuentes y soluciones
 
@@ -157,6 +173,12 @@
 | `pnpm analyze` reporta "0 failed, 0 flaky" justo después de que `pnpm test` mostró fallos reales | `pnpm test` y `pnpm test:generated` escriben al **mismo archivo** `reports/results.json` (mismo reporter JSON, `playwright.generated.config.ts` hereda la config base) — si corres `test:generated` entre medias, pisa la evidencia del `test` original | Re-correr `pnpm test` justo antes de `pnpm analyze`, sin nada en medio que también use el reporter JSON |
 | Dos tests con el mismo error exacto ("the size dialog did not close after selecting a size") en runs distintos | Ruido de entorno ya documentado (findings §14/§16/§18), no un bug nuevo — `pnpm analyze` lo confirma clasificándolo `category: timeout`, no `selector-drift` | No hace falta investigar cada vez — si el analyzer lo clasifica `timeout`/`environment-noise`, confiar en esa clasificación; solo escalar si empieza a aparecer como `selector-drift` o si `--risk`/el histórico muestra que deja de ser transitorio |
 | `pnpm ask "<frase corta>"` devuelve varias opciones en vez de una sola | Ambigüedad real: varias frases matchean por tokens/tipo con score distinto (ver el campo `why` de cada candidato) | No es un fallo — usar `--flow <id>` con el `flowId` del candidato deseado (mostrado en la lista) para generar ese draft en concreto |
+
+### Fase 5
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| Un test falla con timeout esperando un cambio de estado que, mirando el screenshot/aria snapshot del fallo, **ya había ocurrido** | Un locator sin `.first()`/scope se volvió ambiguo (2+ elementos con el mismo rol+nombre) en algún momento del poll; el método de consulta usa `.catch(() => false)` para tratar "no existe todavía", pero eso también atrapa el error real de *strict mode violation* y lo convierte en el mismo `false` | Contar cuántas veces aparece ese rol+nombre en el snapshot del fallo; si son 2+, acotar el locator (`.first()` si el elemento de interés siempre precede al resto en el DOM, o un scope más específico) |
 
 ## Trucos
 
@@ -181,3 +203,7 @@ Requisitos: Node ≥18, pnpm, VPN corporativa, `.env` con credenciales de test. 
 ### Fase 4 — Comandos esenciales
 
 Fase completamente hands-on: cada comando del ciclo se ejecutó en vivo contra DES, en el orden real de dependencia (`explore` acotado sin `--update` → `plan` → `build-tests --top 2` → `test:generated` 4/4 pasado → `analyze` → `heal` → `learn` → `ask` con desambiguación real). Se confirmó en código y en consola: el mapa funcional tiene 3 capas (pages/components/elements) con `selectorHints` que preservan qué atributo real produjo cada testId (M7); los drafts del Builder respetan el POM (cero selectores en el spec); el Healer hace early-exit limpio sin selector-drift que sanar; `pnpm learn` es el único comando de esta fase que escribe en un archivo versionado en git, de forma puramente aditiva. Se encontró y documentó un gotcha real (no de la formación, del propio proyecto): `pnpm test` y `pnpm test:generated` comparten el mismo `reports/results.json`, así que `pnpm analyze` debe correr inmediatamente después de `pnpm test`, sin nada en medio. `pnpm qa-cycle` se explicó a partir de su código real (`orchestrator/cli.ts`) sin re-ejecutarlo, por ser exactamente la misma cadena ya validada paso a paso.
+
+### Fase 5 — Automatización
+
+Completada al tercer intento (2026-08-04), 100% interactiva de principio a fin. Ejercicio: escribir a mano un spec de wishlist (patrón POM) para el botón "Añadir/Eliminar de la lista de deseos" del PDP, sobre la base desktop ya estabilizada (§24 de findings). Proceso real seguido: probar el selector en vivo con `codegen` (el alumno lo ejecutó y describió lo que veía) → diseñar el par acción/consulta (`addToWishlist()`/`isInWishlist()`) discutiendo con el alumno cada decisión antes de escribir código → aplicar el código en `ProductPage.ts` siguiendo el patrón ya existente de `addToCart()` → escribir el spec (`tests/wishlist/add-to-wishlist.spec.ts`) → primera corrida real: **falló** con un timeout aparentemente de ruido de entorno, pero no se aceptó esa explicación sin mirar la evidencia (`error-context.md`) — investigación sistemática encontró un bug real (locator ambiguo por un carrusel de recomendaciones que repite el mismo botón, agravado por un `.catch` que disfrazaba el error de *strict mode*), se arregló con `.first()`, y se validó en vivo dos veces más (limpio) más la suite completa (`pnpm test` 8/8, cero reintentos — la primera corrida completamente verde con el spec de wishlist ya integrado). El stash `fase5-solo-attempt-2026-07-29` (conocimiento móvil, del primer intento inválido) se descartó tras completar el ejercicio de forma fresca. Detalle completo en findings §25.

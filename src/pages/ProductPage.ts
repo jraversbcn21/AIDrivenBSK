@@ -152,4 +152,37 @@ export class ProductPage extends BasePage {
       onTimeout: () => { throw new Error('ProductPage: the size dialog did not close after selecting a size (add not confirmed)'); },
     });
   }
+
+  /** The wishlist button toggles its own accessible name — "Eliminar de la lista de deseos"
+   *  IS the confirmation signal that the item is currently in the wishlist (confirmed live,
+   *  desktop, 2026-08-04; same name on both layouts, no divergence found here).
+   *  .first(): the "También te puede gustar" recommendations carousel repeats this exact
+   *  button (same accessible name) per card — same repeated-element hazard as B16/M8b.
+   *  A bare role locator strict-mode-violates once the carousel hydrates, and isVisible()'s
+   *  .catch(() => false) silently swallows that error, masking an already-successful toggle
+   *  (root-caused live 2026-08-04: the main product's button always renders before the
+   *  carousel, so .first() is always the main product, never a recommendation card). */
+  private wishlistRemoveButton() {
+    return this.page.getByRole('button', { name: 'Eliminar de la lista de deseos' }).first();
+  }
+
+  async isInWishlist(): Promise<boolean> {
+    return this.wishlistRemoveButton().isVisible().catch(() => false);
+  }
+
+  async addToWishlist(): Promise<void> {
+    if (await this.isInWishlist()) return;
+    const addBtn = this.page.getByRole('button', { name: 'Añadir a la lista de deseos' }).first();
+    await actUntil({
+      act: async () => {
+        await dismissOnboardingTour(this.page);
+        await addBtn.click({ force: true, timeout: 5_000 });
+      },
+      verify: () => this.isInWishlist(),
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('ProductPage: wishlist button did not confirm the add within the deadline'); },
+    });
+  }
 }
