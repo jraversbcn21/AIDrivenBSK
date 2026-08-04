@@ -78,15 +78,40 @@ export class ProductPage extends BasePage {
   }
 
   /**
+   * The desktop add-cart-success drawer, identified by its own CONTENT.
+   *
+   * Replaces the original baseline-dialog-count diff (`count() > baseline`), which produced
+   * 7 false "no confirmation dialog appeared" failures between 2026-08-02 and 2026-08-04
+   * before being root-caused from a failure snapshot that showed the drawer plainly on screen,
+   * `alert "Producto añadido"` and all, while the test claimed it never appeared (findings §28).
+   * A count diff cannot tell WHICH dialog appeared: this site keeps dialogs mounted while
+   * visually closed (§17) and desktop renders the search overlay as a dialog too (§24), so any
+   * concurrent dialog churn — one closing as the drawer opens — leaves the count flat and the
+   * real drawer undetected. Matching on content removes the whole failure class.
+   *
+   * Two accepted texts, either of which proves the drawer: the "Producto añadido" alert and
+   * the "Ver cesta (N)" action. "Ver cesta" is also the desktop header cart link (§24), but
+   * this locator is scoped to dialogs and the header is not one.
+   */
+  private addConfirmationDrawer() {
+    return this.page.getByRole('dialog').filter({ hasText: /producto añadido|ver cesta/i }).first();
+  }
+
+  private async isAddConfirmed(): Promise<boolean> {
+    return this.addConfirmationDrawer().isVisible().catch(() => false);
+  }
+
+  /**
    * Clicks the first in-stock size in the open dialog, which performs the actual add-to-cart.
    * The add is only confirmed when the dialog closes — a force-click on a not-yet-hydrated size
    * button is silently lost (confirmed live: cart ended "Cesta vacía" after a "successful" click),
    * so retry until the dialog actually closes.
    */
   async addToCart(): Promise<void> {
-    // Desktop (inline size group present): the add is the "Añadir a la cesta" click, and the
-    // only observed confirmation is a NEW dialog appearing (count 0 -> 1 on a page with no
-    // permanent dialog — desktop has no mobile nav drawer; baseline-diff mirrors M9 §17).
+    // Desktop (inline size group present): the add is the "Añadir a la cesta" click, confirmed
+    // by the add-cart-success drawer appearing. The drawer is identified BY ITS CONTENT
+    // (addConfirmationDrawer) — the original baseline dialog-count diff was replaced 2026-08-04
+    // after it produced 7 false failures: see that helper's comment for the root cause.
     // The act re-selects a size first if none is pressed (a lost click deselects nothing,
     // but a re-rendered group can drop the selection). Layout re-discriminated via the
     // POLLED detectAddFlow(), not a single-shot isVisible() — a transient re-render must
@@ -94,7 +119,7 @@ export class ProductPage extends BasePage {
     if ((await this.detectAddFlow()) === 'desktop') {
       const group = this.sizeGroup();
       const addBtn = this.page.getByRole('button', { name: /^añadir a la cesta$/i }).first();
-      const baseline = await this.page.getByRole('dialog').count();
+      const confirmed = (): Promise<boolean> => this.isAddConfirmed();
       // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
       // unbounded click on a locator the SPA re-rendered away waits to the 150s test
       // timeout, starving actUntil's own deadline (the exact hang mode root-caused in the
@@ -102,26 +127,39 @@ export class ProductPage extends BasePage {
       await actUntil({
         act: async () => {
           // A slow confirmation (>1 cadence) must not trigger a second add — double-adds
-          // feed the shared-cart accumulation (§7) and can stray-click the drawer.
-          if ((await this.page.getByRole('dialog').count()) > baseline) return;
+          // feed the shared-cart accumulation (§7) and can stray-click the drawer. This
+          // guard was ALSO defeated by the old count diff, so a false negative kept
+          // re-clicking "Añadir a la cesta" for the full 20s deadline (findings §28).
+          if (await confirmed()) return;
           await dismissOnboardingTour(this.page);
           if ((await group.getByRole('button', { pressed: true }).count()) === 0) {
             await group.getByRole('button', { disabled: false }).first().click({ force: true, timeout: 5_000 }).catch(() => undefined);
           }
           await addBtn.click({ force: true, timeout: 5_000 });
         },
-        verify: async () => (await this.page.getByRole('dialog').count()) > baseline,
+        verify: confirmed,
         deadlineMs: 20_000,
         sleepMs: 500,
         sleep: (ms) => this.page.waitForTimeout(ms),
-        onTimeout: () => { throw new Error('ProductPage: no confirmation dialog appeared after "Añadir a la cesta" (add not confirmed)'); },
+        onTimeout: () => { throw new Error('ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed)'); },
       });
-      // The confirmation drawer (add-cart-success modal, holds "Ver cesta (N)"/"Cerrar")
-      // stays open and intercepts any subsequent header click — close it before returning.
-      const closeBtn = this.page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).first();
+      // The drawer stays open and intercepts any subsequent header click — close it before
+      // returning. Its close button is USUALLY named "Cerrar", but a live capture
+      // (2026-08-04) showed it nameless (icon-only, image not yet resolved), so fall back to
+      // Escape rather than clicking a positionally-guessed button — the drawer's other
+      // buttons are "Tramitar pedido" and "Ver cesta", both of which NAVIGATE. Escape as a
+      // close idiom is established for this site's overlays (M9 §17) but is not separately
+      // confirmed for this drawer; if it ever proves not to close it, the timeout below says so.
       await actUntil({
-        act: () => closeBtn.click({ timeout: 5_000 }),
-        verify: async () => (await this.page.getByRole('dialog').count()) <= baseline,
+        act: async () => {
+          const named = this.addConfirmationDrawer().getByRole('button', { name: 'Cerrar' }).first();
+          if (await named.isVisible().catch(() => false)) {
+            await named.click({ timeout: 5_000 });
+            return;
+          }
+          await this.page.keyboard.press('Escape');
+        },
+        verify: async () => !(await confirmed()),
         immediateFirstCheck: true, // an auto-closed drawer never enters the act
         deadlineMs: 10_000,
         sleepMs: 500,
