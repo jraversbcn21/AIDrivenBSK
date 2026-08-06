@@ -156,6 +156,35 @@
         "skipped": 0
       },
       "failures": []
+    },
+    {
+      "recordedAt": "2026-08-06T12:38:52.279Z",
+      "failureReportGeneratedAt": "2026-08-06T12:38:48.795Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 15,
+        "passed": 13,
+        "failed": 0,
+        "flaky": 2,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "checkout/checkout-reach.spec.ts",
+          "title": "checkout: cart's \"Tramitar pedido\" reaches /es/checkout.html",
+          "outcome": "flaky",
+          "category": "unknown",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/vestidos-tallas-overlay.spec.ts",
+          "title": "mujer > vestidos: open and close the Tallas overlay from a PLP card",
+          "outcome": "flaky",
+          "category": "assertion",
+          "flowsAffected": []
+        }
+      ]
     }
   ]
 }
