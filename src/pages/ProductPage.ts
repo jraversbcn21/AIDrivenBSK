@@ -204,23 +204,68 @@ export class ProductPage extends BasePage {
     return this.page.getByRole('button', { name: 'Eliminar de la lista de deseos' }).first();
   }
 
+  private wishlistAddButton() {
+    return this.page.getByRole('button', { name: 'Añadir a la lista de deseos' }).first();
+  }
+
+  /** ⚠ Only meaningful once the wishlist control has rendered — see waitForWishlistControl().
+   *  Before that its `false` means "not painted yet", NOT "not in the wishlist". */
   async isInWishlist(): Promise<boolean> {
     return this.wishlistRemoveButton().isVisible().catch(() => false);
   }
 
+  /** The wishlist control renders in exactly one of two states, so waiting for EITHER is
+   *  what makes isInWishlist()'s answer information rather than a guess (same shape as
+   *  detectAddFlow() above). Root-caused live 2026-08-06: a PDP whose body had not painted
+   *  yet answered `false` to isInWishlist(), which is indistinguishable from a genuine
+   *  "not in the wishlist" — that ambiguity is what let a broken add-locator pass green
+   *  (the verify could not tell "my click worked" from "it was already true", the same
+   *  class of defect as findings §28). */
+  async waitForWishlistControl(): Promise<void> {
+    await actUntil({
+      verify: async () =>
+        (await this.wishlistRemoveButton().isVisible().catch(() => false)) ||
+        (await this.wishlistAddButton().isVisible().catch(() => false)),
+      immediateFirstCheck: true,
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('ProductPage: neither wishlist button rendered within the deadline'); },
+    });
+  }
+
   async addToWishlist(): Promise<void> {
+    await this.waitForWishlistControl();
     if (await this.isInWishlist()) return;
-    const addBtn = this.page.getByRole('button', { name: 'Añadir a la lista de deseos' }).first();
     await actUntil({
       act: async () => {
         await dismissOnboardingTour(this.page);
-        await addBtn.click({ force: true, timeout: 5_000 });
+        await this.wishlistAddButton().click({ force: true, timeout: 5_000 });
       },
       verify: () => this.isInWishlist(),
       deadlineMs: 20_000,
       sleepMs: 500,
       sleep: (ms) => this.page.waitForTimeout(ms),
       onTimeout: () => { throw new Error('ProductPage: wishlist button did not confirm the add within the deadline'); },
+    });
+  }
+
+  /** Establishes the "not in the wishlist" starting state so a subsequent add proves a real
+   *  transition. Without it the add-test asserts a state that may already have been true —
+   *  the shared DES account carries wishlist items across runs (findings §7's no-cleanup lead). */
+  async removeFromWishlist(): Promise<void> {
+    await this.waitForWishlistControl();
+    if (!(await this.isInWishlist())) return;
+    await actUntil({
+      act: async () => {
+        await dismissOnboardingTour(this.page);
+        await this.wishlistRemoveButton().click({ force: true, timeout: 5_000 });
+      },
+      verify: async () => !(await this.isInWishlist()),
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => this.page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('ProductPage: wishlist button did not confirm the removal within the deadline'); },
     });
   }
 }

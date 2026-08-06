@@ -13,7 +13,7 @@
 | 3 | Primer contacto: estructura del proyecto | ✅ Completada |
 | 4 | Comandos esenciales | ✅ Completada |
 | 5 | Automatización | ✅ Completada (2026-08-04) |
-| 6 | Debugging | Pendiente |
+| 6 | Debugging | ✅ Completada (2026-08-06) |
 | 7 | Nivel intermedio | Pendiente |
 | 8 | Nivel avanzado | Pendiente |
 | 9 | Proyecto final | Pendiente |
@@ -22,9 +22,11 @@
 
 ## 🔖 Dónde retomar (para la próxima sesión)
 
-**Siguiente paso: empezar la Fase 6 — Debugging.** La Fase 5 (Automatización) se completó el 2026-08-04, a la tercera: 100% interactiva de principio a fin (el alumno ejecutó cada comando y leyó la consola real), sobre la base desktop ya estabilizada, con un bug real encontrado y arreglado por el camino (no solo "código que compila") — detalle completo en "Resumen Fase 5" más abajo y en findings §25.
+**Siguiente paso: empezar la Fase 7 — Nivel intermedio.** La Fase 6 (Debugging) se completó el 2026-08-06 a la primera, 100% interactiva, y produjo un hallazgo real que ya está en el framework y en findings §29: el spec de wishlist que el propio alumno escribió en la Fase 5 **era incapaz de fallar**.
 
 **Nivel del alumno confirmado hasta ahora:** buena intuición conceptual; pide explícitamente aprender de forma interactiva (ver consola real, no solo teoría) — la Fase 4 se rehizo por completo en ese formato a petición suya, y la Fase 5 se repitió dos veces hasta conseguirlo. En la Fase 5 propuso correctamente, sin ayuda: dónde vive el método nuevo (`ProductPage`, no un componente aparte), el par acción/consulta (`addToWishlist()`/`isInWishlist()`), y la idempotencia ("comprobar primero"). Cuando se le preguntó por qué el test fallaba pese a que el botón ya había cambiado de estado, no supo explicarlo — fue el mentor quien lo explicó (mecanismo de *strict mode* de Playwright + un `.catch` que disfraza el error real); normal para una primera exposición a ese concepto, no repetir la pregunta abierta la próxima vez que aparezca, ya se le puede dar como sabido.
+
+**Nuevo, Fase 6:** resolvió **sin ayuda** las dos preguntas de diseño que cerraban el ejercicio — "habría que quitarlo de la wishlist primero" (garantizar el estado de partida) y "esperar a que el PDP esté cargado antes de preguntar" (la señal de readiness). También detectó por su cuenta el `SIN RESULTADOS` en el screenshot del fallo, aunque le atribuyó el fallo equivocado: hubo que enseñarle a usar el **stack trace** para saber qué línea del spec falló cuando hay dos fallos distintos en la misma corrida. Ese punto — leer el stack trace antes de interpretar el screenshot — es el que conviene reforzar en la siguiente fase; lo demás de la investigación lo siguió con soltura.
 
 Correcciones importantes ya hechas y que no deben repetirse:
 - El **mapa funcional lo genera el Explorer**, no el Planner (el Planner solo lo *anota* con evidencia de cobertura).
@@ -100,6 +102,20 @@ Correcciones importantes ya hechas y que no deben repetirse:
 - **Un elemento repetido en la misma página puede aparecer más tarde de lo esperado.** Un carrusel de recomendaciones ("También te puede gustar") puede reutilizar el mismo texto/rol que el botón principal de la página, y si carga con retraso (lazy), el locator puede pasar de único a ambiguo *a mitad de un `actUntil`* — el mismo patrón de bug ya visto en el proyecto con testIds repetidos en grids de producto (findings B16/M8b). `.first()` (scoped al orden real del DOM, cuando el elemento de interés siempre precede al contenido repetido) es la solución ya usada en el propio framework para esta clase de problema.
 - **Nunca concluir "es ruido de entorno" sin mirar la evidencia real primero** (`error-context.md`/screenshot que genera Playwright al fallar) — un test que falla por timeout puede estar fallando por una razón completamente distinta a la que parece a simple vista (aquí: la acción SÍ había funcionado, el problema era cómo lo comprobábamos).
 
+### Fase 6 — Debugging
+
+- **Los cuatro artefactos que Playwright genera al fallar**, y cuándo (según `playwright.config.ts` real): `screenshot: 'only-on-failure'`, `video: 'retain-on-failure'`, `trace: 'on-first-retry'` y un `error-context.md` con el snapshot de accesibilidad. El trace solo se graba en el **primer reintento** — para forzarlo siempre en una investigación se usa `--trace on`.
+- **El trace viewer es la herramienta central de debugging:** muestra la línea de tiempo de *todas* las acciones Playwright, y por cada una un snapshot del DOM en tres momentos (`Before` / `Action` / `After`), más las pestañas `Log`, `Errors`, `Console`, `Network` y `Source`.
+- **Cómo se lee un click en el Log:** un click que funcionó deja rastro de haber resuelto el elemento y ejecutado la acción; uno que solo dice `waiting for <locator>` y consume exactamente su `timeout` **nunca encontró nada** — el click no ocurrió.
+- **Un test verde no demuestra nada por sí solo.** Un test que *no puede fallar* es peor que uno rojo: reporta una seguridad que no da, y nadie relee un test en verde.
+- **La causa estructural del falso verde: afirmar un ESTADO en vez de una TRANSICIÓN.** Si el test no garantiza su estado de partida, el `expect` final puede estar comprobando algo que ya era cierto antes de empezar. En DES esto es especialmente fácil porque la cuenta es compartida y **arrastra estado entre corridas** (carrito, wishlist — findings §7).
+- **`actUntil` se traga el error del `act` por diseño** (`"the verify is the truth"`, `src/support/retry.ts`) — porque en DES un click se pierde constantemente por hidratación. La consecuencia: **toda la corrección recae en el `verify`**. Si el `verify` no sabe distinguir "mi acción funcionó" de "ya era verdad", bendecirá un no-op.
+- **Una consulta booleana con dos significados es una trampa:** `isInWishlist()` devolvía `false` tanto para "no está en la wishlist" como para "la página aún no ha pintado el botón". La solución es una señal de *readiness* previa que espere a que aparezca **cualquiera** de los estados posibles (patrón ya existente en el proyecto: `ProductPage.detectAddFlow()`).
+- **Un falso verde es invisible para toda la plataforma agéntica:** `pnpm analyze` clasifica fallos de `reports/results.json` y `pnpm heal` solo actúa sobre los `selector-drift`. Sin fallo no hay clasificación ni propuesta de curación — el selector roto no lo habría visto nadie.
+- **Validar un arreglo = experimento controlado, no "pasó".** Ver el test **rojo** con el bug puesto y **verde** al quitarlo, cambiando **una sola variable**, es lo que convierte "pasó" en "sé por qué pasó".
+- **Cuando hay dos fallos en una corrida, el stack trace desambigua:** dice qué archivo y qué línea del spec falló. Un screenshot llamativo (`SIN RESULTADOS`) puede pertenecer a un fallo distinto del que estás investigando.
+- **`.first()` arregla la ambigüedad, no el anclaje.** Silencia una *strict mode violation*, pero el locator sigue sin estar atado al elemento que te interesa: si ese elemento deja de coincidir con el nombre buscado, `.first()` se desliza en silencio al siguiente que sí coincida (p. ej. una tarjeta del carrusel de recomendaciones).
+
 ## Comandos
 
 ### Fase 2
@@ -133,6 +149,13 @@ Correcciones importantes ya hechas y que no deben repetirse:
 | `pnpm exec playwright codegen "<url>?device=desktop"` | Abre un navegador controlado + graba código Playwright mientras interactúas a mano | Para probar en vivo un selector nuevo antes de escribirlo en un Page/Component Object — nunca adivinar |
 | `pnpm exec playwright test <archivo> --project=chromium` | Corre un solo spec (dispara `setup` como dependencia si no hay sesión válida) | Validar un spec nuevo o recién arreglado sin esperar a la suite completa |
 
+### Fase 6
+
+| Comando | Qué hace | Cuándo usarlo |
+|---|---|---|
+| `pnpm exec playwright test <spec> --project=chromium --trace on` | Fuerza la grabación del trace en **todas** las corridas, no solo en el primer reintento | Cuando estás investigando algo — incluido un test que pasa y no te fías de él |
+| `pnpm exec playwright show-trace test-results/<carpeta>/trace.zip` | Abre el trace viewer | Para ver qué acciones ocurrieron de verdad, con snapshot del DOM antes/después de cada una |
+
 ## Buenas prácticas
 
 ### Fase 3
@@ -153,6 +176,14 @@ Correcciones importantes ya hechas y que no deben repetirse:
 - Antes de escribir un método nuevo de acción/consulta, mirar si ya existe un método parecido en el mismo Page Object (aquí, `addToCart()` ya mostraba el patrón exacto a seguir para `addToWishlist()`) — copiar el patrón validado en vez de inventar uno nuevo.
 - Tras arreglar un test intermitente, no fiarse de una sola corrida verde — repetirlo 2-3 veces para distinguir "arreglado de verdad" de "esta vez tuvimos suerte".
 - Tras tocar un archivo compartido (un Page/Component Object que usan varios specs), correr la suite completa (`pnpm test`) antes de dar el cambio por bueno — no solo el spec nuevo.
+
+### Fase 6
+
+- **Un test que nunca has visto fallar no es un test.** Antes de dar por bueno un spec nuevo o recién arreglado, rómpelo a propósito (un selector, una aserción) y comprueba que se pone rojo. Si sigue verde con el bug dentro, el test no protege nada.
+- **Todo test que afirme el resultado de una acción debe garantizar primero el estado contrario** — sobre todo en DES, donde la cuenta compartida arrastra estado entre corridas. Afirmar la transición (`false` → acción → `true`), no el estado final.
+- **Lee `test-results/` ANTES de relanzar.** La siguiente corrida lo sobrescribe: screenshot, video, trace y `error-context.md` de la anterior se pierden. Si una corrida te sorprende, captura la evidencia antes de volver a lanzar nada (esta fase lo aprendió por las malas: se perdió el trace del único caso que quedó sin explicar).
+- **Cuando escribas un `verify` para `actUntil`, pregúntate si sabría distinguir "mi acción funcionó" de "ya era verdad".** Si no, el `verify` bendecirá un no-op y el error del `act` ya viene tragado por diseño.
+- **Al tocar un Page/Component Object compartido, correr `pnpm test` completo** — regla heredada de la Fase 5 y aplicada aquí (`ProductPage.ts` lo usan cuatro specs).
 
 ## Errores frecuentes y soluciones
 
@@ -179,6 +210,15 @@ Correcciones importantes ya hechas y que no deben repetirse:
 | Síntoma | Causa | Solución |
 |---|---|---|
 | Un test falla con timeout esperando un cambio de estado que, mirando el screenshot/aria snapshot del fallo, **ya había ocurrido** | Un locator sin `.first()`/scope se volvió ambiguo (2+ elementos con el mismo rol+nombre) en algún momento del poll; el método de consulta usa `.catch(() => false)` para tratar "no existe todavía", pero eso también atrapa el error real de *strict mode violation* y lo convierte en el mismo `false` | Contar cuántas veces aparece ese rol+nombre en el snapshot del fallo; si son 2+, acotar el locator (`.first()` si el elemento de interés siempre precede al resto en el DOM, o un scope más específico) |
+
+### Fase 6
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| Un test pasa en verde pero sospechas que no comprueba nada | Afirma un **estado** que ya era cierto antes de empezar (cuenta compartida que arrastra estado entre corridas), en vez de una **transición** | Romper el selector a propósito y correr: si sigue verde, está confirmado. Arreglarlo garantizando el estado de partida y afirmando la transición completa |
+| Una consulta `isXxx()` devuelve `false` y no sabes si es "no está" o "aún no ha cargado" | La consulta tiene dos significados indistinguibles; su `.catch(() => false)` los unifica | Añadir una espera de *readiness* previa que espere a que sea visible **cualquiera** de los estados posibles del control (patrón `detectAddFlow()`), y documentar en el docstring que la consulta solo es fiable después |
+| Dos fallos distintos en la misma corrida y no sabes cuál investigar | El screenshot más llamativo no tiene por qué ser el de tu bug | Leer el **stack trace**: dice el archivo y la línea exacta del spec que falló. Comparar qué línea es en cada intento |
+| Un `Click` en el trace dura exactamente su `timeout` y el Log solo dice `waiting for <locator>` | El locator no resolvió a ningún elemento — el click **no ocurrió** | Comprobar el nombre accesible real contra el del locator (`codegen` o el snapshot del fallo); no es un problema de timing |
 
 ## Trucos
 
@@ -207,3 +247,7 @@ Fase completamente hands-on: cada comando del ciclo se ejecutó en vivo contra D
 ### Fase 5 — Automatización
 
 Completada al tercer intento (2026-08-04), 100% interactiva de principio a fin. Ejercicio: escribir a mano un spec de wishlist (patrón POM) para el botón "Añadir/Eliminar de la lista de deseos" del PDP, sobre la base desktop ya estabilizada (§24 de findings). Proceso real seguido: probar el selector en vivo con `codegen` (el alumno lo ejecutó y describió lo que veía) → diseñar el par acción/consulta (`addToWishlist()`/`isInWishlist()`) discutiendo con el alumno cada decisión antes de escribir código → aplicar el código en `ProductPage.ts` siguiendo el patrón ya existente de `addToCart()` → escribir el spec (`tests/wishlist/add-to-wishlist.spec.ts`) → primera corrida real: **falló** con un timeout aparentemente de ruido de entorno, pero no se aceptó esa explicación sin mirar la evidencia (`error-context.md`) — investigación sistemática encontró un bug real (locator ambiguo por un carrusel de recomendaciones que repite el mismo botón, agravado por un `.catch` que disfrazaba el error de *strict mode*), se arregló con `.first()`, y se validó en vivo dos veces más (limpio) más la suite completa (`pnpm test` 8/8, cero reintentos — la primera corrida completamente verde con el spec de wishlist ya integrado). El stash `fase5-solo-attempt-2026-07-29` (conocimiento móvil, del primer intento inválido) se descartó tras completar el ejercicio de forma fresca. Detalle completo en findings §25.
+
+### Fase 6 — Debugging
+
+Completada a la primera (2026-08-06), 100% interactiva. Ejercicio: inyectar a propósito un defecto realista de selector (quitarle una palabra al nombre accesible del botón de wishlist: `'Añadir a la lista de deseos'` → `'Añadir a lista de deseos'`) y diagnosticarlo **desde la evidencia**, sin re-lanzar a ciegas. El ejercicio se desvió inmediatamente de lo previsto y ahí estuvo todo el valor: **el test pasó en verde con el selector roto, dos veces**. La investigación con el trace viewer (`--trace on` + `show-trace`) demostró que el click duraba exactamente sus 5s de `timeout` con el Log en `waiting for <locator>` — es decir, nunca ocurrió — y que el `Before` del click mostraba el PDP **sin pintar**. Diagnóstico final: el spec que el propio alumno escribió en la Fase 5 afirmaba un **estado** (`isInWishlist() === true`) en vez de una **transición**, sobre una cuenta compartida que arrastra la wishlist entre corridas (findings §7), de modo que el `true` ya era cierto antes de empezar; y la guarda de idempotencia no lo salvaba porque `isInWishlist()` respondía `false` sobre una página aún sin pintar, indistinguible de un "no está". Es la misma clase de defecto que findings §28: **un `verify` que no distingue "mi acción funcionó" de "ya era verdad"** — agravado porque `actUntil` se traga el error del `act` por diseño, así que toda la corrección recae en el `verify`. El alumno resolvió sin ayuda las dos preguntas de diseño ("quitarlo primero" y "esperar a que el PDP esté cargado"). Arreglo aplicado: `waitForWishlistControl()` (readiness por cualquiera de los dos estados, copiando el patrón existente `detectAddFlow()`), `removeFromWishlist()`, y el spec afirmando la transición completa. Validación como experimento controlado: rojo con el selector roto, verde al arreglarlo, una sola variable cambiada; suite completa 15/15 sin reintentos, unit 421/421, typecheck/lint limpios. Lección de plataforma que se llevó la fase: **un falso verde es invisible para `analyze` y `heal`** — sin fallo no hay clasificación ni propuesta de curación. Y una lección aprendida por las malas: se perdió el trace de la única corrida que quedó sin explicar por relanzar antes de leer `test-results/` (justo la nota de método de findings §28). Detalle completo en findings §29.
