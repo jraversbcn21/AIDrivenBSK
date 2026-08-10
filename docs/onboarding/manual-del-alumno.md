@@ -153,7 +153,7 @@ Correcciones importantes ya hechas y que no deben repetirse:
 | `pnpm heal` | Propone fixes de `selector-drift` (nunca los aplica) | `--top <n>`, `--no-probe` |
 | `pnpm learn` | Graba el run en `coverage/run-history.json` (committed) | — |
 | `pnpm qa-cycle` | Orquesta test→analyze→learn→heal→plan en un comando | `--risk`, `--update-map`, `--top <n>` |
-| `pnpm ask "<intención>"` | Resuelve lenguaje natural → genera el draft de ese flujo | `--flow <id>` (desambiguar) |
+| `pnpm ask "<intención>"` | Resuelve lenguaje natural → genera el draft de ese flujo | `--flow <id>` (desambiguar), `--run` (ejecuta el draft además de generarlo), `--top <n>`, `--map` |
 
 ### Fase 5
 
@@ -257,10 +257,6 @@ Correcciones importantes ya hechas y que no deben repetirse:
 | Una consulta de estado (`isXxx()`) devuelve una respuesta que "no puede ser" (dice `true` con el elemento principal claramente en el estado contrario) | El locator no está anclado: coincide con OTRO elemento de la página que sí está en ese estado (aquí: una tarjeta del cross-selling en la wishlist) | Reconocimiento primero (¿cuántos elementos matchean ese nombre y dónde viven?); anclar el locator a un contenedor propio del elemento de interés, no confiar en la posición |
 | El analyzer clasifica un fallo recurrente como `unknown` | El mensaje de error es más reciente que el vocabulario del clasificador (aquí: el mensaje del drawer §28, escrito después que los patrones del analyzer) | `unknown/transient` recurrente con el mismo mensaje = candidato a nuevo patrón del clasificador; item de backlog con evidencia, no un bug del analyzer |
 
-## Trucos
-
-*(se rellena por fase)*
-
 ---
 
 ## Resúmenes por fase
@@ -271,7 +267,7 @@ AIDrivenBsk es una plataforma de QA agéntica para el sitio DES de Bershka: 9 su
 
 ### Fase 2 — Preparación del entorno
 
-Requisitos: Node ≥18, pnpm, VPN corporativa, `.env` con credenciales de test. `pnpm install` trae paquetes; `pnpm exec playwright install` trae el navegador — son pasos separados. El error de certificado al instalar Chromium (proxy) y el error de VPN al ejecutar tests son problemas distintos, no confundir. `checkoutAllowed=false` en prod es una salvaguarda real de código. Entorno validado con `pnpm typecheck` + `pnpm test:unit` (405/405 tests, 50/50 archivos).
+Requisitos: Node ≥18, pnpm, VPN corporativa, `.env` con credenciales de test. `pnpm install` trae paquetes; `pnpm exec playwright install` trae el navegador — son pasos separados. El error de certificado al instalar Chromium (proxy) y el error de VPN al ejecutar tests son problemas distintos, no confundir. `checkoutAllowed=false` en prod es una salvaguarda real de código. Entorno validado con `pnpm typecheck` + `pnpm test:unit` (405/405 tests, 50/50 archivos — cifra de aquella sesión; la suite unitaria crece, hoy son 421/421).
 
 ### Fase 3 — Primer contacto: estructura del proyecto
 
