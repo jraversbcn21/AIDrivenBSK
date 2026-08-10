@@ -28,10 +28,12 @@ cp .env.example .env                    # ENVIRONMENT=des, BASE_URL, BERSHKA_USE
 
 Live anything (e2e, crawl, probing) needs the corp VPN (GlobalProtect) connected. `ENVIRONMENT` ∈ `prod | des | local`; no hardcoded URLs anywhere. Checkout is gated by `checkoutAllowed` (never on prod).
 
+**Layout matters:** DES serves MOBILE by default and decides layout server-side per request. The suite tests **desktop** — a context-level interceptor (`src/support/layout.ts`) rewrites every document request to carry `device=desktop`, and every passing test is guarded against a silent mobile fallback; `EXPLORER_DEVICE` (default `desktop`) does the same for crawls. This is not optional plumbing: the suite silently tested the wrong layout for months before it existed (findings §24).
+
 ## Daily use
 
 ```bash
-pnpm qa-cycle                 # the whole loop in one command (~5 min); consolidated report in reports/orchestrator/
+pnpm qa-cycle                 # the whole loop in one command (~10-15 min on the 25-test suite); consolidated report in reports/orchestrator/
 pnpm ask "prueba el carrito"  # resolve an intent to a flow and generate its draft spec (--run executes it too)
 ```
 
@@ -49,7 +51,7 @@ pnpm test:generated        # run ONLY the drafts
 ## When something breaks
 
 ```bash
-pnpm analyze               # failures classified (7 signature-anchored categories + flaky/persistent)
+pnpm analyze               # failures classified (6 signature-anchored categories + an `unknown` fallback, each flagged flaky/persistent)
 pnpm heal                  # selector-drift failures get live-probed replacement proposals (never auto-applied)
 pnpm exec playwright show-report reports/html   # videos/screenshots/traces of failures
 ```
@@ -58,7 +60,8 @@ pnpm exec playwright show-report reports/html   # videos/screenshots/traces of f
 
 - `coverage/functional-map.json` — what the platform knows about DES (pages/elements/flows/interactions, schema 1.7)
 - `coverage/run-history.json` — what it remembers across runs (feeds analyzer risk-scores and planner ranking)
-- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha (§1–§22)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha, current behaviour (§2–§7, §23–§31)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings-archive.md` — closed milestone reports split out of it (§1, §8–§22)
 
 ## Explorer details
 
@@ -72,7 +75,7 @@ Aria-tree extraction by default (`EXPLORER_EXTRACTION=aria` — DES renders thro
 ## Development
 
 ```bash
-pnpm test:unit    # 389 unit tests across all nine sub-projects (vitest)
+pnpm test:unit    # unit tests across all nine sub-projects (vitest; the run prints the count)
 pnpm typecheck && pnpm lint
 ```
 
