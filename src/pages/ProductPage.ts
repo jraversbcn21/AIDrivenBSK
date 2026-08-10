@@ -191,27 +191,44 @@ export class ProductPage extends BasePage {
     });
   }
 
+  /** The main product's own wishlist control panel. The scoping is load-bearing, not
+   *  cosmetic: a desktop PDP renders 43 buttons named "Añadir/Eliminar de la lista de
+   *  deseos" — 1 here and 42 in the cross-selling grid (measured live 2026-08-10,
+   *  findings §31). The earlier page-wide `.first()` (§25) was NOT anchored to the main
+   *  product: the button renames itself by state, so once the main product left the
+   *  wishlist its button stopped matching the remove-name and `.first()` slid silently
+   *  to the first cross-selling card — isInWishlist() answered "is ANY product on this
+   *  page in the wishlist" (proven live via a row-D probe, §31).
+   *  A CSS class as anchor is a deliberate, documented deviation from the selector
+   *  priority: the main button carries NO test-id attribute (ironically the 42
+   *  cross-selling ones each carry data-qa-anchor="productItemWishlist"), and this is a
+   *  semantic BEM component class, not a positional/structural selector. */
+  private mainWishlistPanel() {
+    return this.page.locator('div.product-detail-info__labels-wishlist');
+  }
+
   /** The wishlist button toggles its own accessible name — "Eliminar de la lista de deseos"
    *  IS the confirmation signal that the item is currently in the wishlist (confirmed live,
    *  desktop, 2026-08-04; same name on both layouts, no divergence found here).
-   *  .first(): the "También te puede gustar" recommendations carousel repeats this exact
-   *  button (same accessible name) per card — same repeated-element hazard as B16/M8b.
-   *  A bare role locator strict-mode-violates once the carousel hydrates, and isVisible()'s
-   *  .catch(() => false) silently swallows that error, masking an already-successful toggle
-   *  (root-caused live 2026-08-04: the main product's button always renders before the
-   *  carousel, so .first() is always the main product, never a recommendation card). */
+   *  No .first(): within the main panel this name is unique, and strict mode is the
+   *  ambiguity detector — if DES ever renders two, the error IS the information (§31). */
   private wishlistRemoveButton() {
-    return this.page.getByRole('button', { name: 'Eliminar de la lista de deseos' }).first();
+    return this.mainWishlistPanel().getByRole('button', { name: 'Eliminar de la lista de deseos' });
   }
 
   private wishlistAddButton() {
-    return this.page.getByRole('button', { name: 'Añadir a la lista de deseos' }).first();
+    return this.mainWishlistPanel().getByRole('button', { name: 'Añadir a la lista de deseos' });
   }
 
   /** ⚠ Only meaningful once the wishlist control has rendered — see waitForWishlistControl().
-   *  Before that its `false` means "not painted yet", NOT "not in the wishlist". */
+   *  Before that its `false` means "not painted yet", NOT "not in the wishlist".
+   *  No .catch(() => false): isVisible() on zero matches returns false WITHOUT throwing
+   *  (verified offline, §31), so the only error a catch here could ever swallow is a
+   *  strict-mode violation — i.e. it could only hide ambiguity, never absence. Callers
+   *  inside actUntil still get throw-as-false from retry.ts's own verify catch (deliberate
+   *  doctrine there); direct callers (expect.poll) now see the real error. */
   async isInWishlist(): Promise<boolean> {
-    return this.wishlistRemoveButton().isVisible().catch(() => false);
+    return this.wishlistRemoveButton().isVisible();
   }
 
   /** The wishlist control renders in exactly one of two states, so waiting for EITHER is
@@ -223,9 +240,12 @@ export class ProductPage extends BasePage {
    *  class of defect as findings §28). */
   async waitForWishlistControl(): Promise<void> {
     await actUntil({
+      // No per-call .catch here: actUntil's own verify catch (retry.ts, deliberate doctrine)
+      // already treats a throw as false-and-keep-polling, and a local catch would only
+      // re-hide the ambiguity signal isInWishlist() just stopped swallowing (§31).
       verify: async () =>
-        (await this.wishlistRemoveButton().isVisible().catch(() => false)) ||
-        (await this.wishlistAddButton().isVisible().catch(() => false)),
+        (await this.wishlistRemoveButton().isVisible()) ||
+        (await this.wishlistAddButton().isVisible()),
       immediateFirstCheck: true,
       deadlineMs: 20_000,
       sleepMs: 500,
