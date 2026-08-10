@@ -185,6 +185,57 @@
           "flowsAffected": []
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-10T14:43:24.379Z",
+      "failureReportGeneratedAt": "2026-08-10T14:33:55.872Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 25,
+        "passed": 22,
+        "failed": 1,
+        "flaky": 2,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "checkout/checkout-reach.spec.ts",
+          "title": "checkout: cart's \"Tramitar pedido\" reaches /es/checkout.html",
+          "outcome": "flaky",
+          "category": "unknown",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "unknown",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "search/search-plp-pdp.spec.ts",
+          "title": "search, filter, and open a product detail page",
+          "outcome": "failed",
+          "category": "timeout",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_5eeb09a253b5"
+          ]
+        }
+      ]
     }
   ]
 }
