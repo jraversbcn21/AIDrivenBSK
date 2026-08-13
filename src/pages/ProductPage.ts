@@ -101,6 +101,32 @@ export class ProductPage extends BasePage {
     return this.addConfirmationDrawer().isVisible().catch(() => false);
   }
 
+  /** The main product's own action-buttons panel — add-to-cart and wishlist live in sibling
+   *  BEM sections under the same `product-detail-info` root: `mainWishlistPanel()` anchors
+   *  to `__header`'s `__labels-wishlist`; this anchors to the sibling `__actions`. CONFIRMED
+   *  live via a throwaway ancestor-chain probe (§31's method, 2026-08-13,
+   *  `tests/_probe/add-button-anchor-probe.spec.ts`, deleted after landing here):
+   *  `button "Añadir a la cesta"` resolves as `button.add-to-cart-button__cta` inside
+   *  `div.add-to-cart-button` < `div.product-detail-info__actions` <
+   *  `div.product-detail-info` — the exact same root `mainWishlistPanel()` hangs off. A CSS
+   *  class anchor is the same deliberate, documented selector-priority deviation as
+   *  `mainWishlistPanel()` (no test-id on this button either).
+   *
+   *  Scoping guards the defect observed live 2026-08-13 (`cart-lifecycle.spec.ts`, task 5):
+   *  one intended add produced TWO distinct cart lines across two separate attempts, with
+   *  the second product's identity changing between them (a same-base-product color variant
+   *  once, an unrelated "SPIDER-MAN"-campaign product the next) — while the cart was
+   *  confirmed freshly empty going into each attempt, pinning the extra line on the add
+   *  step itself. The probe found only ONE page-wide exact-name match at probe time, so the
+   *  live ambiguity did not reproduce in the probe itself — but per §31, a name-matched
+   *  locator's match set is a function of STATE and TIME, not a fixed page property, so the
+   *  old page-wide `.first()` was unanchored by construction regardless of what any single
+   *  snapshot shows. Scoping to this panel removes the exposure at its root instead of
+   *  requiring the exact reproduction. */
+  private mainProductActionsPanel() {
+    return this.page.locator('div.product-detail-info__actions');
+  }
+
   /**
    * Clicks the first in-stock size in the open dialog, which performs the actual add-to-cart.
    * The add is only confirmed when the dialog closes — a force-click on a not-yet-hydrated size
@@ -118,7 +144,10 @@ export class ProductPage extends BasePage {
     // not send a desktop PDP down the mobile branch with a misleading diagnostic.
     if ((await this.detectAddFlow()) === 'desktop') {
       const group = this.sizeGroup();
-      const addBtn = this.page.getByRole('button', { name: /^añadir a la cesta$/i }).first();
+      // Scoped to the main product's own actions panel, not page-wide (see
+      // mainProductActionsPanel() above) — unique within that scope, so no `.first()`:
+      // strict mode is re-armed as the ambiguity detector (§31).
+      const addBtn = this.mainProductActionsPanel().getByRole('button', { name: /^añadir a la cesta$/i });
       const confirmed = (): Promise<boolean> => this.isAddConfirmed();
       // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
       // unbounded click on a locator the SPA re-rendered away waits to the 150s test
