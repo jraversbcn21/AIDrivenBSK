@@ -1,8 +1,10 @@
 import type { Page, Locator } from '@playwright/test';
 import { BasePage } from './BasePage';
 import { Header } from '../components/Header';
+import { LoginPage } from './LoginPage';
 import { actUntil } from '../support/retry';
 import { parseEuroAmount } from '../support/price';
+import { primaryUser } from '../data/users';
 
 const CART_PATH = '/es/shop-cart.html';
 // The cart renders from a slow skeleton (~6-10s measured, findings §5) and has a
@@ -10,6 +12,15 @@ const CART_PATH = '/es/shop-cart.html';
 // skeleton with headroom; past it, failing IS the correct outcome. Confirmed still
 // accurate by the §32 probe (real content settled well inside this budget).
 const SKELETON_DEADLINE_MS = 30_000;
+// One session-recovery cycle's budget (backlog P5 / findings §32 "Task 7 completion",
+// confirmed live again in this task's own reproduction, 2026-08-13): DES single-sessions
+// the shared test account, so `login.spec`'s mid-suite re-auth invalidates the session
+// every other test relies on for the rest of the run. Sized against `LoginPage`'s own
+// observed live cost for the identical open()+login() call (`login.spec` itself: ~1.0m
+// wall clock, findings §32) with real margin — a CEILING, not a cost: §26's precedent
+// ("only to fit one recovery cycle, happy path pays nothing") applies identically here —
+// waitForLoaded() never reaches it when the session is already live.
+const RECOVERY_DEADLINE_MS = 90_000;
 
 export class CartPage extends BasePage {
   readonly header: Header;
@@ -67,19 +78,83 @@ export class CartPage extends BasePage {
     return this.lineItems().count();
   }
 
+  /**
+   * Re-authenticates and retries the cart navigation. Only called once the session-
+   * invalidation tell (below) has been positively observed.
+   *
+   * CONFIRMED live 2026-08-13 (task-7-report.md; reproduced again identically in this
+   * task's own reproduction run): a direct navigation to `/es/shop-cart.html` with a dead
+   * session does NOT open an in-dialog gate the way clicking checkout's "Tramitar pedido"
+   * does (`src/support/loginGate.ts`) — it silently renders the Mujer HOME page instead, so
+   * there is no dialog to complete here. Recovery is therefore a full re-authentication via
+   * the same `LoginPage` flow `auth.setup`/`login.spec` already use (both login variants,
+   * §19/§23 — reused as-is, not reimplemented), followed by retrying the cart navigation.
+   */
+  private async recoverInvalidSession(): Promise<void> {
+    const login = new LoginPage(this.page);
+    await login.open();
+    await login.login(primaryUser());
+    await this.open(); // retry the cart navigation now that the session is live again
+  }
+
   /** Waits out the skeleton: real content is EITHER line items OR the empty state.
-   *  Pure poll (no act) — same shape as waitForWishlistControl (§29): only after one of
-   *  the two states rendered is any answer information rather than a guess. Necessity
-   *  confirmed live, not assumed: P8 showed the mid-load skeleton renders as `main` with
-   *  literally zero children — indistinguishable from "0 lines" by count alone. */
+   *  Same either-state shape as waitForWishlistControl (§29): only after one of the two
+   *  states rendered is any answer information rather than a guess. Necessity confirmed
+   *  live, not assumed: P8 showed the mid-load skeleton renders as `main` with literally
+   *  zero children — indistinguishable from "0 lines" by count alone.
+   *
+   * Session-invalidation recovery (backlog P5, findings §32 "Task 7 completion"): every
+   * poll cycle's act checks the header's own logged-out tell — `Header.isUserLoggedIn()`,
+   * the SAME primitive `auth.setup`/`login.spec` already trust for this exact question —
+   * before doing anything else. It identifies WHAT it sees (a positively-rendered "Iniciar
+   * sesión" button) rather than inferring invalidity from a timeout (§28 doctrine): the
+   * button check defaults to "logged in" on absence (not found ≠ seen-and-false), so a
+   * not-yet-hydrated header cannot misfire this into an unnecessary re-login — only an
+   * actually-rendered logged-out header can. A "non-cart main content" tell was considered
+   * and rejected as the primary signal: both live failures (task-7-report.md, this task's
+   * own reproduction) show `main` fully rendered with real, if wrong, content — a home
+   * page, not a skeleton or an error shell — so a content-shape check would need its own
+   * positive definition of "not cart content" with no natural anchor, where the header tell
+   * is already a single proven boolean.
+   *
+   * Recovery is bounded to exactly ONE attempt per call (the `recovered` flag) — DES's
+   * session death is a one-time event per suite invocation (§32 Task 7: once any test
+   * recovers it, the rest of the suite runs clean), so a second attempt within the same
+   * call would only mask a genuinely broken login rather than a transient timing race.
+   * The deadline widens by RECOVERY_DEADLINE_MS to fit exactly one such cycle — the same
+   * "ceiling, not a cost" reasoning as `VestidosTallasOverlayPage.openOverlay()` (§26): the
+   * happy path (session already live) never pays it, since `recovered` only ever flips to
+   * true when the tell is genuinely observed.
+   *
+   * isEmpty()/lineItemCount() are unaffected: DES never renders the "Cesta vacía" copy on
+   * the bounced home page (confirmed in both failure snapshots above) or on the home page's
+   * own content, so the verify below cannot bless a logged-out page as an empty cart (§29).
+   */
   async waitForLoaded(): Promise<void> {
+    let recovered = false;
     await actUntil({
+      act: async () => {
+        if (recovered) return; // one-shot — see recoverInvalidSession()'s doc above
+        if (await this.header.isUserLoggedIn()) return; // session fine, nothing to recover
+        recovered = true;
+        await this.recoverInvalidSession();
+      },
       verify: async () => (await this.lineItemCount()) > 0 || (await this.isEmpty()),
       immediateFirstCheck: true,
-      deadlineMs: SKELETON_DEADLINE_MS,
+      deadlineMs: SKELETON_DEADLINE_MS + RECOVERY_DEADLINE_MS,
       sleepMs: 500,
       sleep: (ms) => this.page.waitForTimeout(ms),
-      onTimeout: () => { throw new Error('CartPage: neither line items nor the empty state rendered within the deadline — cart content service degraded? (findings §23)'); },
+      onTimeout: async () => {
+        // Distinguish the two failure classes the deadline can now mean (§28: a diagnostic
+        // must say what it saw, never a generic timeout) — session-invalid-and-unrecovered
+        // vs. §23's pre-existing backend-outage shape (a skeleton that never resolves).
+        const sessionInvalid = !(await this.header.isUserLoggedIn().catch(() => true));
+        throw new Error(
+          sessionInvalid
+            ? 'CartPage: session invalid and recovery failed — the "Iniciar sesión" header tell persisted after re-authentication (backlog P5, findings §32 Task 7 completion)'
+            : 'CartPage: neither line items nor the empty state rendered within the deadline — cart content service degraded? (findings §23)',
+        );
+      },
     });
   }
 
