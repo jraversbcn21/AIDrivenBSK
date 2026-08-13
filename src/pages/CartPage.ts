@@ -12,15 +12,21 @@ const CART_PATH = '/es/shop-cart.html';
 // skeleton with headroom; past it, failing IS the correct outcome. Confirmed still
 // accurate by the §32 probe (real content settled well inside this budget).
 const SKELETON_DEADLINE_MS = 30_000;
-// One session-recovery cycle's budget (backlog P5 / findings §32 "Task 7 completion",
-// confirmed live again in this task's own reproduction, 2026-08-13): DES single-sessions
-// the shared test account, so `login.spec`'s mid-suite re-auth invalidates the session
-// every other test relies on for the rest of the run. Sized against `LoginPage`'s own
-// observed live cost for the identical open()+login() call (`login.spec` itself: ~1.0m
-// wall clock, findings §32) with real margin — a CEILING, not a cost: §26's precedent
-// ("only to fit one recovery cycle, happy path pays nothing") applies identically here —
-// waitForLoaded() never reaches it when the session is already live.
-const RECOVERY_DEADLINE_MS = 90_000;
+// One session-recovery cycle's budget (the closed session-invalidation item, backlog P5
+// / findings §32 "Task 7 completion", confirmed live again in this task's own
+// reproduction, 2026-08-13): DES single-sessions the shared test account, so `login.spec`'s
+// mid-suite re-auth invalidates the session every other test relies on for the rest of the
+// run. RAISED to 120_000 (task-review fix, 2026-08-13; the original 90_000 was sized only
+// against `login.spec`'s own OBSERVED wall clock, ~1.0m — not against `LoginPage.login()`'s
+// own BOUNDED WORST CASE, which composes higher: up to 30s variant-detection deadline +
+// up to 45s interstitial-click deadline + up to 30s post-login `waitForURL`, ≈105s, plus
+// `LoginPage.open()`'s un-timed navigation+consent walk on top). A slow-but-successful
+// recovery near that ~105s worst case could otherwise starve the remaining budget for the
+// post-recovery skeleton settle and throw "recovery failed" on a recovery that actually
+// worked, just slowly. A CEILING, not a cost: §26's precedent ("only to fit one recovery
+// cycle, happy path pays nothing") applies identically here — waitForLoaded() never reaches
+// it when the session is already live.
+const RECOVERY_DEADLINE_MS = 120_000;
 
 export class CartPage extends BasePage {
   readonly header: Header;
@@ -45,9 +51,18 @@ export class CartPage extends BasePage {
    * `div.shop-cart__grid` < `div.shop-cart__products` < `div.shop-cart`. A CSS-class
    * anchor is a documented deviation from the selector priority — there is no role or
    * testid to anchor on instead (§31 `mainWishlistPanel()` precedent).
+   *
+   * Scoped through `div.shop-cart__products` (task-review fix, 2026-08-13), not just
+   * `main`: §32/P1's own ancestor chain names it as the real cart-lines container, and a
+   * bare `main` scope would count product TILES on a wrong-page render too — both the
+   * Mujer home page and the member-hub page (the two documented wrong-page renders, §32
+   * Task 7/8 completion) show tiles/cards under `main` that could otherwise coincidentally
+   * match this same CSS-class combination, and `main` alone also leaves the cart's own
+   * recommendation-carousel scope unexcluded structurally rather than by luck.
    */
   private lineItems(): Locator {
     return this.page.locator('main')
+      .locator('div.shop-cart__products')
       .locator('div.product-list-card.product-card-full-screen.product-list-card--desktop');
   }
 
@@ -65,7 +80,8 @@ export class CartPage extends BasePage {
    *  `lineItemCount()` is indistinguishable from the mid-load skeleton (findings §32,
    *  P8: the skeleton is a bare `main` with zero children). Exact copy confirmed live:
    *  "Cesta vacía Aún no tienes ningún artículo en la cesta, descubre todo lo que
-   *  tenemos para ti" (P5). */
+   *  tenemos para ti" (probe P5, findings §32 — the empty-state probe question, NOT
+   *  backlog item P5/P6; disambiguated 2026-08-13, task review). */
   private emptyState(): Locator {
     return this.page.locator('main').getByText(/cesta vacía/i);
   }
@@ -90,23 +106,25 @@ export class CartPage extends BasePage {
    * the same `LoginPage` flow `auth.setup`/`login.spec` already use (both login variants,
    * §19/§23 — reused as-is, not reimplemented), followed by retrying the cart navigation.
    *
-   * ⚠ INTERACTION RISK WITH BACKLOG P5 (task-review finding 2, 2026-08-13, NOT yet resolved
-   * either way): the last line here — a fresh login immediately followed by a COLD
-   * `this.open()` — is structurally the SAME sequence as the still-open, separately-filed
-   * `CartPage` cold-navigation defect (findings §32 Task 8 completion): a cart navigation as
-   * the very first act after a fresh authentication can render `/es/member-hub.html`
-   * content instead, with a genuinely valid session. If that defect's real mechanism turns
-   * out to be session-propagation timing (one of its two live, unconfirmed hypotheses)
-   * rather than something specific to `auth.setup`'s own storageState snapshot, THIS
-   * recovery path could race into the identical failure right after "successfully"
-   * re-authenticating — the retried navigation would render the wrong page again, and
-   * `waitForLoaded()` would time out a second time with `recovered` already `true`. The
-   * `onTimeout` branch below reports this honestly as "recovery was attempted but did not
-   * resolve it" rather than misreporting it as generic §23 degradation — but it cannot
-   * distinguish "the login itself failed" from "the login worked and the retried navigation
-   * hit the cold-nav defect": both produce the identical observable shape from here. Backlog
-   * P5's investigation should explicitly test this case (does a `waitForLoaded()` timeout
-   * with `recovered === true` correlate with the cold-nav signature — member-hub content,
+   * ⚠ INTERACTION RISK WITH BACKLOG P6 (task-review finding 2, 2026-08-13, NOT yet resolved
+   * either way — renumbered from an earlier mislabeling as P5, which is the CLOSED
+   * session-invalidation item this method itself implements, task-review finding 5): the
+   * last line here — a fresh login immediately followed by a COLD `this.open()` — is
+   * structurally the SAME sequence as the still-open, separately-filed `CartPage`
+   * cold-navigation defect (findings §32 Task 8 completion): a cart navigation as the very
+   * first act after a fresh authentication can render `/es/member-hub.html` content
+   * instead, with a genuinely valid session. If that defect's real mechanism turns out to
+   * be session-propagation timing (one of its two live, unconfirmed hypotheses) rather than
+   * something specific to `auth.setup`'s own storageState snapshot, THIS recovery path
+   * could race into the identical failure right after "successfully" re-authenticating —
+   * the retried navigation would render the wrong page again, and `waitForLoaded()` would
+   * time out a second time with `recovered` already `true`. The `onTimeout` branch below
+   * reports this honestly as "recovery was attempted but did not resolve it" rather than
+   * misreporting it as generic §23 degradation — but it cannot distinguish "the login
+   * itself failed" from "the login worked and the retried navigation hit the cold-nav
+   * defect": both produce the identical observable shape from here. Backlog P6's
+   * investigation should explicitly test this case (does a `waitForLoaded()` timeout with
+   * `recovered === true` correlate with the cold-nav signature — member-hub content,
    * degraded title, valid session — rather than a genuinely broken re-login?).
    */
   private async recoverInvalidSession(): Promise<void> {
@@ -129,12 +147,13 @@ export class CartPage extends BasePage {
    *  live, not assumed: P8 showed the mid-load skeleton renders as `main` with literally
    *  zero children — indistinguishable from "0 lines" by count alone.
    *
-   * Session-invalidation recovery (backlog P5, findings §32 "Task 7 completion"): every
-   * poll cycle's act checks the header's own logged-out tell — `Header.isUserLoggedIn()`,
-   * the SAME primitive `auth.setup`/`login.spec` already trust for this exact question —
-   * before doing anything else. It identifies WHAT it sees (a positively-rendered "Iniciar
-   * sesión" button) rather than inferring invalidity from a timeout (§28 doctrine): the
-   * button check defaults to "logged in" on absence (not found ≠ seen-and-false), so a
+   * Session-invalidation recovery (the closed session-invalidation item, backlog P5,
+   * closed 2026-08-13, findings §32 "Task 7 completion"): every poll cycle's act checks
+   * the header's own logged-out tell — `Header.isUserLoggedIn()`, the SAME primitive
+   * `auth.setup`/`login.spec` already trust for this exact question — before doing
+   * anything else. It identifies WHAT it sees (a positively-rendered "Iniciar sesión"
+   * button) rather than inferring invalidity from a timeout (§28 doctrine): the button
+   * check defaults to "logged in" on absence (not found ≠ seen-and-false), so a
    * not-yet-hydrated header cannot misfire this into an unnecessary re-login — only an
    * actually-rendered logged-out header can. A "non-cart main content" tell was considered
    * and rejected as the primary signal: both live failures (task-7-report.md, this task's
@@ -142,6 +161,15 @@ export class CartPage extends BasePage {
    * page, not a skeleton or an error shell — so a content-shape check would need its own
    * positive definition of "not cart content" with no natural anchor, where the header tell
    * is already a single proven boolean.
+   *
+   * ⚠ CONFOUNDER (task-review finding 6, 2026-08-13): `Header.isUserLoggedIn()` short-
+   * circuits to `true` on `member-hub`/`/account` URLs (`src/components/Header.ts`) BEFORE
+   * checking for the "Iniciar sesión" button at all — which is exactly the URL family the
+   * open cold-nav lead (backlog P6) lands on. So on a genuine cold-nav-defect render, this
+   * detector reads "logged in" from the URL alone and never even looks at the header
+   * button — it cannot distinguish that case from a truly live session by design. This is
+   * the same blind spot named in `recoverInvalidSession()`'s interaction-risk doc above,
+   * traced to its exact mechanism here; backlog P6's investigation checklist names it too.
    *
    * Recovery is bounded to exactly ONE attempt per call (the `recovered` flag) — DES's
    * session death is a one-time event per suite invocation (§32 Task 7: once any test
@@ -161,6 +189,8 @@ export class CartPage extends BasePage {
     await actUntil({
       act: async () => {
         if (recovered) return; // one-shot — see recoverInvalidSession()'s doc above
+        // NOTE (task-review finding 6): isUserLoggedIn() short-circuits true on
+        // member-hub/account URLs — blind to a genuine cold-nav-defect render (backlog P6).
         if (await this.header.isUserLoggedIn()) return; // session fine, nothing to recover
         recovered = true;
         await this.recoverInvalidSession();
@@ -182,7 +212,7 @@ export class CartPage extends BasePage {
         // recovery at all," which is exactly what the diagnostic needs to report.
         if (recovered) {
           throw new Error(
-            `CartPage: session invalid and recovery failed — a recovery attempt (re-authentication + retried navigation) ran but cart content still did not render within the deadline (current URL: ${this.page.url()}; backlog P5, findings §32 Task 7/8 completion)`,
+            `CartPage: session invalid and recovery failed — a recovery attempt (re-authentication + retried navigation) ran but cart content still did not render within the deadline (current URL: ${this.page.url()}; backlog P5 [closed] / P6, findings §32 Task 7/8 completion)`,
           );
         }
         throw new Error('CartPage: neither line items nor the empty state rendered within the deadline — cart content service degraded? (findings §23)');
@@ -281,7 +311,13 @@ export class CartPage extends BasePage {
     // sites are (§26). A timeout rejects, which the catch below maps to null.
     const raw = await this.firstLine().getByRole('status').textContent({ timeout: 5_000 }).catch(() => null);
     if (raw === null) return null;
-    const n = Number(raw.trim());
+    const trimmed = raw.trim();
+    // Guard (task-review fix, 2026-08-13): an empty readout is UNREADABLE, not zero —
+    // `Number('')` is `0`, which would silently corrupt `beforeQty` in setQuantity() into a
+    // real (wrong) target rather than the "cannot assert a transition from it" throw that
+    // method already does for a genuinely null read.
+    if (trimmed === '') return null;
+    const n = Number(trimmed);
     return Number.isFinite(n) ? n : null;
   }
 
