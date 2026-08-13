@@ -60569,6 +60569,8 @@
       ],
       "coveredBy": [
         "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
         "tests/checkout/checkout-reach.spec.ts",
         "tests/checkout/checkout-structure.spec.ts",
         "tests/footer/footer-navigation.spec.ts",
@@ -60620,6 +60622,8 @@
         "page_b1ec771fc108"
       ],
       "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
         "tests/checkout/checkout-reach.spec.ts",
         "tests/checkout/checkout-structure.spec.ts"
       ]
@@ -60749,7 +60753,9 @@
         "page_1516d420e8fa"
       ],
       "coveredBy": [
-        "tests/auth/login.spec.ts"
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts"
       ]
     },
     {
@@ -61273,6 +61279,8 @@
       ],
       "coveredBy": [
         "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
         "tests/checkout/checkout-reach.spec.ts",
         "tests/checkout/checkout-structure.spec.ts",
         "tests/footer/footer-navigation.spec.ts",
@@ -61338,6 +61346,8 @@
         "page_4d1e2006f73b"
       ],
       "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
         "tests/checkout/checkout-reach.spec.ts",
         "tests/checkout/checkout-structure.spec.ts"
       ]
@@ -61502,7 +61512,9 @@
         "page_4f96567e1f6c"
       ],
       "coveredBy": [
-        "tests/auth/login.spec.ts"
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts"
       ]
     },
     {
