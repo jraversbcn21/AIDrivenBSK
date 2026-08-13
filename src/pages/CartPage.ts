@@ -84,9 +84,12 @@ export class CartPage extends BasePage {
   }
 
   /**
-   * Removes the first line entirely, from ANY starting quantity. Verify is the
-   * TRANSITION N→N−1 (§29) over identified line containers — the empty state is accepted
-   * UNCONDITIONALLY, not just when N=1 (see the note below).
+   * Removes the first line entirely, from ANY starting quantity. The verify's contract is
+   * "the targeted removal took effect — count dropped OR the cart is empty", NOT a
+   * guaranteed exact N→N−1: a live two-line drain (task 5 report, Run A attempt 1,
+   * 2026-08-13) showed the count can skip straight past the intermediate `before − 1`
+   * value while DES re-renders, so the empty-state branch is accepted UNCONDITIONALLY,
+   * not gated on `before === 1` (see the note below).
    *
    * The remove control is STATE-DEPENDENT (findings §32, P2, confirmed across 13
    * consecutive live clicks, no confirm dialog on any of them): `button "Eliminar
@@ -98,20 +101,28 @@ export class CartPage extends BasePage {
    * observed, draining any starting quantity down to zero exactly as the live probe's
    * own drain loop did (13→0, one click per iteration).
    *
+   * The act must not blindly re-click every retry cycle either — the SAME root-cause
+   * class `setQuantity`'s guard was built to fix (CartPage.ts, task 5 report): once the
+   * targeted line-level transition has already happened (count dropped below `before`, or
+   * the cart emptied), a further click would land on whatever is now first — a DIFFERENT
+   * line. This is exactly what Run A attempt 1 showed live: with `before === 2` (two
+   * genuinely different product lines, not one multi-quantity line), the loop clicked past
+   * the removal of line A and into line B before its own poll ever observed the
+   * intermediate `before − 1 === 1` count — removing BOTH lines from a call meant to
+   * remove only one. The act therefore checks state FIRST and returns without clicking
+   * once it has already moved; only a still-`before` state is eligible for another click on
+   * "the current first line" (repeated same-line "Restar unidad" clicks while draining a
+   * single multi-quantity line are unaffected — that IS the intended per-click decrement).
+   *
    * The empty-state branch of verify is unconditional (not gated on `before === 1`),
    * fixing a false-negative timeout CONFIRMED live 2026-08-13 (task 5 report, Run A
-   * attempt 1): with `before === 2` (two genuinely different product lines, not one
-   * multi-quantity line), the drain removed BOTH lines before the loop's poll ever
-   * observed the intermediate `before − 1 === 1` count — `firstLine()` is a live,
-   * position-based locator that re-resolves to whatever is currently first, so once line
-   * A is gone it can legitimately click into line B before verify catches the in-between
-   * state. The cart really was empty (confirmed in the failure's own error-context.md —
-   * "Cesta vacía") but the exact-match-only verify never accepted it, so `removeFirstItem`
-   * timed out on a removal that had already succeeded. `isEmpty()` is CONTENT-identified
-   * (§32/§28 doctrine — not a bare zero count): DES never renders that "Cesta vacía" copy
-   * while any line remains, so an empty cart is unconditional proof the targeted line is
-   * gone, regardless of what `before` was or whether the count ever equalled `before − 1`
-   * along the way.
+   * attempt 1): the cart really was empty (confirmed in that failure's own
+   * error-context.md — "Cesta vacía") but the old exact-match-only verify never accepted
+   * it, so `removeFirstItem` timed out on a removal that had already succeeded.
+   * `isEmpty()` is CONTENT-identified (§32/§28 doctrine — not a bare zero count): DES
+   * never renders that "Cesta vacía" copy while any line remains, so an empty cart is
+   * unconditional proof the targeted line is gone, regardless of what `before` was or
+   * whether the count ever equalled `before − 1` along the way.
    */
   async removeFirstItem(): Promise<void> {
     const before = await this.lineItemCount();
@@ -119,6 +130,11 @@ export class CartPage extends BasePage {
     const line = this.firstLine();
     await actUntil({
       act: async () => {
+        // Already moved past `before` (a click already landed, possibly into a different
+        // line once the targeted one is gone) — let the verify decide instead of clicking
+        // again on top of it.
+        const currentCount = await this.lineItemCount();
+        if (currentCount !== before || (await this.isEmpty())) return;
         const eliminar = line.getByRole('button', { name: 'Eliminar producto' });
         if (await eliminar.isVisible().catch(() => false)) {
           await eliminar.click({ timeout: 5_000 });
