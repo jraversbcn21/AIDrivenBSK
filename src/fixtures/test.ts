@@ -4,7 +4,9 @@ import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { SearchResultsPage } from '../pages/SearchResultsPage';
 import { ProductPage } from '../pages/ProductPage';
+import { CartPage } from '../pages/CartPage';
 import { forceDesktopLayout, assertDesktopLayout } from '../support/layout';
+import { ensureEmptyCart } from '../support/cartCleanup';
 
 interface Fixtures {
   env: AppEnv;
@@ -12,8 +14,10 @@ interface Fixtures {
   loginPage: LoginPage;
   searchResultsPage: SearchResultsPage;
   productPage: ProductPage;
+  cartPage: CartPage;
   routeEvidence: void;
   desktopLayout: void;
+  cleanCart: void;
 }
 
 export const test = base.extend<Fixtures>({
@@ -23,6 +27,15 @@ export const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => { await use(new LoginPage(page)); },
   searchResultsPage: async ({ page }, use) => { await use(new SearchResultsPage(page)); },
   productPage: async ({ page }, use) => { await use(new ProductPage(page)); },
+  cartPage: async ({ page }, use) => { await use(new CartPage(page)); },
+  // Explicit (NOT auto): only cart specs pay its cost. Depends on desktopLayout so the
+  // device=desktop interceptor is active before this fixture's own navigation — cleanup
+  // must see the same layout (and selectors) the test will.
+  cleanCart: async ({ cartPage, desktopLayout }, use) => {
+    void desktopLayout;
+    await ensureEmptyCart(cartPage);
+    await use();
+  },
   // Records every main-frame navigation and attaches the ordered URL list to the test
   // result; planner/evidence/reporter.ts aggregates the attachments into
   // reports/route-evidence.json for journey-coverage matching (design spec
