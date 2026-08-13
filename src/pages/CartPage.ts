@@ -115,9 +115,11 @@ export class CartPage extends BasePage {
         (await this.lineItemCount()) === before - 1 ||
         (before === 1 && (await this.isEmpty())),
       // Sized for a worst-case multi-unit drain: the live probe observed a line reach
-      // quantity 13 (via §28's confirmation-drawer noise re-triggering the add) and
-      // drain cleanly to 0, each decrement settling well under 1s. 30s covers that with
-      // real headroom on the common 1-2 unit case.
+      // quantity 13 (via §28's confirmation-drawer noise re-triggering the add) and drain
+      // cleanly to 0 within its own bound (13 clicks, no confirm dialog on any of them —
+      // §32 does not record per-click timestamps, so this is sized as iterations × cadence
+      // with margin, not a measured per-click duration). 30s covers ~13 act/verify cycles
+      // at the 500ms sleep cadence with real headroom on the common 1-2 unit case.
       deadlineMs: 30_000,
       sleepMs: 500,
       sleep: (ms) => this.page.waitForTimeout(ms),
@@ -133,7 +135,13 @@ export class CartPage extends BasePage {
    *  any observed quantity), so `inputValue()` does not apply; read via `.textContent()`
    *  instead. Null while unreadable — poll-friendly. */
   async lineQuantity(): Promise<number | null> {
-    const raw = await this.firstLine().getByRole('status').textContent().catch(() => null);
+    // .textContent() is a WAITING/retrying locator method (unlike .count()/.isVisible()),
+    // and the project has no global actionTimeout (ProductPage.ts's own addBtn/eliminar
+    // click sites document this). Without an explicit timeout here, an unresolved status
+    // element (empty-cart race, partial render) could block for the whole TEST timeout
+    // instead of failing within a nominal budget — bounded the same way the file's click
+    // sites are (§26). A timeout rejects, which the catch below maps to null.
+    const raw = await this.firstLine().getByRole('status').textContent({ timeout: 5_000 }).catch(() => null);
     if (raw === null) return null;
     const n = Number(raw.trim());
     return Number.isFinite(n) ? n : null;
@@ -190,7 +198,9 @@ export class CartPage extends BasePage {
   /** Null while not rendered/parseable — poll-friendly on purpose (`expect.poll` aborts
    *  on a throw), never throws itself. */
   async totalAmount(): Promise<number | null> {
-    const text = await this.totalRegion().textContent().catch(() => null);
+    // Bounded for the same reason as lineQuantity() above (§26) — .textContent() waits/
+    // retries with no global actionTimeout to fall back on.
+    const text = await this.totalRegion().textContent({ timeout: 5_000 }).catch(() => null);
     if (text === null) return null;
     return parseEuroAmount(text);
   }
