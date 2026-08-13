@@ -147,6 +147,25 @@ export class CartPage extends BasePage {
     return Number.isFinite(n) ? n : null;
   }
 
+  /**
+   * The act must not blindly re-click every retry cycle. CONFIRMED live 2026-08-13
+   * (`cart-lifecycle.spec.ts`, task 5): a single intended "increase 1→2" click overshot to a
+   * server-confirmed quantity of 4 in one run and 19 in another (subtotal matched
+   * unit-price × observed-quantity both times — real server-side state, not a display
+   * glitch). Root cause: DES's per-click round trip (it also has to recompute the
+   * shipping-progress banner, e.g. "Has conseguido tu envío estándar gratis a domicilio")
+   * can exceed the loop's 500ms poll cadence, so the old unconditional re-click fired
+   * several more times before the readout was ever observed exactly at `target` — the poll
+   * skipped straight over it. Same defect FAMILY as `ProductPage.addToCart`'s anti-double-add
+   * guard and `Footer.goToStoreLocator` (§27/§28: "a slow confirmation must not trigger a
+   * second stray act"), but those guard an idempotent single-shot action ("already there?");
+   * this one is cumulative (each click is a further +1/-1), so the guard here checks whether
+   * the readout has left `beforeQty` AT ALL — not whether it reached `target` — before
+   * allowing another click, and gives a landed click a bounded settle window (up to 3s) to
+   * actually leave `beforeQty` before the next retry cycle could otherwise fire again. The
+   * retry loop itself is NOT removed — fire-once clicks are still lost on this site (§7) —
+   * only the blind unconditional re-click is.
+   */
   private async setQuantity(direction: 'up' | 'down'): Promise<void> {
     const beforeQty = await this.lineQuantity();
     if (beforeQty === null) throw new Error('CartPage: line quantity is unreadable — cannot assert a transition from it');
@@ -162,15 +181,33 @@ export class CartPage extends BasePage {
     // (§31 anchoring — both names repeat once per line): increase = "Sumar unidad"
     // (always present); decrease = "Restar unidad" (present only at quantity >=2).
     const name = direction === 'up' ? 'Sumar unidad' : 'Restar unidad';
+    let observedQty: number | null = beforeQty;
     await actUntil({
       act: async () => {
+        observedQty = await this.lineQuantity();
+        // Already moved (or unreadable mid-transition) — a click already landed or is in
+        // flight; let the verify decide instead of firing another one on top of it.
+        if (observedQty === null || observedQty !== beforeQty) return;
         await line.getByRole('button', { name }).click({ timeout: 5_000 });
+        // Bounded settle window: give the just-sent click a real chance to leave `beforeQty`
+        // before this act could be re-invoked and fire another one on top of it. Widens the
+        // effective inter-click gap well past the observed DES lag without abandoning
+        // act→verify→retry.
+        for (let i = 0; i < 6; i++) {
+          await this.page.waitForTimeout(500);
+          observedQty = await this.lineQuantity();
+          if (observedQty === null || observedQty !== beforeQty) return;
+        }
       },
       verify: async () => (await this.lineQuantity()) === target,
       deadlineMs: 20_000,
       sleepMs: 500,
       sleep: (ms) => this.page.waitForTimeout(ms),
-      onTimeout: () => { throw new Error(`CartPage: quantity did not reach ${target} (was ${beforeQty})`); },
+      onTimeout: () => {
+        // Distinguish a dead control (observedQty still beforeQty) from an overshoot/
+        // undershoot (observedQty moved but not to target) — both are real diagnostics now.
+        throw new Error(`CartPage: quantity did not reach ${target} (was ${beforeQty}, observed ${observedQty} at timeout)`);
+      },
     });
   }
 
