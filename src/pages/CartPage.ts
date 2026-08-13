@@ -85,8 +85,8 @@ export class CartPage extends BasePage {
 
   /**
    * Removes the first line entirely, from ANY starting quantity. Verify is the
-   * TRANSITION N→N−1 (§29) over identified line containers — when N=1 the empty state
-   * is accepted too (the list may unmount whole).
+   * TRANSITION N→N−1 (§29) over identified line containers — the empty state is accepted
+   * UNCONDITIONALLY, not just when N=1 (see the note below).
    *
    * The remove control is STATE-DEPENDENT (findings §32, P2, confirmed across 13
    * consecutive live clicks, no confirm dialog on any of them): `button "Eliminar
@@ -97,6 +97,21 @@ export class CartPage extends BasePage {
    * repeated automatically by actUntil's retry loop until the line-count transition is
    * observed, draining any starting quantity down to zero exactly as the live probe's
    * own drain loop did (13→0, one click per iteration).
+   *
+   * The empty-state branch of verify is unconditional (not gated on `before === 1`),
+   * fixing a false-negative timeout CONFIRMED live 2026-08-13 (task 5 report, Run A
+   * attempt 1): with `before === 2` (two genuinely different product lines, not one
+   * multi-quantity line), the drain removed BOTH lines before the loop's poll ever
+   * observed the intermediate `before − 1 === 1` count — `firstLine()` is a live,
+   * position-based locator that re-resolves to whatever is currently first, so once line
+   * A is gone it can legitimately click into line B before verify catches the in-between
+   * state. The cart really was empty (confirmed in the failure's own error-context.md —
+   * "Cesta vacía") but the exact-match-only verify never accepted it, so `removeFirstItem`
+   * timed out on a removal that had already succeeded. `isEmpty()` is CONTENT-identified
+   * (§32/§28 doctrine — not a bare zero count): DES never renders that "Cesta vacía" copy
+   * while any line remains, so an empty cart is unconditional proof the targeted line is
+   * gone, regardless of what `before` was or whether the count ever equalled `before − 1`
+   * along the way.
    */
   async removeFirstItem(): Promise<void> {
     const before = await this.lineItemCount();
@@ -113,7 +128,7 @@ export class CartPage extends BasePage {
       },
       verify: async () =>
         (await this.lineItemCount()) === before - 1 ||
-        (before === 1 && (await this.isEmpty())),
+        (await this.isEmpty()),
       // Sized for a worst-case multi-unit drain: the live probe observed a line reach
       // quantity 13 (via §28's confirmation-drawer noise re-triggering the add) and drain
       // cleanly to 0 within its own bound (13 clicks, no confirm dialog on any of them —
