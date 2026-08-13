@@ -5,7 +5,8 @@ import { test, expect } from '../../src/fixtures/test';
 // navigation (measured live), racing the default 5s expect timeout under load.
 const HYDRATION_TIMEOUT_MS = 20_000;
 
-test('adding a product updates the mini cart', async ({ homePage, searchResultsPage, productPage }) => {
+test('adding a product updates the mini cart', async ({ cleanCart, homePage, searchResultsPage, productPage }) => {
+  void cleanCart; // guaranteed-empty start: the final assert is the transition 0→1 (§29)
   await homePage.open();
   await homePage.header.searchBar.search('camiseta');
   await searchResultsPage.waitForResults();
@@ -17,5 +18,5 @@ test('adding a product updates the mini cart', async ({ homePage, searchResultsP
   await productPage.header.goToCart();
   const cartTab = productPage.header.cartTab();
   await expect.poll(() => cartTab.isVisible(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
-  await expect.poll(() => cartTab.itemCount(), { timeout: HYDRATION_TIMEOUT_MS }).toBeGreaterThan(0);
+  await expect.poll(() => cartTab.itemCount(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(1);
 });
