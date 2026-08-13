@@ -672,7 +672,7 @@ The confirmation-drawer failure and its quantity-inflation side effect (§28's d
 
 **Gate 2 — offline, clean.** `pnpm typecheck` clean, `pnpm lint` clean (incl. the `import/no-cycle` check — `CartPage` now imports `LoginPage`/`primaryUser`, no cycle found), `pnpm test:unit` **428/428**, no regression.
 
-**Gate 3 — reproduction recipe, post-fix (`tests/auth tests/cart`): green, 2 clean + 2 flaky, both flakes independently confirmed unrelated.** `auth.setup` (1.4m) and `login.spec` (1.0m) passed clean; both cart specs failed attempt 1 and passed retry 1 — but neither attempt-1 failure was the session-invalidation error. Read from each failure's own `error-context.md` (not inferred): `add-to-cart.spec` attempt 1 failed with `ProductPage: the add-to-cart confirmation drawer never appeared` (the pre-existing §28 class — header showed `button "Mi cuenta"`, a real PDP, no session issue); `cart-lifecycle.spec` attempt 1 failed with a quantity assertion (`expected 2, received 3` after `increaseQuantity()`) — the documented, accepted `setQuantity` residual-overshoot class named in this same §32's Task 7 completion — header again showed `"Mi cuenta"` and a real, populated cart (`Cesta (3)` tab). The targeted failure mode (the "Iniciar sesión" tell + wrong-page `main`) did not recur anywhere in this run — direct evidence the fix closes the mechanism it targets.
+**Gate 3 — reproduction recipe, post-fix (`tests/auth tests/cart`): green, 2 clean + 2 flaky, both flakes independently confirmed unrelated.** `auth.setup` (1.4m) and `login.spec` (1.0m) passed clean; both cart specs failed attempt 1 and passed retry 1 — but neither attempt-1 failure was the session-invalidation error. Read from each failure's own `error-context.md` (not inferred): `add-to-cart.spec` attempt 1 failed with `ProductPage: the add-to-cart confirmation drawer never appeared` (the pre-existing §28 class — header showed `button "Mi cuenta"`, a real PDP, no session issue); `cart-lifecycle.spec` attempt 1 failed with a quantity assertion (`expected 2, received 3` after `increaseQuantity()`) — the documented, accepted `setQuantity` residual-overshoot class named in this same §32's Task 7 completion — header again showed `"Mi cuenta"` and a real, populated cart (`Cesta (3)` tab). The targeted failure mode (the "Iniciar sesión" tell + wrong-page `main`) did not recur anywhere in this run. **Stated precisely (task-review finding 1, corrected):** this is evidence the OLD symptom is gone across this run, not a direct observation of `recoverInvalidSession()` itself firing and succeeding — this run predates the observability lines added below, so whether recovery silently engaged and worked, or simply wasn't needed this time, could not be told apart from this evidence alone. Direct, positive confirmation of the recovery path engaging was captured afterward, once the gap was flagged — see "Task 8 fix report" below.
 
 **Gate 4 — standalone `cart-lifecycle.spec.ts`: found a second, narrower, previously-undocumented `CartPage` defect — reproduced 2/2, filed, NOT fixed (out of this task's scope).** Two separate invocations (4 attempts total: attempt + retry, twice) all failed identically with the SAME diagnostic (`CartPage: neither line items nor the empty state rendered… cart content service degraded?` — the non-session branch of the new `onTimeout`, confirming `Header.isUserLoggedIn()` genuinely returned `true` throughout, i.e. this is NOT the mechanism Task 8 was scoped to fix). Read from all four `error-context.md` files: the header shows unambiguous authenticated content (`button "Mi cuenta"`, `button "Cerrar sesión"`), yet `main` renders **`/es/member-hub.html` content** (`"¡Hola, Jota!"`, "Mi perfil", "Mis compras"…) with the degraded-shell title `"Bershka | Bershka"` (§7/§13's own documented signature) — not cart content, not a skeleton, not an error page. `recoverInvalidSession()` never engaged (the act's session check always short-circuited true), so this is provably not a code path Task 8 touched.
 
@@ -689,3 +689,56 @@ Hypothesis, stated as such and NOT confirmed live (out of scope to probe further
 - Healthy path pays ~nothing: confirmed — gate 5's `cart-lifecycle.spec` at 1.6m, no recovery engaged.
 
 **Backlog P5 (`CartPage` session-invalidation gap) is CLOSED.** A new lead is filed for the gate-4 finding — see the backlog and CLAUDE.md pending-task list.
+
+### Task 8 fix report — task review found three Important issues, all addressed (2026-08-13)
+
+A task review of the above flagged three gaps before this branch merges. All three are in
+`src/pages/CartPage.ts` only; no behavior changed beyond what each finding required.
+
+1. **Evidence-strength overclaim.** The gate-3 paragraph above said the fix's absence-of-old-
+   symptom was "direct evidence the fix closes the mechanism" — it wasn't; no run had yet
+   directly observed `recoverInvalidSession()` firing. Corrected in place (see the paragraph
+   above) to say precisely what the evidence supported. **Fixed with an actual instrument, not
+   just softer words:** `recoverInvalidSession()` now logs when it engages (the tell was
+   observed) and when it completes (with the post-recovery URL) — plain `console.log`,
+   surfaced live by Playwright's own reporters. Re-running the gate-3 recipe with this in
+   place gave the FIRST direct, positive confirmation: all four cart-spec attempts (both
+   specs × attempt + retry) logged both lines, meaning `recoverInvalidSession()` genuinely
+   fired and completed on every single one — the shared account's session was dead for the
+   whole run, exactly as expected the run right after `login.spec`. Neither attempt-1 failure
+   in this re-run was the session-invalidation error (confirmed the same way as before, via
+   each failure's own `error-context.md`): `add-to-cart.spec` — the pre-existing §28 drawer
+   class again; `cart-lifecycle.spec` — the `setQuantity` overshoot class again (`expected 2,
+   received 6` this time — a larger overshoot than the earlier run, still the same named,
+   accepted noise family, findings §32 Task 7 completion). 2 clean + 2 flaky, 0 failed, 12.7m.
+
+2. **Undocumented interaction risk with the gate-4 cold-navigation lead.**
+   `recoverInvalidSession()` ends with fresh-login → immediate cold `this.open()` — structurally
+   the same sequence as the still-open, separately-filed cold-navigation defect (this section,
+   Task 8 completion above). If that defect's mechanism turns out to be session-propagation
+   timing rather than something specific to `auth.setup`'s own storageState snapshot, recovery
+   could itself race into it right after a "successful" re-login. Documented explicitly at the
+   recovery site (`CartPage.ts`, the doc comment above `recoverInvalidSession()`) and in the
+   backlog's P5 entry, which now names the specific correlation the next investigation should
+   check: does a `waitForLoaded()` timeout with `recovered === true` correlate with the cold-nav
+   signature (member-hub content, degraded title, valid session) rather than a genuinely broken
+   re-login? Not observed either way this session — recovery succeeded cleanly all four times
+   it fired in the re-validation run above.
+
+3. **Diagnostic contract gap.** If recovery's own login failed partway, the old `onTimeout`
+   re-checked `Header.isUserLoggedIn()` at the moment of timeout — which could read `true` even
+   though a recovery attempt had run and failed (mid-navigation, a partially-completed login, or
+   exactly finding 2's race), misreporting it as the generic §23 "cart content service degraded"
+   message instead of naming the real situation. Fixed: `onTimeout` now branches on the
+   `recovered` flag itself (ground truth for "did this call attempt recovery," set the instant
+   the tell is observed, never reset) rather than re-deriving it from page state. When recovery
+   was attempted, the thrown message says so explicitly and includes the current URL; the
+   generic §23 message is now reserved for calls where recovery was never attempted at all.
+
+**Covering gates re-run:** `pnpm typecheck` clean, `pnpm lint` clean (no `no-console` rule
+configured in `.eslintrc.cjs`, confirmed by reading it rather than assuming). Targeted
+recipe (`pnpm exec playwright test tests/auth tests/cart`): green as reported in finding 1
+above — 2 clean + 2 flaky (both independently confirmed pre-existing noise), 0 failed, 12.7m.
+The full suite was not re-run for this fix round — none of the three findings changed the
+happy-path behavior validated by gate 5 (25/1/0) in the original Task 8 pass, and the
+covering-gates instruction for this round scoped to the targeted recipe specifically.

@@ -89,12 +89,38 @@ export class CartPage extends BasePage {
    * there is no dialog to complete here. Recovery is therefore a full re-authentication via
    * the same `LoginPage` flow `auth.setup`/`login.spec` already use (both login variants,
    * §19/§23 — reused as-is, not reimplemented), followed by retrying the cart navigation.
+   *
+   * ⚠ INTERACTION RISK WITH BACKLOG P5 (task-review finding 2, 2026-08-13, NOT yet resolved
+   * either way): the last line here — a fresh login immediately followed by a COLD
+   * `this.open()` — is structurally the SAME sequence as the still-open, separately-filed
+   * `CartPage` cold-navigation defect (findings §32 Task 8 completion): a cart navigation as
+   * the very first act after a fresh authentication can render `/es/member-hub.html`
+   * content instead, with a genuinely valid session. If that defect's real mechanism turns
+   * out to be session-propagation timing (one of its two live, unconfirmed hypotheses)
+   * rather than something specific to `auth.setup`'s own storageState snapshot, THIS
+   * recovery path could race into the identical failure right after "successfully"
+   * re-authenticating — the retried navigation would render the wrong page again, and
+   * `waitForLoaded()` would time out a second time with `recovered` already `true`. The
+   * `onTimeout` branch below reports this honestly as "recovery was attempted but did not
+   * resolve it" rather than misreporting it as generic §23 degradation — but it cannot
+   * distinguish "the login itself failed" from "the login worked and the retried navigation
+   * hit the cold-nav defect": both produce the identical observable shape from here. Backlog
+   * P5's investigation should explicitly test this case (does a `waitForLoaded()` timeout
+   * with `recovered === true` correlate with the cold-nav signature — member-hub content,
+   * degraded title, valid session — rather than a genuinely broken re-login?).
    */
   private async recoverInvalidSession(): Promise<void> {
+    // Observability (task-review finding 1, 2026-08-13): every validation of this path so
+    // far inferred it worked from the OLD failure signature's absence across a run, never
+    // from directly watching it engage — the honest gap this line and the one below close.
+    // Plain console.log is deliberate: Playwright's own reporters (list included) surface
+    // test-process stdout live, no testInfo plumbing needed for a page-object method.
+    console.log('[CartPage] session-invalidation tell observed ("Iniciar sesión" in header) — attempting recovery: re-authenticating and retrying the cart navigation');
     const login = new LoginPage(this.page);
     await login.open();
     await login.login(primaryUser());
     await this.open(); // retry the cart navigation now that the session is live again
+    console.log(`[CartPage] recovery re-authentication completed, cart navigation retried (current URL: ${this.page.url()})`);
   }
 
   /** Waits out the skeleton: real content is EITHER line items OR the empty state.
@@ -144,16 +170,22 @@ export class CartPage extends BasePage {
       deadlineMs: SKELETON_DEADLINE_MS + RECOVERY_DEADLINE_MS,
       sleepMs: 500,
       sleep: (ms) => this.page.waitForTimeout(ms),
-      onTimeout: async () => {
+      onTimeout: () => {
         // Distinguish the two failure classes the deadline can now mean (§28: a diagnostic
-        // must say what it saw, never a generic timeout) — session-invalid-and-unrecovered
-        // vs. §23's pre-existing backend-outage shape (a skeleton that never resolves).
-        const sessionInvalid = !(await this.header.isUserLoggedIn().catch(() => true));
-        throw new Error(
-          sessionInvalid
-            ? 'CartPage: session invalid and recovery failed — the "Iniciar sesión" header tell persisted after re-authentication (backlog P5, findings §32 Task 7 completion)'
-            : 'CartPage: neither line items nor the empty state rendered within the deadline — cart content service degraded? (findings §23)',
-        );
+        // must say what it saw, never a generic timeout). Branches on `recovered` — NOT a
+        // fresh `isUserLoggedIn()` re-check (task-review finding 3, 2026-08-13): a fresh
+        // check would misreport a recovery that ran but still failed as the generic §23
+        // message whenever the page happens to read "logged in" at timeout (e.g. re-login
+        // itself failed partway, mid-navigation, or the retried navigation raced into the
+        // cold-nav defect the doc comment above flags — `isUserLoggedIn()` could read either
+        // way in those cases). `recovered` is ground truth for "did this call attempt
+        // recovery at all," which is exactly what the diagnostic needs to report.
+        if (recovered) {
+          throw new Error(
+            `CartPage: session invalid and recovery failed — a recovery attempt (re-authentication + retried navigation) ran but cart content still did not render within the deadline (current URL: ${this.page.url()}; backlog P5, findings §32 Task 7/8 completion)`,
+          );
+        }
+        throw new Error('CartPage: neither line items nor the empty state rendered within the deadline — cart content service degraded? (findings §23)');
       },
     });
   }
