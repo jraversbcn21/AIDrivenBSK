@@ -497,3 +497,133 @@ The add had **succeeded** and the drawer was **on screen announcing it**. Stated
 - **Only a state where the hypotheses predict DIFFERENT outcomes is evidence** — the page's default state (row C here) confirms both hypotheses at once, i.e. nothing; enumerate the combinations and go build the discriminating one.
 
 **Open lead handed forward — one more `.first()` of the same shape, NOT probed (2026-08-10).** A doc audit the same day found `tests/mujer/pages/VestidosTallasOverlayPage.ts:89`: `isOverlayOpen()` returns `locate(page, { role: { type: 'button', name: 'Talla XS' } }).first().isVisible()`. Its own comment concedes the name repeats ("once the overlay renders alongside the grid behind it") — which is precisely this section's defect shape: **a `verify` whose locator is not anchored to the thing it claims to be checking.** If a grid card behind the overlay can expose a `"Talla XS"` button on its own, `isOverlayOpen()` would answer *"is any size button visible anywhere"*, and the spec could pass with the overlay shut. **Stated as a lead, not a finding: this was NOT probed** — unlike the wishlist case there is no live evidence either way, and the spec passes consistently (19-30s, §26). Confirming it needs the same method used here: build the discriminating state (a PLP with the overlay closed but a card's size buttons rendered) and see what `isOverlayOpen()` says. The trigger's own `.first()` at line 75 is a *different* and legitimate case — "any exemplar of a repeated trigger", §17's policy.
+
+---
+
+## 32. Cart inner structure — probed live for the first time (2026-08-13)
+
+**Context.** Cart-regression effort, Task 1 (plan: `docs/superpowers/plans/2026-08-13-cart-regression.md`). The functional map holds **0 elements** for `/es/shop-cart.html` (the crawler has never had a reason to interact past it) and no remove/quantity selector had ever been confirmed against DES — this section is the first live look inside `/es/shop-cart.html`'s content. Temporary probe `tests/_probe/cart-inner-probe.spec.ts` (deleted after this section, same §18 lifecycle as §18/§22/§23/§31). Full P1–P8 answers are recorded in the plan's Probe Results table; this section carries the verbatim evidence and the two live surprises the round-2 script had to adapt to.
+
+### Round 1 (observe only) — real content dump, quantity 1
+
+Primed via the proven recipe (search "camiseta" → first standard card → PDP → select size → add), entered the cart, dumped `main` at t0 (skeleton) and t+12s (real content):
+
+```yaml
+# t0 — mid-load skeleton
+- main "Contenido principal"
+```
+
+```yaml
+# t+12s — real content, one line, quantity 1
+- main "Contenido principal":
+  - link:
+    - /url: /es/camiseta-ajustada-spider-man-c0p228471235.html?colorId=600
+  - link "Camiseta ajustada SPIDER-MAN":
+    - /url: /es/camiseta-ajustada-spider-man-c0p228471235.html?colorId=600
+  - text: 15,99 € XS Rojo
+  - button "Eliminar producto"
+  - status: "1"
+  - button "Sumar unidad"
+  - alertdialog "Te faltan 19,01 € para conseguir tu envío estándar gratis":
+    - text: Información
+    - paragraph: Te faltan 19,01 € para conseguir tu envío estándar gratis
+  - text: Total
+  - link "(Impuestos, en su caso, incluidos)"
+  - text: 15,99 €
+  - button "Tramitar pedido"
+  - button "Comprar con Apple Pay"
+  - list: [Ticket regalo checkbox, Código promocional checkbox]
+  - heading "Podría gustarte" [level=2]
+  - list "Productos que te pueden interesar": (19 recommendation cards, each an `article` inside a `listitem`)
+```
+
+Structured queries confirmed: `[P7 TAB] 1`; only `/eliminar/i` (→ "Eliminar producto", count=1) and `/unidad/i` (→ "Sumar unidad", count=1) matched any button name out of the 7 candidate regexes tried; `[P3 SPINBUTTONS] 0`; `[P3 COMBOBOXES] 0`; `[P1 MAIN LISTITEMS] 21` / `[P1 MAIN ARTICLES] 19` (both fully accounted for by the recommendations list + the 2 gift-ticket/promo-code items — **zero** belong to the cart's own line); `[P6 TOTAL-ish] ["Total"]` (the € amount is a separate text node, not part of this match).
+
+**Ancestor chain (the anchoring container, same technique as §31):**
+```
+BUTTON.bds-button bds-button-icon bds-button--size-s bds-button--tertiary
+  < DIV.quantity-selector product-card-full-screen__quantity-selector
+  < DIV.product-list-card__wrapper
+  < DIV.product-list-card__content
+  < DIV.product-list-card product-card-full-screen product-list-card--desktop
+  < DIV.shop-cart__grid < DIV.shop-cart__products < DIV.shop-cart
+```
+Both "Eliminar producto" and "Sumar unidad" share this exact chain — the line-item container is `div.product-list-card.product-card-full-screen.product-list-card--desktop`, a plain CSS-classed div with **no wrapping ARIA role**. This directly falsifies the plan's provisional `CartPage.lineItems()`, which used `getByRole('listitem')` — that call would match only recommendation cards, never the cart's own line.
+
+### Surprise 1 — the remove button is state-dependent, found by round 2's first (adapted) attempt
+
+Round 2's script (brief-provided, `REMOVE_NAME = /eliminar producto/i`) re-ran the identical prime step. DES **merged** the newly-added unit into the *existing* line rather than creating a second one — the dump showed one line at **quantity 2**, with `button "Restar unidad"` present and **`button "Eliminar producto"` absent entirely**. The unmodified removal loop found 0 matches, no-opped, and the "[P5 EMPTY STATE]" capture was actually still the loaded 2-unit state — caught by reading the output rather than trusting the PASS.
+
+**Adapted per the brief's own guidance** ("record exactly what you saw in P2 and adapt round 2's step-5 loop minimally"): the loop now targets `/eliminar producto|restar unidad/i` (whichever name is present) and uses the header tab's unit count — confirmed to track total units exactly (P7) — as the settle signal instead of the combined-button count (which legitimately stays at "1 button present" across a decrement, since exactly one of the two names is always shown while units remain).
+
+### Round 2 (adapted) — full drain to zero, quantity 13 → 0, and a live re-confirmation of §28's second-order damage
+
+The re-run's **first attempt failed** inside the priming step: `ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed)` — the exact §28-documented DES noise class, still occurring 2026-08-13 (a further occurrence beyond §26/§27/§30's tally, consistent with §30's read that it is genuine intermittent environment noise, not a lingering detector bug). §28's own predicted "second-order damage" reproduced live: while the confirmation-drawer detector kept failing, `addToCart`'s act kept re-clicking "Añadir a la cesta" for the full 20s deadline, and **each click was a real, separate server-side add** — the line's quantity jumped from 2 to **13** (+11) during that one failed attempt, confirmed by the retry's own opening dump. **Retry #1 passed** (1.5m) with the drawer confirming normally, and the removal loop then drained all 13 units cleanly:
+
+```
+[P2 REMOVE] clicked "Restar unidad", tab 13 -> 12
+[P2 REMOVE] clicked "Restar unidad", tab 12 -> 11
+[P2 REMOVE] clicked "Restar unidad", tab 11 -> 10
+[P2 REMOVE] clicked "Restar unidad", tab 10 -> 9
+[P2 REMOVE] clicked "Restar unidad", tab 9 -> 8
+[P2 REMOVE] clicked "Restar unidad", tab 8 -> 7
+[P2 REMOVE] clicked "Restar unidad", tab 7 -> 6
+[P2 REMOVE] clicked "Restar unidad", tab 6 -> 5
+[P2 REMOVE] clicked "Restar unidad", tab 5 -> 4
+[P2 REMOVE] clicked "Restar unidad", tab 4 -> 3
+[P2 REMOVE] clicked "Restar unidad", tab 3 -> 2
+[P2 REMOVE] clicked "Restar unidad", tab 2 -> 1
+[P2 REMOVE] clicked "Eliminar producto", tab 1 -> 0
+```
+
+Every one of the 13 clicks dropped the tab count by exactly 1 (no confirm dialog ever intervened), and the last click's button name — "Eliminar producto" — confirms the state-dependent swap holds symmetrically on the way down too: decrementing to quantity 1 restores the trash-icon button, which then performs the actual removal.
+
+**P5 — the real empty state, captured this time:**
+
+```yaml
+- main "Contenido principal":
+  - img
+  - text: Cesta vacía Aún no tienes ningún artículo en la cesta, descubre todo lo que tenemos para ti
+  - link "Descubrir":
+    - /url: /es/h-woman.html
+  - heading "Te puede interesar" [level=2]
+  - list "Productos que te pueden interesar": (16 recommendation cards)
+```
+
+`[P5 TAB FINAL] 0` — the header tab independently corroborates the empty state.
+
+### Surprise 2 — the Total label and its € amount are separate text nodes, and a Subtotal breakdown can appear alongside it
+
+Added after round 1's dump showed `[P6 TOTAL-ish]` returning `["Total"]` with no amount attached: an ancestor-chain probe (same technique as above) on both the "Total" text and the `/€/`-suffixed amount texts found they render as **separate sibling nodes**, not one combined string:
+
+```
+[P6 TOTAL LABEL ancestors] SPAN.total-amount-module__title bds-typography-label-m-highlight
+  < DIV.total-amount-module__title-wrapper < DIV.total-amount-module__content
+  < DIV.total-amount-module < DIV.total-module__content < DIV.bds-button-dock__content
+  < DIV.bds-button-dock total-module__button-dock ... < DIV.total-module shop-cart-total-dock__module
+
+[P6 TOTAL AMOUNT ancestors] SPAN.current-price-elem
+  < DIV.price-elem total-amount-module__price bds-typography-label-l-highlight price-grid
+  < DIV.total-amount-module__price-and-touch < DIV.total-amount-module__content
+  < DIV.total-amount-module < DIV.total-module__content < DIV.bds-button-dock__content
+```
+
+`div.total-amount-module` is the nearest shared ancestor of both — the correct scoping container for `CartPage.totalRegion()`, replacing the plan's provisional bare `getByText(/total/i)` (which returns only the label, never the €, so `parseEuroAmount` would see `null`). At 13 units (past the free-shipping threshold, with the "Ocultar detalle de costes" [expanded] cost breakdown rendered) a sibling `paragraph "Subtotal"` also appeared, and `[P6 TOTAL-ish]` correspondingly returned `["Subtotal","Total"]` — a live-confirmed false-positive risk for any locator scoped no tighter than `main` and matched on `/total/i` alone. `div.total-amount-module` does not contain "Subtotal" (that lives in the sibling `div.sub-total-module`), so scoping to it avoids the collision.
+
+### Net structural findings (full detail in the plan's Probe Results table P1–P8)
+
+- **P1:** cart line = plain `div.product-list-card...` (no ARIA role), not a `listitem` — anchor via CSS class (§31 precedent).
+- **P2:** remove button name is state-dependent — "Eliminar producto" only at quantity 1, "Restar unidad" at quantity ≥2; no confirm dialog on any click (13/13 clean).
+- **P3:** quantity control exists, shape = 2-button stepper + `status` readout, no spinbutton/combobox; names "Sumar unidad" / "Restar unidad".
+- **P4:** quantity read from a `status`-role element's text (not an input value).
+- **P5:** empty state = `getByText(/cesta vacía/i)` — confirmed exact copy above.
+- **P6:** total = two separate text nodes under a shared `div.total-amount-module` container; a sibling "Subtotal" can collide with a bare `/total/i` match.
+- **P7:** the header tab counts **units**, not lines (1→2→13→0, exact throughout).
+- **P8:** the mid-load skeleton is a bare `main` with zero children — indistinguishable from "0 lines" by count alone, confirming the either/or `waitForLoaded()` design is necessary.
+- **Bonus, unasked but load-bearing for Task 5's prime step:** re-adding the same product+size to the cart **merges into the existing line's quantity** rather than creating a duplicate line — confirmed twice live (1→2, then the noise-driven 2→13).
+
+### Environment note, not chased
+
+The confirmation-drawer failure and its quantity-inflation side effect (§28's documented mechanism) is recorded here as a live recurrence, not a new defect — consistent with §26/§27/§30's characterization as genuine intermittent DES noise. No action taken beyond noting it; the retry recovered cleanly and the probe's own goal (structural knowledge) was unaffected.
+
+**Probe deleted after this section** (§18 lifecycle). Side effect, deliberate: the shared account's cart is empty at the end of this session.
