@@ -236,6 +236,62 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-16T13:16:28.827Z",
+      "failureReportGeneratedAt": "2026-08-16T13:16:23.151Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-07-30T11:21:11.424Z",
+      "totals": {
+        "tests": 27,
+        "passed": 24,
+        "failed": 0,
+        "flaky": 3,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/cart-lifecycle.spec.ts",
+          "title": "cart lifecycle: add → quantity up/down → remove → empty",
+          "outcome": "flaky",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_92ffb23be7fd",
+            "flow_5eeb09a253b5",
+            "flow_5c335c37c325",
+            "flow_2c34cf57c54f"
+          ]
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "unknown",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "mujer/pantalones-capri.spec.ts",
+          "title": "mujer > pantalones: navigate home -> pantalones PLP -> capri PLP",
+          "outcome": "flaky",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_97c44933c933",
+            "flow_41b3f84fa207",
+            "flow_5eeb09a253b5",
+            "flow_feb2a0501922",
+            "flow_2ad0f792ba8d"
+          ]
+        }
+      ]
     }
   ]
 }
