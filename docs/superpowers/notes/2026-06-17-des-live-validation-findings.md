@@ -6,12 +6,12 @@
 
 ## Status
 
-**The suite tests DES's TRUE DESKTOP layout. Suite is 26 tests; latest full run (2026-08-13, the final-review fix wave's gate) 25 passed / 1 flaky (§28 drawer noise, retry-recovered) / 0 failed, 14.2m — both cart specs clean on their first attempt. The cart-regression effort (§32) shipped `CartPage` + `cleanCart` + the `cart-lifecycle` journey spec, and fixed FOUR defects along the way: three in its own new cart code, caught by its own live gates before merge (`setQuantity` overshoot, `removeFirstItem` stray re-click + verify gap, the session-invalidation gap — closed as backlog P5), and one genuinely PRE-EXISTING production defect (`ProductPage.addToCart`'s page-wide-unanchored add button could add a different product — §29's false-green thesis, invisible until a spec finally counted cart lines). Still OPEN: backlog P6 — a cold cart navigation right after `auth.setup` can render `/es/member-hub.html` content with a genuinely VALID session; fires in standalone/targeted orderings (observed 2/2, 2/2, and again 2/2 during the fix wave's targeted gate), never in the full suite (§32, Task 8 gate 4 + session close).**
+**The suite tests DES's TRUE DESKTOP layout. Suite is 26 tests; latest full run (2026-08-16, §33's regression gate) 24 passed / 3 flaky / 0 failed, 19.2m — a slow DES window; all three flakes were read from their own `error-context.md` and attributed to named, unrelated noise classes. Backlog **P6 is CLOSED** (§33): the "cold cart navigation renders member-hub with a valid session" defect was never DES — `CartPage`'s session detector read DES's server-rendered LOGGED-OUT header (visible ~5-8s before hydration, MEASURED) as a dead session, fired an unnecessary re-login, and `logon.html` then bounced the already-authenticated user to member-hub while `actUntil` silently swallowed the resulting error. The tell must now PERSIST 15s before it is believed; the reproducer went 2/2 red → 2/2 green, and legitimate recovery still fires and lands on the cart (3/3 in the full suite). Before it, the cart-regression effort (§32) shipped `CartPage` + `cleanCart` + the `cart-lifecycle` journey spec and fixed FOUR defects: three in its own new cart code, caught pre-merge (`setQuantity` overshoot, `removeFirstItem` stray re-click + verify gap, the session-invalidation gap — backlog P5), and one genuinely PRE-EXISTING production defect (`ProductPage.addToCart`'s page-wide-unanchored add button could add a different product — §29's false-green thesis, invisible until a spec finally counted cart lines). Still open, unfixed by design (one fix at a time): the **150s fixture budget collision** — `cleanCart` is a fixture, so a spec's own `test.setTimeout()` has not applied when it runs, and `waitForLoaded()`'s worst case equals the des test timeout exactly (§33).**
 
 - **Desktop enforcement** is a context-level route interceptor — `src/support/layout.ts`, `forceDesktopLayout(context)` — plus `assertDesktopLayout(page)` on every passing test. ⚠ **Every suite claim dated before 2026-08-02 was measured on the MOBILE layout**: the 2026-07-29 "migration" was incomplete and the correction is §24. Read §24 before touching any selector — its closing table is the mobile↔desktop divergence catalogue, and selectors are dual-layout (mobile names deliberately kept).
 - **Login is dual-variant** (§23): DES switches the `/es/logon.html` shape server-side between an e-mail+password form and a "Continuar con e-mail" interstitial. `LoginPage.login()` handles both — do not "simplify" it back to one.
 - **Interaction reliability** is the standing rule (§7): every state-changing interaction must act→verify→retry, every click must be bounded, and every verify must identify *what* it is looking at rather than counting (§28 is the cautionary tale) — and must distinguish "my action worked" from "it was already true" (§29). **Locators must be ANCHORED, not merely disambiguated:** `.first()` switches off strict mode, the only ambiguity detector there is (§31).
-- **Session gate:** DES single-sessions the shared test account, so `login.spec`'s mid-suite re-auth invalidates the `auth.setup`-minted session for the rest of that invocation (§24). `checkout-reach.spec` recovers via `src/support/loginGate.ts` (in-dialog re-login); **`CartPage`/`cleanCart` now recovers too** — `CartPage.waitForLoaded()` detects the header's logged-out tell (`Header.isUserLoggedIn()`) and re-authenticates, bounded to one attempt (§32 completion, Task 8, 2026-08-13, closes backlog P5). A separate, narrower, still-open `CartPage` defect exists for a *valid*-session cold navigation landing on the wrong page — see §32 completion's Task 8 subsection.
+- **Session gate:** DES single-sessions the shared test account, so `login.spec`'s mid-suite re-auth invalidates the `auth.setup`-minted session for the rest of that invocation (§24). `checkout-reach.spec` recovers via `src/support/loginGate.ts` (in-dialog re-login); **`CartPage`/`cleanCart` now recovers too** — `CartPage.waitForLoaded()` detects the header's logged-out tell (`Header.isUserLoggedIn()`) and re-authenticates, bounded to one attempt (§32 completion, Task 8, 2026-08-13, closes backlog P5). ⚠ **That tell must PERSIST before it is believed (§33, 2026-08-16, closes backlog P6):** DES serves its server-rendered LOGGED-OUT header for the first ~5-8s of a cold navigation on a perfectly VALID session, so a single-instant read fires a re-login that then bounces the already-authenticated user to member-hub. "Not found ≠ seen-and-false" does not protect you here — the pre-hydration DOM is not empty, it is the logged-out page.
 - **Open watch item:** the Builder's interaction template emits an unbounded click, so a generated interaction spec hangs to the test timeout instead of failing fast (root-caused §26, not fixed).
 - **Environment noise is real and documented** (§7): dead `/q/` loads, degraded app shells, DES maintenance pages. Read §7 before blaming the framework for a red run.
 
@@ -590,3 +590,72 @@ covering-gates instruction for this round scoped to the targeted recipe specific
 2. **150s budget collision, made permanent here (was only in an ephemeral task report):** `waitForLoaded()`'s worst case (30s skeleton + 120s recovery) equals the des `timeout: 150_000` — on specs without an extended `test.setTimeout` (i.e. every cart consumer except `cart-lifecycle.spec`'s 240s), a failed recovery can be masked by Playwright's generic test timeout before the crafted "recovery failed" diagnostic fires. Diagnostic-quality only, not correctness (the test fails either way); belongs to the P6 investigation.
 3. **`ProductPage.addToCart()` has a FIFTH consumer nobody's gates validated: `explorer/crawl/primeCart.ts`** (the seeded-checkout crawl's cart primer), alongside the four specs. `primeCart` never throws by contract, so if the `div.product-detail-info__actions` anchor ever misses on a PDP variant, the failure degrades silently into "checkout seed skipped" — the exact situation the 2026-07-30 P0 re-crawl fixed. Named here so a future seeded-crawl failure isn't re-diagnosed from scratch.
 4. **Dead-code scan: clean.** Every public method of the session's new code (`CartPage`, `cartCleanup`, `price`) has a live consumer (`CartPage.header` is used internally by the recovery detector); no probes or throwaway specs remain on disk.
+
+---
+
+## 33. Backlog P6 root-caused and CLOSED — the "cold-navigation defect" was our own session detector misfiring (2026-08-16)
+
+**P6 was never a DES defect.** For three sessions it was filed as "a cold cart navigation can render `/es/member-hub.html` content with a genuinely valid session", with two competing hypotheses about DES (backend session-propagation timing, or an SPA bootstrap restoring a persisted route). Both are wrong. The cart navigation is healthy; what fails is `CartPage`'s own session-invalidation detector, which fires on a **valid** session and triggers a re-login that cannot possibly work. Every observed symptom — member-hub content, the "degraded" title, the authenticated header, the 150s death — is downstream of that one misfire.
+
+### The measurement that settled it
+
+Temporary probe `tests/_probe/p6-cold-nav-probe.spec.ts` (deleted after this section, §18 lifecycle), run standalone so `auth.setup` → cold cart navigation is the exact P6 ordering. Instruments were explicit and never the suspect (§31): the navigation's own `Response`, the redirect chain, `page.url()`, and content identified by CONTENT (§28), not counted.
+
+**Round 1 — the cold navigation is perfectly healthy, and it did NOT reproduce.** Status `200`, **no redirect chain at all**, `page.url()` stays on `/es/shop-cart.html`, title `"Cesta | Bershka"` (the healthy one — *not* the `"Bershka | Bershka"` degraded shell the reports described), cart content rendered at t+10s, `memberHub=0` at every mark. A `page.reload()` changed nothing because nothing was wrong. **The non-reproduction was the clue**: the probe had navigated exactly like `cleanCart` does, but never ran `waitForLoaded()`'s act — so whatever P6 is, it is not in the navigation.
+
+**Round 2 — the same run, sampled densely from t=0 and reading the header.** This is the whole finding:
+
+| mark | `loginBtn` visible | `isUserLoggedIn()` | cart lines |
+|---|---|---|---|
+| t+0 … t+5000ms | **true** | **false** | 0 |
+| t+8000ms onward | false | true | 1 |
+
+**For the first ~5-8s of a cold cart navigation, on a perfectly valid, freshly-minted session, DES serves its server-rendered header in the LOGGED-OUT state — a real, visible "Iniciar sesión" button — and only then does hydration swap it for "Mi cuenta" and render the cart.**
+
+### The causal chain, end to end
+
+1. `waitForLoaded()`'s `act` runs at **t≈0** (`immediateFirstCheck` makes the verify fail against the skeleton, so the act fires immediately) — squarely inside that window.
+2. `Header.isUserLoggedIn()` returns `false`. The detector believes the session is dead. It is not.
+3. `recoverInvalidSession()` runs a full re-login: `LoginPage.open()` → `/es/` → `logon.html`.
+4. The user is **already authenticated**, so `logon.html` never renders a login form (the run ends on `/es/member-hub.html`, and no form was ever reached — see "honest limits" below).
+5. `LoginPage.login()`'s variant-detection `actUntil` throws at its 30s deadline ("neither the e-mail form nor the interstitial rendered").
+6. **`actUntil` swallows the act's error by design** (`retry.ts`, §29's "the verify is the truth") — so the broken recovery is invisible. `recovered` is already `true`, so the act no-ops from then on and the loop just spins against member-hub.
+7. The test dies at **150s**, page sitting on member-hub with a valid session. That snapshot is what three sessions filed as a mysterious DES defect.
+
+Confirmed directly in the failing run's own trace: exactly **three** navigations — `shop-cart` → `""` → `logon.html`. `recoverInvalidSession()`'s own final `this.open()` **never executed**, which is only possible if `login()` threw.
+
+### What this falsifies
+
+- **Backlog hypothesis (b), "the SPA bootstrap restores a persisted route" — falsified OFFLINE**, before any live run. `.auth/state.json`'s only SPA-owned key, `piniaLocal-navigation`, holds `{"genderCategoryKey":"BERSHKA_WOMAN","targetGroupKey":"BERSHKA_WOMAN"}`; `firstPageSession` holds `/es/logon.html`. **No stored key contains a member-hub URL or any route** — there is nothing for a bootstrap to restore.
+- **Backlog hypothesis (a), "DES redirects / backend propagation" — falsified LIVE**: 200, no redirect chain, URL unchanged, 2/2 runs.
+- **The "degraded shell" reading** — `"Bershka | Bershka"` was member-hub's generic title mid-load, not §7/§13's degraded shell.
+- **The `Header.isUserLoggedIn()` member-hub URL short-circuit (the documented P6 confounder) never intervened**: measured `false` on the real cold navigation. It was a red herring.
+- **The `CartPage.waitForLoaded()` doc comment was itself wrong**, and had been since Task 8: *"a not-yet-hydrated header cannot misfire this into an unnecessary re-login — only an actually-rendered logged-out header can."* The premise is false. A not-yet-hydrated header on this site is not an **absent** header, it is the **logged-out** one, button and all. Corrected in place.
+
+### The fix — one change, one place
+
+`CartPage.waitForLoaded()`'s act now requires the logged-out tell to **persist** across `SESSION_TELL_CONFIRM_MS` (15s, ~2× the measured 5-8s window) before believing it: read the tell, settle, read again. A hydrating header flips to "Mi cuenta" and the act returns without acting; a genuinely dead session still reads logged-out and recovery proceeds. Nothing else changed — not `Header`, not `LoginPage`, not the fixture, not `actUntil`.
+
+### Validation — a controlled experiment, both directions
+
+- **Offline:** `typecheck` clean, `lint` clean, unit **428/428**.
+- **True negative (valid session, the P6 trigger):** the documented reproducer `pnpm exec playwright test tests/cart/cart-lifecycle.spec.ts`, which failed **both attempts** pre-fix (6.6m, ending on member-hub), now passes **2/2, first attempt each time** (1.2m and 54.9s), with **no recovery line logged** — the misfire is gone.
+- **True positive (genuinely dead session):** full suite **24 passed / 3 flaky / 0 failed** (19.2m, a slow DES window). Recovery fired **3 times** — `add-to-cart` attempt 0, `cart-lifecycle` attempts 0 and 1 — and **all three logged completion and landed on `/es/shop-cart.html`**, not member-hub (read from `reports/results.json`'s per-test stdout, not inferred). The 15s confirmation does not block legitimate recovery; and this is the positive proof that the member-hub landing was only ever a consequence of re-logging-in an already-authenticated session.
+- The 3 flakes were each read from their own `error-context.md` before being dismissed: `cart-lifecycle` attempt 0 failed on the quantity assertion (`Expected: 2, Received: 11`) with a demonstrably healthy session (header `"Mi cuenta"`, **zero** "Iniciar sesión" occurrences) and *after* `cleanCart` had already succeeded — the documented `setQuantity` residual-overshoot class (§32 Task 7 completion); `checkout-structure` and `pantalones-capri` are unrelated specs this change does not touch.
+
+### Why the full suite was always immune — now explained, not guessed
+
+In the full suite the cart specs run after `login.spec`, which genuinely invalidates the shared session (§24), so the tell is **real**, recovery is **correct**, and `logon.html` renders a real form because the user really is logged out. The misfire needs the opposite state — a **valid** session plus a cold cart navigation — which only the standalone/targeted ordering produces. Same code, opposite session state, opposite outcome. That is why three sessions of full-suite green never contradicted a 2/2 standalone red.
+
+### Rules earned
+
+- **"Not found ≠ seen-and-false" is only safe when the pre-hydration DOM is genuinely EMPTY.** On a server-rendered site it is the *logged-out page* — a positively rendered **wrong** answer, which satisfies a "positive tell" check perfectly. Prefer requiring a tell to **persist** over trusting a single instant.
+- **§29's rule applies to detectors, not just to specs' verifies.** A detector that cannot tell its target state from a transient that looks identical will act on the transient — and here the action was destructive (an unnecessary re-login), not merely a false green.
+- **`actUntil` swallowing the act's error hides a broken recovery, not just a broken click.** When an act does something expensive and fallible, its failure surfaces only as the generic deadline. Worth knowing before putting more work inside an act.
+- **A probe that does NOT reproduce is evidence.** Round 1's healthy navigation is what eliminated the navigation and pointed at the detector; without it the investigation would still be chasing DES.
+
+### Honest limits and what stays open
+
+- **The `logon.html` → member-hub redirect for an authenticated user is inferred, not instrumented.** It is the only reading consistent with the three observations (final URL is member-hub; no login form was reached; `login()` threw rather than returned), but no probe captured that redirect directly. Cheap to confirm if it ever matters.
+- **The 150s budget collision is REAL, CONFIRMED, and deliberately NOT fixed here** (one fix at a time). Proven by the pre-fix attempt 1's raw `Test timeout of 150000ms exceeded while setting up "cleanCart"`: `cleanCart` is a **fixture**, so `cart-lifecycle.spec`'s own `test.setTimeout(240_000)` — which lives in the test **body** — has not applied yet when it runs, and `waitForLoaded()`'s own budget (`SKELETON_DEADLINE_MS` 30s + `RECOVERY_DEADLINE_MS` 120s) equals the des 150s test timeout exactly. Consequence: a slow-but-legitimate recovery can still be killed by Playwright's generic timeout before the crafted diagnostic fires. Much less likely now that the misfire is gone, but unchanged as a defect. Stays in the backlog.
+- **`SESSION_TELL_CONFIRM_MS = 15_000` is sized against one live measurement** (~5-8s, sampled every 250ms) with a 2× margin, not against a bounded worst case DES publishes. If a future session sees a legitimate recovery skipped, that constant is the first suspect.

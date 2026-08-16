@@ -27,6 +27,15 @@ const SKELETON_DEADLINE_MS = 30_000;
 // cycle, happy path pays nothing") applies identically here — waitForLoaded() never reaches
 // it when the session is already live.
 const RECOVERY_DEADLINE_MS = 120_000;
+// The logged-out header tell must PERSIST this long before it counts as a dead session.
+// MEASURED LIVE 2026-08-16 (findings §33, backlog P6): on a cold cart navigation with a
+// perfectly VALID session, DES serves its server-rendered header in the LOGGED-OUT state —
+// a real, visible "Iniciar sesión" button — for the first ~5-8s, and only then does
+// hydration swap it for "Mi cuenta" and render the cart. Sampled every 250ms from t=0:
+// loginBtn=true through t+5000ms, false from t+8000ms (cart content arrived in the same
+// tick). 15s is ~2x that observed window — sized against the measurement with margin, not
+// against a single sample's exact value.
+const SESSION_TELL_CONFIRM_MS = 15_000;
 
 export class CartPage extends BasePage {
   readonly header: Header;
@@ -106,26 +115,20 @@ export class CartPage extends BasePage {
    * the same `LoginPage` flow `auth.setup`/`login.spec` already use (both login variants,
    * §19/§23 — reused as-is, not reimplemented), followed by retrying the cart navigation.
    *
-   * ⚠ INTERACTION RISK WITH BACKLOG P6 (task-review finding 2, 2026-08-13, NOT yet resolved
-   * either way — renumbered from an earlier mislabeling as P5, which is the CLOSED
-   * session-invalidation item this method itself implements, task-review finding 5): the
-   * last line here — a fresh login immediately followed by a COLD `this.open()` — is
-   * structurally the SAME sequence as the still-open, separately-filed `CartPage`
-   * cold-navigation defect (findings §32 Task 8 completion): a cart navigation as the very
-   * first act after a fresh authentication can render `/es/member-hub.html` content
-   * instead, with a genuinely valid session. If that defect's real mechanism turns out to
-   * be session-propagation timing (one of its two live, unconfirmed hypotheses) rather than
-   * something specific to `auth.setup`'s own storageState snapshot, THIS recovery path
-   * could race into the identical failure right after "successfully" re-authenticating —
-   * the retried navigation would render the wrong page again, and `waitForLoaded()` would
-   * time out a second time with `recovered` already `true`. The `onTimeout` branch below
-   * reports this honestly as "recovery was attempted but did not resolve it" rather than
-   * misreporting it as generic §23 degradation — but it cannot distinguish "the login
-   * itself failed" from "the login worked and the retried navigation hit the cold-nav
-   * defect": both produce the identical observable shape from here. Backlog P6's
-   * investigation should explicitly test this case (does a `waitForLoaded()` timeout with
-   * `recovered === true` correlate with the cold-nav signature — member-hub content,
-   * degraded title, valid session — rather than a genuinely broken re-login?).
+   * ⚠ RESOLVED 2026-08-16 (findings §33, closes backlog P6) — this block used to warn of an
+   * "interaction risk" with a suspected DES cold-navigation defect, and to note that the
+   * observed failures could not be told apart from a genuinely broken re-login. There is no
+   * such DES defect. The failures were THIS method being called when it never should have
+   * been: the caller's session tell misfired on a valid session (see waitForLoaded() below),
+   * so `login.open()` navigated an ALREADY-AUTHENTICATED user to `/es/logon.html`, which DES
+   * bounces to `/es/member-hub.html`. No login form ever rendered, `login()` threw at its
+   * own 30s variant-detection deadline, and the final `this.open()` below never ran — a
+   * failing run's trace showed exactly three navigations, not four. So the danger is not
+   * that this method races into something; it is that **calling it unnecessarily is
+   * destructive**, because the re-login it performs cannot succeed against a live session.
+   * That is why the caller now requires its tell to persist before calling here at all.
+   * When the session really IS dead, this path works: 3/3 legitimate recoveries in the
+   * 2026-08-16 full suite completed and landed on `/es/shop-cart.html`.
    */
   private async recoverInvalidSession(): Promise<void> {
     // Observability (task-review finding 1, 2026-08-13): every validation of this path so
@@ -152,24 +155,37 @@ export class CartPage extends BasePage {
    * the header's own logged-out tell — `Header.isUserLoggedIn()`, the SAME primitive
    * `auth.setup`/`login.spec` already trust for this exact question — before doing
    * anything else. It identifies WHAT it sees (a positively-rendered "Iniciar sesión"
-   * button) rather than inferring invalidity from a timeout (§28 doctrine): the button
-   * check defaults to "logged in" on absence (not found ≠ seen-and-false), so a
-   * not-yet-hydrated header cannot misfire this into an unnecessary re-login — only an
-   * actually-rendered logged-out header can. A "non-cart main content" tell was considered
+   * button) rather than inferring invalidity from a timeout (§28 doctrine).
+   *
+   * ⚠ CORRECTED 2026-08-16 (findings §33, closes backlog P6). This comment used to claim:
+   * "the button check defaults to 'logged in' on absence (not found ≠ seen-and-false), so a
+   * not-yet-hydrated header CANNOT misfire this into an unnecessary re-login — only an
+   * actually-rendered logged-out header can." The premise was measured and is FALSE: a
+   * not-yet-hydrated header on this site is not an ABSENT header, it is DES's server-rendered
+   * LOGGED-OUT header, button and all, for the first ~5-8s of a cold cart navigation on a
+   * perfectly valid session. So "an actually-rendered logged-out header" was satisfied by a
+   * page that was not logged out, and this act — which runs at t≈0 — fired a full, useless
+   * re-login every time. That re-login then navigated to /es/logon.html, which DES redirects
+   * to /es/member-hub.html for an already-authenticated user, so LoginPage.login() sat
+   * waiting for a form that would never render until the test timeout killed it, leaving the
+   * page on member-hub with a valid session — the entire "cold-navigation wrong-page defect"
+   * (backlog P6) was this misfire and its cascade, not anything DES does wrong. The tell is
+   * now required to PERSIST across SESSION_TELL_CONFIRM_MS before it is believed (see the
+   * act below). A "non-cart main content" tell was considered
    * and rejected as the primary signal: both live failures (task-7-report.md, this task's
    * own reproduction) show `main` fully rendered with real, if wrong, content — a home
    * page, not a skeleton or an error shell — so a content-shape check would need its own
    * positive definition of "not cart content" with no natural anchor, where the header tell
    * is already a single proven boolean.
    *
-   * ⚠ CONFOUNDER (task-review finding 6, 2026-08-13): `Header.isUserLoggedIn()` short-
-   * circuits to `true` on `member-hub`/`/account` URLs (`src/components/Header.ts`) BEFORE
-   * checking for the "Iniciar sesión" button at all — which is exactly the URL family the
-   * open cold-nav lead (backlog P6) lands on. So on a genuine cold-nav-defect render, this
-   * detector reads "logged in" from the URL alone and never even looks at the header
-   * button — it cannot distinguish that case from a truly live session by design. This is
-   * the same blind spot named in `recoverInvalidSession()`'s interaction-risk doc above,
-   * traced to its exact mechanism here; backlog P6's investigation checklist names it too.
+   * KNOWN, MEASURED AS HARMLESS HERE (was "confounder", task-review finding 6, 2026-08-13;
+   * settled 2026-08-16, findings §33): `Header.isUserLoggedIn()` short-circuits to `true` on
+   * `member-hub`/`/account` URLs (`src/components/Header.ts`) BEFORE looking at the header
+   * button at all. That was suspected of blinding this detector, since member-hub is where
+   * the failures ended up. It does not: on the real cold cart navigation the URL stays on
+   * `/es/shop-cart.html` (200, no redirect — measured 2/2), so the short-circuit never
+   * evaluates. The page only ever reached member-hub as a CONSEQUENCE of the misfire below,
+   * never as its cause.
    *
    * Recovery is bounded to exactly ONE attempt per call (the `recovered` flag) — DES's
    * session death is a one-time event per suite invocation (§32 Task 7: once any test
@@ -189,9 +205,18 @@ export class CartPage extends BasePage {
     await actUntil({
       act: async () => {
         if (recovered) return; // one-shot — see recoverInvalidSession()'s doc above
-        // NOTE (task-review finding 6): isUserLoggedIn() short-circuits true on
-        // member-hub/account URLs — blind to a genuine cold-nav-defect render (backlog P6).
         if (await this.header.isUserLoggedIn()) return; // session fine, nothing to recover
+        // The tell must PERSIST before it is believed (findings §33, closes backlog P6). A
+        // SINGLE read cannot tell "the session is dead" from "the header has not hydrated
+        // yet" — DES serves the logged-out header for ~5-8s on a VALID session — and this
+        // act runs at t≈0 (immediateFirstCheck makes verify fail on the skeleton, so the
+        // act fires straight away), i.e. squarely inside that window. Re-reading after a
+        // settle discriminates them: a hydrating header flips to "Mi cuenta", a genuinely
+        // dead one stays logged-out. This is §29's rule applied to the detector itself —
+        // a verify that cannot distinguish its target state from a transient that looks
+        // identical will act on the transient.
+        await this.page.waitForTimeout(SESSION_TELL_CONFIRM_MS);
+        if (await this.header.isUserLoggedIn()) return; // it was pre-hydration, not a dead session
         recovered = true;
         await this.recoverInvalidSession();
       },
