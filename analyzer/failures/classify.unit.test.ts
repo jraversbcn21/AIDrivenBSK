@@ -42,6 +42,10 @@ describe('classifyFailureMessage', () => {
     expect(classifyFailureMessage(
       'Error: ProductCard: click did not navigate to a product detail page within the deadline',
     )).toBe('environment-noise');
+    // ProductPage.ts:173 (findings §28 — vocabulary gap, backlog item 4/P4, closed)
+    expect(classifyFailureMessage(
+      'Error: ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed)',
+    )).toBe('environment-noise');
   });
 
   it('classifies strict-mode violations as selector-drift (B16/M9 family, findings §16/§17/§20)', () => {
@@ -68,6 +72,18 @@ describe('classifyFailureMessage', () => {
     // "waiting for expect(locator..." must NOT match the selector-drift "waiting for locator" rule.
     expect(classifyFailureMessage(
       'Timed out 20000ms waiting for expect(locator).toBeVisible()',
+    )).toBe('assertion');
+  });
+
+  it('classifies add-to-cart.spec\'s tightened toBe(1) mismatch as assertion, NOT unknown (backlog item 4/P4)', () => {
+    // The backlog once described this shape as falling through to `unknown` alongside the
+    // §28 drawer message above; it does not — `expect(received).toBe(expected)` already
+    // matches the assertion rule. Left generic on purpose: an inflated count from §28's
+    // drawer-retry noise and a genuine cart-add regression produce the IDENTICAL
+    // "Expected: 1, Received: N" text, so no signature here could tell them apart without
+    // risking a real regression being swallowed as environment-noise.
+    expect(classifyFailureMessage(
+      'Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 1\nReceived: 6\n\nCall Log:\n- Timeout 20000ms exceeded while waiting on the predicate',
     )).toBe('assertion');
   });
 

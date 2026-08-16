@@ -24,7 +24,7 @@ const RULES: ReadonlyArray<{ category: FailureCategory; pattern: RegExp }> = [
   { category: 'catalog-drift', pattern: /no standard-add-to-cart product found/i },
   {
     category: 'environment-noise',
-    pattern: /dead \/q\/ load|did not reach the \/q\/ results URL|size-selection dialog did not open|size dialog did not close|did not navigate to a product detail page/i,
+    pattern: /dead \/q\/ load|did not reach the \/q\/ results URL|size-selection dialog did not open|size dialog did not close|did not navigate to a product detail page|add-to-cart confirmation drawer never appeared/i,
   },
   { category: 'selector-drift', pattern: /strict mode violation|waiting for (locator|getBy)/i },
   { category: 'assertion', pattern: /expect\(|expect\.poll/ },
