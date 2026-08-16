@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { primeCart, type PrimeCartDriver } from './primeCart';
 
 function driver(counts: number[], addImpl: () => Promise<void> = async () => {}): PrimeCartDriver {
@@ -25,5 +25,12 @@ describe('primeCart', () => {
 
   it('returns failed when the driver throws (never lets the error escape)', async () => {
     expect(await primeCart(driver([0], async () => { throw new Error('DES noise'); }))).toBe('failed');
+  });
+
+  it('logs the caught error instead of swallowing it silently (2026-08-16: a real seeded-crawl failure left no trace of why)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await primeCart(driver([0], async () => { throw new Error('DES noise'); }));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('DES noise'));
+    warn.mockRestore();
   });
 });
