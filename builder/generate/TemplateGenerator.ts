@@ -124,12 +124,16 @@ ${isLoadedBody(input)}
    * Act -> verify -> retry (src/support/retry.ts, the CLAUDE.md standing rule): a fire-once
    * click can be silently lost to Vue hydration lag. .first() on the trigger is deliberate —
    * the testId may repeat across a product grid and any exemplar opens the overlay (M9 §4).
+   * The click is BOUNDED: with no actionTimeout configured, an unbounded click on a locator
+   * the SPA re-rendered away waits out the whole test timeout and starves this deadline
+   * (findings §26, root-caused live on a promoted draft — every generated interaction spec
+   * inherited the hang until this template carried the bound too).
    */
   async openOverlay(): Promise<void> {
 ${dialogBaselineCapture(input)}    await actUntil({
       act: async () => {
         await dismissOnboardingTour(this.page);
-        await locate(this.page, ${strategyLiteral(input.trigger)}).first().click();
+        await locate(this.page, ${strategyLiteral(input.trigger)}).first().click({ timeout: 5_000 });
       },
       verify: () => this.isOverlayOpen(),
       deadlineMs: 20_000,

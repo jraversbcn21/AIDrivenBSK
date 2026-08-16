@@ -96,7 +96,7 @@ describe('TemplateGenerator.generateInteraction', () => {
     expect(page.relPath).toBe('pages/MujerRopaRebajasNInteractionF05B1C4B.ts');
   });
   it('clicks the trigger with .first() (repeated-grid semantics) via the shared actUntil primitive (F8)', () => {
-    expect(page.content).toContain(".first().click()");
+    expect(page.content).toContain(".first().click({ timeout: 5_000 })");
     expect(page.content).toContain('dismissOnboardingTour');
     expect(page.content).toContain("import { actUntil } from '../../../src/support/retry';");
     expect(page.content).toContain('await actUntil({');
