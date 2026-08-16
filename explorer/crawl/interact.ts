@@ -99,11 +99,16 @@ export function selectCandidates(
   return picked;
 }
 
-/** Overlay nodes (role dialog|menu, keyed role+name) present in `after` but not `before`.
- *  DES overlays are dialogs (Tallas, filter drawer, mobile-nav — findings §5/§7); menu
- *  covers plain dropdowns. Deliberately NOT a generic tree diff (spec §3). */
+/** Overlay nodes (role dialog|menu|complementary, keyed role+name) present in `after` but
+ *  not `before`. DES overlays are dialogs (Tallas, filter drawer, mobile-nav — findings
+ *  §5/§7); menu covers plain dropdowns. `complementary` covers the DESKTOP PLP filter
+ *  sidebar specifically — confirmed live (backlog item 4/P4): clicking "Filtrar" reveals
+ *  a `role=complementary "Filtros"` region, not a dialog/menu, so without it here the
+ *  click succeeded but the crawler never recognized the reveal or extracted its contents
+ *  (Color, Talla, sort options, ...) — the root cause of "PLP overlay knowledge is
+ *  thinner than mobile's". Deliberately NOT a generic tree diff (spec §3). */
 export function newOverlayNodes(before: AriaNode[], after: AriaNode[]): AriaNode[] {
-  const OVERLAY_ROLES = new Set(['dialog', 'menu']);
+  const OVERLAY_ROLES = new Set(['dialog', 'menu', 'complementary']);
   const overlaySig = (n: AriaNode): string => `${n.role}|${n.name ?? ''}`;
 
   const seen = new Set<string>();

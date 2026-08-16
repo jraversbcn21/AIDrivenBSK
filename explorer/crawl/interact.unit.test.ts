@@ -63,6 +63,19 @@ describe('newOverlayNodes', () => {
     const after = `${BEFORE}\n- text: nuevo banner promocional`;
     expect(newOverlayNodes(parseAriaSnapshot(BEFORE), parseAriaSnapshot(after))).toHaveLength(0);
   });
+
+  it('finds a complementary region present only after the click (desktop PLP filter sidebar, backlog item 4/P4, confirmed live 2026-08-16: clicking "Filtrar" reveals role=complementary "Filtros", not a dialog/menu)', () => {
+    const afterFilters = `${BEFORE}\n- complementary "Filtros":\n  - button "Color"\n  - button "Talla"`;
+    const found = newOverlayNodes(parseAriaSnapshot(BEFORE), parseAriaSnapshot(afterFilters));
+    expect(found).toHaveLength(1);
+    expect(found[0].role).toBe('complementary');
+    expect(found[0].name).toBe('Filtros');
+  });
+
+  it('ignores a complementary region already present before (e.g. a persistent sidebar elsewhere on the page)', () => {
+    const withSidebar = `${BEFORE}\n- complementary "Filtros":\n  - button "Color"`;
+    expect(newOverlayNodes(parseAriaSnapshot(withSidebar), parseAriaSnapshot(withSidebar))).toHaveLength(0);
+  });
 });
 
 const META: PageMeta = { path: '/es/p-c0p1.html', url: 'https://x/es/p-c0p1.html', title: 'P', session: 'auth', discoveredVia: 'seed' };
