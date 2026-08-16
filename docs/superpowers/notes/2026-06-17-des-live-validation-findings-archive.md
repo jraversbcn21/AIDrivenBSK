@@ -1,6 +1,8 @@
-# DES Live-Validation Findings — Archive (§1, §8–§22)
+# DES Live-Validation Findings — Archive (§1, §5, §8–§23, §25, §30)
 
 **Split out of [`2026-06-17-des-live-validation-findings.md`](./2026-06-17-des-live-validation-findings.md) on 2026-08-06.** The parent doc is `@`-imported by `CLAUDE.md` and had crossed its 150k-char budget; these sections were moved here **verbatim, unedited**.
+
+**Second tranche, 2026-08-16 (§5, §23, §25, §30).** The parent had grown back to ~136k/150k. Same rule, same verbatim move: §5 and §23 are MOBILE-layout captures that §24 supersedes, §25's fix was refuted and replaced by §31, and §30 is a closed coverage-expansion milestone whose one durable rule now lives in `CLAUDE.md`. Sections are kept in numeric order, so this tranche is interleaved rather than appended.
 
 **What is here:** closed milestone reports — work that shipped, bugs that are fixed, backlog items that are closed. Each one's durable takeaway is summarised in the parent doc's "Archived sections" table, which also preserves the `§N` anchors (~480 citations across `src/`, `explorer/`, `tests/`, specs and plans point at them).
 
@@ -18,6 +20,27 @@ Running `pnpm exec playwright test --project=setup` and `--project=chromium` aga
 - `search-plp-pdp.spec`, `add-to-cart.spec` — still failing (see §5).
 
 The login fixes are merged to `master`. Files changed: `src/support/consent.ts`, `src/pages/LoginPage.ts`, `src/components/Header.ts`, `src/config/environments.ts`, `tests/auth.setup.ts`.
+
+---
+
+## 5. Search/Cart — selectors confirmed live (2026-06-17, second pass)
+
+All real selectors below were confirmed live against DES (accessibility-tree probing + screenshots) and are now implemented in `SearchBar`, `Header`, `FiltersPanel`, `ProductCard`, `ProductPage`, `MiniCart`, `SearchResultsPage`. Unit suite (76 tests), `typecheck`, and `lint` all pass; `login.spec` and the search/cart specs each pass **in isolation**.
+
+**Confirmed flow.** ⚠ *Mobile-layout capture (2026-06-17). The suite tests DESKTOP since §24 — the search trigger, search input, filters and add-to-cart flow all diverge there; read §24's closing divergence table before using any selector below.*
+1. Search trigger is `getByRole('button', { name: 'Buscar', exact: true })` (not the icon-only "Buscar en tienda" — that one stayed `--hidden` the whole time and wasn't needed). It's CSS hover-revealed, so Playwright needs `force: true`, retried against a wall-clock deadline (Vue hydration lag observed anywhere from ~1s to >20s).
+2. The opened input has no role (`bds-input` shadow-DOM component) — use `getByPlaceholder('Escribe aquí')`.
+3. Submitting lands on `/es/q/{term}` (no `searchResult.html?q=`-style shortcut exists).
+4. PDP URL pattern is **`-c0p<digits>.html`** (not `-p<digits>.html` — the original placeholder regex was wrong; fixed in `explorer/url.ts` too).
+5. Filters: "Filtrar" opens a `role=dialog` drawer (heading "Filtrar", no accessible dialog name) with a "Con descuento" checkbox + "Ver resultados" button to apply.
+6. Add-to-cart is a **two-step dialog**, not a single click: clicking "Añadir a cesta" opens a `dialog` named "Tallas…" with `button "Talla {size}"` options; clicking a size both selects it **and** completes the add (no separate confirm step).
+7. There is **no mini-cart drawer** — "Ir a la cesta" navigates to the full `/es/shop-cart.html` page. Item count is read from the `tab "Cesta (N)"` label (cart-page content itself renders as a slow skeleton — the tab count is the fast, reliable signal).
+
+**driver.js onboarding popover** ("TU ESPACIO MMBRS, TU CUENTA") is the main remaining blocker: it appears asynchronously (observed ~5s after load) and intercepts clicks at fixed screen coordinates even with `force: true`. `dismissOnboardingTour(page)` (Escape if `.driver-overlay` is present) was added to `consent.ts` and is called defensively before every click in `SearchBar`, `FiltersPanel`, `ProductCard`, `Header.openMiniCart`, and `ProductPage.addToCart`.
+
+**Known flakiness at the time (fully resolved — see §7):** the two specs above passed alone but failed intermittently in the full suite run. The original hypothesis (a fresh `auth.setup` session triggering more persistent onboarding-tour behavior than a reused one) was investigated directly and found **wrong** — see §7 for the real root cause (a cookie-gated tour, unrelated to session freshness) and the eventual full resolution.
+
+---
 
 ---
 
@@ -401,3 +424,163 @@ Design: `docs/superpowers/specs/2026-07-13-b17-element-id-dedup-design.md`. Plan
 
 ---
 
+
+## 23. D15 phase 2 — checkout inner structure, settle profile, routability (2026-07-18)
+
+**Task:** D15 phase 2, Task 1 (plan: `docs/superpowers/plans/2026-07-18-d15-phase2-checkout-inner.md`; design: `docs/superpowers/specs/2026-07-18-d15-phase2-checkout-inner-design.md`). Temporary probe `tests/_probe/d15-checkout-inner-probe.spec.ts` (deleted after this section, same lifecycle as §18/§22). **Strict read-only inside checkout honored throughout: nothing on `/es/checkout.html` was ever focused, filled, or clicked** — all structure below comes from `ariaSnapshot()` of the page as it renders.
+
+### Headline results
+
+- **`/es/checkout.html` IS server-routable with a non-empty cart.** Direct `goto` lands on it — no redirect. Confirmed in **two independent browser contexts** this session (a standalone spike context, plus the probe's context — where both the entry navigation and the Q3 re-check landed; those two share a context, so they count as one independent confirmation, not two). **Branch decision: C (routable).**
+- Settle profile measured (Q1 below); **`CHECKOUT_SETTLE` derived: `{ minWaitMs: 13_000, maxWaitMs: 26_000, pollIntervalMs: 500 }`** (first stable Q1 mark +12s, +1s margin; ceiling 2×).
+- The read-only entry state exposes **only the shipping-method step** — no shipping address form and **no payment methods anywhere in the tree**. Payment knowledge requires selecting a shipping method (a click — out of scope under the strict read-only rule; a future phase decision for Jorge, do not guess).
+
+### Environment turbulence found on the way (RIGOR Regla 7 — none of this is smoothed over)
+
+The brief's verbatim probe (UI priming: search → PDP → add → cart → "Tramitar pedido") was **unrunnable tonight** (evening session, 2026-07-18, consistent with §7's service-quality-varies-within-a-day pattern). Four distinct, live-confirmed causes, in discovery order:
+
+1. **The login interstitial is BACK — §19's premise is reopened.** `auth.setup` failed 2/2 (120s timeout each): `/es/logon.html` again renders the pre-A6 **"Continuar con e-mail" / "Continuar con Facebook"** method-choice screen (§4's original recipe), which the post-A6 `LoginPage.login()` (direct e-mail form, §19) cannot pass. This confirms §19's explicitly-unruled-out hypothesis: the flow is server-side variant-switched (A/B or config), not permanently drifted. The stored `.auth/state.json` had also expired (member-hub redirected to logon). A fresh session was minted via a temporary scratchpad script handling BOTH variants; notably, the interstitial button needed **one plain actionability-waiting `click()` after a ~5s settle** — rapid `force: true` clicks at 1s cadence were ALL silently lost (57 clicks/60s, form never opened): §7's hydration-lag doctrine confirmed again, and a reminder that `force: true` retry loops are not automatically safer. **`LoginPage.login()` needs a dual-variant fix (tolerate both the interstitial and the direct form) — NOT shipped here (outside Task 1's file list); recorded as an open item for Jorge.**
+2. **`/es/q/` search results served dead loads persistently:** 5 consecutive dead `/q/camiseta` loads across two independent contexts over ~30 min (grid never rendered; §7's documented noise class, but tonight sustained, not intermittent). Search-based cart priming was abandoned after discrimination probes, per §7's own doctrine.
+3. **Category URL scheme drift (real catalog drift, not noise):** the old `-n{digits}.html` category URLs — including `/es/mujer/ropa/camisetas-n4365.html`, §10's own probe page — now render a SPA 404 ("Oh no… esto es un 404") with the degraded generic title "Bershka | Bershka". The store home is healthy (133 anchors, correct title) and its category links now use **`-c{digits}.html`** (e.g. `/es/mujer/ropa/tops-y-bodies-c1010193220.html`, which rendered 10 product cards + 10 per-card quick-adds cleanly). Consequences: the committed map's category routes are stale until the next re-crawl; the PDP pattern `-c0p<digits>.html` is unaffected (category ids observed all start `c1…`, no `0p`).
+4. **The cart page's content service was down:** `/es/shop-cart.html`'s `<main>` stayed an EMPTY skeleton for 60+ seconds in a clean independent context (and across 6 reload rounds in probe attempts), so "Tramitar pedido" never existed to click — while the header tab read "Cesta (3)", proving the cart items are real server-side. §5's "slow skeleton" finding, degraded to "never renders" tonight. **Phase 1's `checkout-reach.spec.ts` would fail tonight for this reason** — environment, not regression. Even the tab's "(N)" count intermittently failed to hydrate (observed bare "Cesta" for 50+s in one probe attempt; "Cesta (5)" within the poll budget in the passing run).
+
+### Probe shape actually run (deviation from the brief, recorded honestly)
+
+Because of (2)+(4), the passing probe run primed nothing itself: the cart already held the items added **earlier this same session** via the working path — category PLP (`-c1010193220.html`) → first standard card (A5's predicate: has quick-add, not Personalizable) → PDP → `ProductPage.selectFirstSize()`/`addToCart()` (the proven Tallas recipe, which worked fine tonight) — during earlier probe attempts (cart grew 3→5 items across runs; §7's no-cleanup accumulation, unchanged). The probe then: verified the cart tab (best-effort observation, `"Cesta (5)"`, count hydrated), entered checkout by **direct `goto`** (the same entry branch C's crawler seeding will use — so Q1's numbers measure exactly what Tasks 4C/5 will consume), ran Q1/Q2 verbatim, then Q3 verbatim. **PASS, attempt 1, 1.0m, no retries.**
+
+### Q1 — settle profile (real console output, passing run)
+
+| mark | len | changed |
+|---|---|---|
+| +2000ms | 144 | true |
+| +5000ms | 378 | true |
+| +8000ms | 994 | true |
+| +12000ms | 994 | **false** ← first stable mark |
+| +20000ms | 994 | false |
+
+Corroborating spike run (same session, minutes earlier): `+2s len=378`, `+5s len=378 changed=false`, `+8s len=994 changed=true`, `+12s/+20s len=994 stable` — i.e. **checkout exhibits §10's false-stable plateau**: the 378-length shell can sit unchanged across consecutive reads before content arrives ~+8s. A naive two-identical-reads poll without a floor would lock onto the shell — `CHECKOUT_SETTLE`'s `minWaitMs` floor exists for exactly this (same design as `DEFAULT_SETTLE`, §10). Derived numbers: **`minWaitMs: 13_000`** (first stable mark 12s + 1s margin), **`maxWaitMs: 26_000`** (2×), **`pollIntervalMs: 500`**.
+
+Two caveats on these numbers: (a) they were measured on a degraded-service evening (see the turbulence list above) and may be conservative — a healthy-window re-measure could tighten the floor; (b) Q1 measured the **direct-`goto` entry profile** — a "Tramitar pedido" SPA navigation from an already-hydrated cart could settle on a different profile, and Task 5's spec should keep that in mind.
+
+### Q2 — inner structure (verbatim aria dump, entry state, read-only)
+
+```yaml
+- link "Saltar al contenido principal":
+  - /url: "#main-content"
+- status
+- main "Contenido principal":
+  - navigation:
+    - heading "Método de envío" [level=1]
+    - button "Cerrar"
+  - heading "Método de envío" [level=2]
+  - list:
+    - listitem:
+      - paragraph:
+        - button "Recógelo en 4 horas"
+      - paragraph: Disponible en alguna de nuestras tiendas Gratis
+      - img
+    - listitem:
+      - paragraph:
+        - button "Recoger en tienda"
+      - paragraph: Recíbelo entre Lunes 20 - Miércoles 22
+      - paragraph: Gratis
+      - img
+    - listitem:
+      - paragraph:
+        - button "Envío estándar a domicilio"
+      - paragraph: Recíbelo entre Lunes 20 - Jueves 23
+      - paragraph: Antes 3,95 € Gratis
+      - img
+  - text: Total
+  - link "(Impuestos, en su caso, incluidos)":
+    - /url: https://static.bershka.net/4/static/itxwebstandard/docs/termsandconditions/terms_and_conditions_es_ES.pdf?t=20260718015333
+  - text: 119,95 €
+  - button "Ver detalle de costes"
+```
+
+**Structural summary:**
+- **Checkout steps seen:** exactly one — **shipping-method selection** ("Método de envío"). The SPA's entry state is a method chooser, not a form.
+- **Shipping-form fields:** **none exist in the entry state** — no address inputs, no textboxes at all. (Do not guess what a later step renders.)
+- **Payment methods listed:** **none are exposed in the read-only tree.** Reaching the payment step requires clicking a shipping method — forbidden by this phase's strict read-only rule. Recorded plainly: **the payment-method inventory D15 wanted is NOT obtainable read-only from the entry state**; it needs a future, explicitly-scoped interaction decision with Jorge.
+- Shipping options (buttons, exact accessible names): `"Recógelo en 4 horas"`, `"Recoger en tienda"`, `"Envío estándar a domicilio"`.
+- The checkout page renders **no store header/footer chrome** (no search pill, no cart tab, no nav drawer in the tree) — every element above is page-specific, which is good news for loaded-signal selection.
+- Strict-mode hazard for Task 5: `"Método de envío"` appears as **two headings** (level 1 inside `navigation`, level 2 in `main`) — a bare `getByRole('heading', { name: 'Método de envío' })` will hit a strict-mode violation; scope or pick a level.
+
+**Two most page-specific, stable-looking structural signals for Task 5's spec (chosen from the dump; none are header/chrome — the page has none):**
+1. **Shipping-side:** `role: button`, name **`"Envío estándar a domicilio"`** (unique; the standard-shipping option is the least likely of the three to vary by store/campaign).
+2. **Payment-side: not available read-only** (see above). Recorded substitute, cost-summary side: `role: button`, name **`"Ver detalle de costes"`** (unique, page-specific, part of the order-total block). Task 5 must treat this as the second signal *in lieu of* a payment element, not as evidence a payment element exists.
+
+### Q3 — routability (raw verdict)
+
+- Probe run: `[Q3] attempt 1: goto /es/checkout.html landed on https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/checkout.html` — routable on the first attempt, second attempt not needed per the probe's own loop rule.
+- Standalone spike (independent context, minutes earlier): the same direct `goto` landed on `/es/checkout.html`, title `"Checkout | Bershka"`.
+- The probe's own entry navigation was also a successful direct `goto` — but it shares the probe's browser context with the Q3 attempt above, so the honest count is two independent confirmations (spike context + probe context), not three.
+
+**Branch decision: C (routable).** §22's open question ("whether `/es/checkout.html` is server-routable") is now answered: yes, with a non-empty cart and an authenticated session. Not tested (out of scope, do not assume): direct `goto` with an EMPTY cart, or anonymous.
+
+### Open items handed forward
+
+- **`LoginPage.login()` dual-variant fix** (the interstitial is back — item 1 above): needed before any suite run that depends on `auth.setup`; decide with Jorge whether it lands inside this phase's tasks or as its own item. **DONE 2026-07-18 — Jorge authorized inserting it as Task 4.5 of this phase; shipped and live-validated (setup 1/1 PASS, 42.1s, no retry, variant A served — see the Status paragraph's ⚠ note).**
+- **Map/category staleness** from the `-n{digits}` → `-c{digits}` category URL drift (item 3): the next `pnpm explore --update` re-crawl will re-root category knowledge; until then the committed map's PLP routes 404. **2026-07-21 update: the drift is UNSTABLE, not permanent — the old `-n{digits}.html` category URLs rendered normally again in all three of this session's crawls (real PLP grids, interactions running on them). The committed map reflects what the closing crawl saw; treat the `-n`/`-c` scheme as environment-variable, not as a one-way migration.**
+- **Payment-step capture** needs a scoped interaction decision (click one shipping method, read-only beyond that?) — future phase, Jorge's call.
+- Cart accumulation grew to 5 items on the shared account (§7's cleanup-fixture lead, unchanged, cosmetic). **2026-07-21 update: DES purged the shared cart server-side at some point between 2026-07-18 and 2026-07-21 (itemCount 0 confirmed by direct probe) — accumulation is bounded by pre-prod purges, which also means a non-empty cart can NOT be assumed across days (see the primeCart episode in the completion section below).**
+
+### D15 phase 2 COMPLETED (2026-07-21) — Tasks 5 and 6 closed, all gates green
+
+**Task 5 — permanent spec `tests/checkout/checkout-structure.spec.ts` (commit `edaa296`).** The `/es/q/` outage that paused the phase (4/4 dead loads across 2026-07-18/19) is over — search walked healthy in every run this session. The health-check-by-running-the-spec surfaced a real signal drift instead: the spec failed BOTH attempts with checkout fully rendered, because the cost-summary disclosure button's accessible name is **state-dependent** — `"Ver detalle de costes"` collapsed (§23's Q2 capture) vs **`"Ocultar detalle de costes"` expanded**, which is how checkout rendered that run (`[expanded]` in both failure snapshots). Root-caused from the error-context snapshots; fix: the in-lieu-of payment signal accepts both names (either proves the cost-summary block rendered), documented in the spec header. After the fix: spec PASS (retry #1 — first attempt was the pre-existing Tallas-dialog-close noise §14/§16/§18, before reaching checkout), then **full suite 7/7 PASS, zero retries, 2.9m**. Both names have now been observed live (spec run: expanded; closing crawl's capture: collapsed) — the toggle state at entry is not deterministic.
+
+**Task 6 Step 1 — the opted-in crawl took three attempts (stated plainly, RIGOR Regla 7).** Attempt 1 was externally stopped mid-anon-session (~13 min in; map untouched — `--update` writes only on completion). Attempt 2 completed (exit 0, map written) **but `primeCart` returned `failed` and the checkout seed was skipped** — the never-throws contract worked as designed, but the gate wasn't met. Diagnosed with a temporary probe (deleted, §18 lifecycle) instead of blind re-runs: `goToCart()` and `cartTab().itemCount()` both worked fine and returned **0 — DES had purged the shared cart server-side** (≥5 items on 2026-07-18 → 0), so `cartCount() === 0` was legitimate and the recovery `addOneItem()` fell to the documented Tallas-dialog noise (the same class hit `add-to-cart.spec`'s first attempt minutes later). Neither watch item from Task 3's review (empty-cart tab shape; lost `goToCart` click) was the cause. Mitigation: pre-primed the cart via `add-to-cart.spec` (PASS, retry #1), re-ran the crawl. Attempt 3: completed, `primeCart` short-circuited (no failure line), **checkout crawled and in the canonical map**.
+
+**Map verified directly (JSON, not logs — B17 precedent):** schema 1.7, **154 pages / 154 flows**. `/es/checkout.html` present (auth session), `pageType: Checkout`, **5 elements** — exactly §23's Q2 inventory: `Cerrar`, the 3 shipping-method buttons, and the cost-summary disclosure (captured collapsed, `"Ver detalle de costes"`). **1 Checkout-typed flow** (single-step, auth — the branch-C direct-goto seed shape). **B17 guard: 4,245/4,245 unique element ids, zero duplicates.** 1 interaction recorded on the checkout page — **the `"Cerrar"` click, outcome `none`** (not a shipping-method click). Note: the M8 interaction pass also attempted clicks on two shipping-method buttons (`"Recógelo en 4 horas"`, `"Recoger en tienda"`) — both timed out with no effect and produced no map interaction, so the strict read-only stance survived de facto; a future payment-step scope round should not assume the crawler's clicks would land there anyway.
+
+**`pnpm ask` gate — resolution works, draft generation intentionally blocked; Jorge's call recorded.** Both `pnpm ask "checkout"` and `pnpm ask "prueba el checkout"` resolve to the Checkout flow (score 65, explainable: token + type match — no blind-spot message; the map-derived answer works exactly as B-NL1 designed). But the Builder's **deliberate `CHECKOUT_ROUTE` path guard** (`builder/select.ts`, original Builder Engine 2026-07-03: generated specs never navigate to checkout; they carry no `checkoutAllowed` skip) refuses the journey: `"checkout-looking route, skipped by path guard"`, exit 1. This is a **design gap in the phase-2 spec** — its §7 gate 3 expected a passing draft, but its zero-change verification only checked `intent/`, never the Builder guard. **Jorge's decision (2026-07-21): keep the guard, close the gate as resolution-only.** Generating checkout drafts safely (template gains `test.skip(!env.checkoutAllowed)` + guard allows single-step checkout flows) is filed as a future backlog item, not smuggled into this phase.
+
+**Remaining gates:** default-crawl boundary check — a 10-page/session crawl WITHOUT the flag: 16 pages, **0 checkout pages in the run report, zero primeCart/seed output** (opt-in boundary demonstrated). Offline: unit **399/399** (incl. `resolve` 9/9 — the blind-spot test still passes against its own checkout-less fixture map), typecheck/lint clean.
+
+**Net cart effect this session:** purge to 0 (DES) → +1 (pre-prime) → +1 per checkout-structure/add-to-cart run — the seed itself added nothing (short-circuit). §7's cleanup-fixture lead unchanged.
+
+---
+
+---
+
+## 25. PDP wishlist button — confirmed live on desktop; repeated-element strict-mode bug found and fixed (2026-08-04)
+
+**Context:** onboarding Fase 5 repeat (Automatización), run fully interactively — Jorge executing every command and reading the real console output, per the standing agreement after the two invalidated prior attempts (see `docs/onboarding/manual-del-alumno.md`, "🔖 Dónde retomar"). Exercise: hand-write a wishlist spec, POM pattern, on the now-stabilized true-desktop base (§24).
+
+**Confirmed selector (desktop) — no divergence from historical mobile knowledge.** On the PDP, `getByRole('button', { name: 'Añadir a la lista de deseos' })` toggles, on click, to `getByRole('button', { name: 'Eliminar de la lista de deseos' })` — same element, same accessible name flip as the confirmation signal. No dialog, no login gate, no separate confirm step (probed live via `codegen` against `?device=desktop`). Shipped: `ProductPage.addToWishlist()` / `ProductPage.isInWishlist()` (`src/pages/ProductPage.ts`), `tests/wishlist/add-to-wishlist.spec.ts`.
+
+**A real bug found and fixed (systematic-debugging, not blind-retried).** The first live run failed — `ProductPage: wishlist button did not confirm the add within the deadline` — despite the failure's own captured aria snapshot showing the main product's button had already toggled correctly to "Eliminar de la lista de deseos". Root-caused directly from that snapshot, not guessed: the PDP's own "También te puede gustar" recommendations carousel repeats the **exact same accessible name** (`"Añadir a la lista de deseos"` / `"Eliminar de la lista de deseos"`) once per recommended product card — the same repeated-element family already documented for testIds in B16/M8b, here hitting a bare role-based locator instead. Once the carousel had rendered (observed as arriving after the main click, mid-poll), a bare `getByRole(...).isVisible()` resolved to 3 elements (the main button + 2 recommendation cards, one of them a self-referencing recommendation of the exact same product) and threw a strict-mode violation — which `isInWishlist()`'s `.catch(() => false)` (written to mean "button not found yet") silently swallowed, masking an already-successful state change and starving `actUntil`'s `verify()` forever.
+
+**Fix: ⚠ SUPERSEDED by §31 (2026-08-10) — the reasoning below was REFUTED and the `.first()` is gone.** Order only breaks ties among elements that *match*, and this button renames itself by state: the moment the main product leaves the wishlist its button stops matching the remove-name and `.first()` slides to a cross-selling card. The locators are now scoped to `div.product-detail-info__labels-wishlist` with no `.first()`. Original text kept for the record, because §31 reasons about it: ~~`.first()` on both the query locator and the add-button locator — the main product's own button always renders before the recommendations carousel in DOM order (confirmed directly in the failure snapshot), so `.first()` always resolves to the main product, never a recommendation card. Same "any exemplar via `.first()`" precedent M9 (§17) already established for a different repeated-trigger hazard.~~
+
+**Live validation:** 2 consecutive standalone runs of the new spec after the fix, 2/2 passed, zero retries (23-72s each — ordinary DES-speed variance, not flakiness). Full manual reference suite: **8/8 PASSED, zero retries** (`pnpm test`, 5.5m) — the first fully green full-suite run since the interceptor merge that also includes the newly promoted wishlist spec, confirming no regression in the shared `ProductPage.ts` file.
+
+**Decision on the prior mobile-era attempt:** the stash `fase5-solo-attempt-2026-07-29` (the invalidated solo attempt from the first try at this exercise — mobile-only knowledge, MMBRS promo-modal auto-dismiss + a bounded `ProductCard.open()` click + an old wishlist spec) was discarded (`git stash drop`) rather than reused — this session's implementation was built fresh from live desktop probes, per the onboarding manual's rule (c).
+
+**Closes the onboarding Fase 5 repeat.**
+
+---
+
+---
+
+## 30. Coverage expansion round 2 — 10 more Builder drafts promoted, suite 15 → 25, coverage 26 → 38/139 (2026-08-06)
+
+**Context.** Same day as §29, later session. Jorge asked directly for more coverage; `pnpm plan` was already the answer to "what measures it", but raising the number meant repeating §26's promote-from-drafts cycle: `pnpm build-tests --top 10` → review → promote → validate live.
+
+**Drafts reviewed before touching anything (11 generated, not 10 — one turned out redundant).** `pnpm build-tests --top 10` wrote 10 journey drafts + 1 interaction draft. The interaction draft (`inter_e04838ecc799` / `flow_960ceaa6b799`, product `vestidos-n3802`) was a **byte-identical duplicate of the already-promoted `tests/mujer/vestidos-tallas-overlay.spec.ts`** (§26) — the planner still lists that flow as uncovered because its evidence-matching doesn't recognise the promoted spec's manually-renamed page object as satisfying the same flow id. Discarded, not promoted; the mismatch itself is cosmetic (the flow genuinely has a spec), not a new defect.
+
+**The redundancy shape from §26 recurred, but wasn't actually the same problem.** 8 of the remaining 10 drafts shared the chain `h-woman → combo-wins-n5214.html → PDP`, split across the same two signal shapes §26 already named (3 × `role button "Anterior"`, 5 × `testId addToCartBtn`). Unlike §26's five drafts — which were **the same PDP** captured by different crawl sessions — these 8 are **8 genuinely different products**, each a distinct flow id the planner independently lists as high-priority and uncovered. Promoting all of them is real coverage, not padding; asked Jorge to choose the scope explicitly rather than deciding unilaterally (a real suite-size/runtime trade-off, not a redundant-duplicate call like §26's). **Decision: promote all 10** (the 2 PLPs + all 8 PDPs).
+
+**Signal hardening repeated §26's zero-live-probe trick.** Every new page object got the same two-part `isLoaded()`: a `page.title()` prefix check (sourced straight from the committed map's own `title` field for that page, crawl 2026-07-30) ahead of the Builder's original structural signal. One title collision found and recorded honestly rather than hidden: `"COMBO WINS % | Bershka"` is shared by **6** map entries (confirmed by grep before writing the comment) — same limitation §26 already flagged for a different combo-wins page — so `PantalonesComboWinsPlpPage`'s title check proves the right *campaign*, not uniquely this PLP; the `filterButton` structural signal is what actually anchors it. All other 9 titles were grep-checked unique (1-2 hits, the 2 being anon/auth session twins) before writing the regex.
+
+**Live validation, in two passes (a real mistake made and caught, not glossed over).** First pass ran only the 10 new specs standalone: 11/11 passed (setup + 10), zero retries, 3.0m. Ran `pnpm plan --update` immediately after and coverage **dropped** to 17/139 — a mistake, not a regression: `reports/route-evidence.json` is overwritten by whichever `pnpm test` invocation ran last, not accumulated across runs, so the planner only saw the 10 new specs' evidence and briefly "forgot" the other 15. Fixed by re-running the **full** `pnpm test` (all 25 specs) before updating the plan. Full suite: **23/25 passed, 2 flaky, 0 failed** — recovered on retry #1 both times, and neither was one of the 10 new specs (zero regression from the promotion itself):
+- `add-to-cart.spec` — the "confirmation drawer never appeared" error, same shape §28 fixed the *detector* for. This is its **3rd occurrence today** with the corrected content-based detector in place, which shifts the weight of evidence: this now reads as genuine intermittent DES noise rather than a lingering detection bug. Not re-opened, just noted for whoever next investigates it.
+- `hombre/lo-mas-vendido.spec` — a fresh `isLoaded()` timeout, first time seen on this spec. Recovered on retry; treated as one-off environment noise, not chased.
+
+**Coverage after full-suite evidence: 38/139 flows (evidence: 24 passed tests)** — up from 26/139 (this same day's earlier `qa-cycle` run) and the best number in the map's history by a wide margin (prior bests: 10/140 §24, 5/155 §20). `typecheck`/`lint` clean throughout.
+
+**Method note for next time a coverage push happens:** `pnpm plan --update` only ever reflects the *most recent* `pnpm test` invocation's route evidence — always run the full suite (not a filtered subset) immediately before updating the plan, or the coverage number will silently regress to whatever subset happened to run last.
+
+---
+
+---
