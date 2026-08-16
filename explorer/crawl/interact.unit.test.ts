@@ -145,18 +145,37 @@ describe('discoverInteractions', () => {
     expect(d.calls).toContain('recover');
   });
 
-  it('skips a candidate whose driver call throws and continues', async () => {
-    // candidate 1 ('Roto') consumes one snapshot call (its own `before` read) before throwing on click.
-    // candidate 2's before-read must stay dialog-free and its post-click reads must show the dialog —
-    // tuned from the brief's script (last entry changed BASE -> D_WITH_DIALOG) so the diff-read after
-    // the click actually observes the opened dialog; see report for why.
+  it('retries a candidate whose click always throws, recording outcome none once attempts are exhausted (was: abandoned with no record at all)', async () => {
+    // candidate 1 ('Roto') consumes one snapshot call (its own `before` read); every click
+    // attempt throws and is retried in place (no further snapshot calls, since the throw is
+    // caught before waitForSettle runs), so MAX_CLICK_ATTEMPTS clicks land on it before it
+    // falls through to outcome 'none'. Candidate 2's before-read must stay dialog-free and
+    // its post-click reads must show the dialog — tuned from the brief's script (last entry
+    // changed BASE -> D_WITH_DIALOG) so the diff-read after the click actually observes the
+    // opened dialog; see report for why.
     const d = fakeDriver([D_BASE, D_BASE, D_WITH_DIALOG, D_WITH_DIALOG, D_WITH_DIALOG]);
     const boom = btn('Roto');
     const orig = d.click.bind(d);
-    d.click = async (r, n) => { if (n === 'Roto') throw new Error('boom'); return orig(r, n); };
+    let rotoAttempts = 0;
+    d.click = async (r, n) => { if (n === 'Roto') { rotoAttempts++; throw new Error('boom'); } return orig(r, n); };
     const out = await discoverInteractions(d, [boom, btn('Añadir a cesta')], META);
-    expect(out).toHaveLength(1);
-    expect(out[0].outcome).toBe('overlay');
+    expect(out).toHaveLength(2);
+    expect(out[0].outcome).toBe('none');
+    expect(out[1].outcome).toBe('overlay');
+    expect(rotoAttempts).toBe(3);
+  });
+
+  it('recovers from a throwing click on an early attempt once a later attempt succeeds (the "Filtrar" hydration-lag shape, root-caused live 2026-08-16, backlog item 4/P4-successor: the desktop PLP filter toolbar took up to ~16s to even appear in the DOM)', async () => {
+    const d = fakeDriver([D_BASE, D_WITH_DIALOG, D_WITH_DIALOG, D_WITH_DIALOG]);
+    let calls = 0;
+    const orig = d.click.bind(d);
+    d.click = async (r, n) => {
+      calls++;
+      if (calls === 1) throw new Error('locator.click: Timeout 5000ms exceeded — waiting for getByRole(...)');
+      return orig(r, n);
+    };
+    const [it1] = await discoverInteractions(d, [btn('Filtrar')], META);
+    expect(it1.outcome).toBe('overlay');
   });
 
   it('recovers page state when a candidate throws mid-protocol after navigating away, then continues with the next candidate', async () => {

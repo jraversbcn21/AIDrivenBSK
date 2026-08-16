@@ -155,12 +155,26 @@ export const MAX_CLOSE_ATTEMPTS = 3;
  * `MAX_CLICK_ATTEMPTS` clicks — a lost hydration click and a genuine no-op look identical from
  * outside, so this is a bounded give-up, not a claim the element does nothing).
  *
- * A driver exception on one candidate (e.g. the click throws, or `snapshot()` throws mid-protocol
- * with a navigation in flight) skips just that candidate — logged via `console.warn` — so one bad
- * element doesn't abort discovery for the rest of the page. Before moving on, the page state is
- * recovered if the exception left it on a foreign path: if recovery succeeds, the next candidate
- * proceeds normally; if recovery fails (or itself throws), remaining candidates for this page are
- * aborted, mirroring the `navigated`-outcome recovery-failure semantics above.
+ * The click itself is retried within the attempt loop, not just the "click worked but
+ * produced no visible change" case: a click that THROWS (locator never resolved, or an
+ * actionability timeout) is the exact hydration-lag class this loop's retries exist for
+ * (CLAUDE.md's "Interaction reliability" rule) — root-caused live (backlog item 4/P4-
+ * successor, 2026-08-16): the desktop PLP filter toolbar ("Filtrar") took up to ~16s from
+ * navigation to even appear in the accessibility tree, well past a single 5s attempt, so
+ * every crawl attempt on it failed with a bare locator-not-found timeout though the earlier
+ * `complementary`-overlay fix (this same investigation) was itself correct and validated.
+ * A throw from `driver.click()` now pauses (`INTERACT_SETTLE.pollIntervalMs`) and retries
+ * up to `MAX_CLICK_ATTEMPTS`, exactly like a click that succeeded without changing anything —
+ * if every attempt throws, the candidate still gets a recorded `none` outcome rather than
+ * vanishing from the map with no trace (§28: a diagnostic must say what it saw).
+ *
+ * A driver exception ELSEWHERE in the protocol (e.g. `snapshot()` throwing mid-protocol with
+ * a navigation in flight) still skips the whole candidate — logged via `console.warn` — so
+ * one bad element doesn't abort discovery for the rest of the page. Before moving on, the
+ * page state is recovered if the exception left it on a foreign path: if recovery succeeds,
+ * the next candidate proceeds normally; if recovery fails (or itself throws), remaining
+ * candidates for this page are aborted, mirroring the `navigated`-outcome recovery-failure
+ * semantics above.
  */
 export async function discoverInteractions(
   driver: InteractionDriver,
@@ -175,7 +189,12 @@ export async function discoverInteractions(
       const before = await driver.snapshot();
       let outcome: ExtractedInteraction | null = null;
       for (let attempt = 0; attempt < MAX_CLICK_ATTEMPTS && outcome === null; attempt++) {
-        await driver.click(role.type, role.name);
+        try {
+          await driver.click(role.type, role.name);
+        } catch {
+          await driver.wait(INTERACT_SETTLE.pollIntervalMs);
+          continue;
+        }
         await waitForSettle(() => driver.snapshot(), (ms) => driver.wait(ms), INTERACT_SETTLE);
 
         if (driver.currentPath() !== meta.path) {
