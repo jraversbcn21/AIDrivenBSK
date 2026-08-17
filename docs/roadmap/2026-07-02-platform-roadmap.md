@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-02
 **Status:** COMPLETE (2026-07-14). No milestone or phase gate can land. Maintained as the **chronological history log**; the live prioritized pending list is the backlog's own resume section.
-**Sources of truth:** `CLAUDE.md`, `docs/superpowers/specs/2026-06-17-qa-foundation-design.md`, `docs/superpowers/specs/2026-06-17-explorer-agent-design.md`, `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` (+ its archive `…-findings-archive.md`, holding §1, §5, §8–§23, §25 and §30 across two tranches, 2026-08-06 and 2026-08-16 — not auto-loaded)
+**Sources of truth:** `CLAUDE.md`, `docs/superpowers/specs/2026-06-17-qa-foundation-design.md`, `docs/superpowers/specs/2026-06-17-explorer-agent-design.md`, `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` (+ its archive `…-findings-archive.md`, holding §1, §5, §8–§23, §25, §30 and §32 across three tranches, 2026-08-06, 2026-08-16 and 2026-08-17 — not auto-loaded)
 **Companion:** [`2026-07-02-backlog.md`](./2026-07-02-backlog.md) — the complete pending-work backlog this roadmap sequences.
 
 ---
