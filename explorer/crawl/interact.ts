@@ -188,13 +188,16 @@ export async function discoverInteractions(
     try {
       const before = await driver.snapshot();
       let outcome: ExtractedInteraction | null = null;
+      let lastClickError: unknown = null;
       for (let attempt = 0; attempt < MAX_CLICK_ATTEMPTS && outcome === null; attempt++) {
         try {
           await driver.click(role.type, role.name);
-        } catch {
+        } catch (err) {
+          lastClickError = err;
           await driver.wait(INTERACT_SETTLE.pollIntervalMs);
           continue;
         }
+        lastClickError = null; // a later attempt landed — don't report an earlier throw as the cause
         await waitForSettle(() => driver.snapshot(), (ms) => driver.wait(ms), INTERACT_SETTLE);
 
         if (driver.currentPath() !== meta.path) {
@@ -234,6 +237,17 @@ export async function discoverInteractions(
         }
       }
       if (outcome === null) {
+        // `none` alone cannot say WHY (2026-08-17 re-crawl): the click-retry catch above was
+        // silent, so a candidate whose every attempt THREW and one that clicked cleanly with
+        // no visible effect both landed here indistinguishable — and the previous crawl's
+        // `TimeoutError` log lines disappeared when the retry loop started swallowing them.
+        // Keeps §28's rule intact: the diagnostic must say what it saw, not just what it got.
+        if (lastClickError !== null) {
+          console.warn(
+            `interaction click never resolved on ${meta.path} ("${el.label}") ` +
+              `after ${MAX_CLICK_ATTEMPTS} attempts: ${String(lastClickError)}`,
+          );
+        }
         results.push({
           trigger: { role: el.role, label: el.label, type: el.type },
           outcome: 'none',

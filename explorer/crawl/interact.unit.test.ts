@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   InteractionLedger, selectCandidates, newOverlayNodes, discoverInteractions, labelClass, interactionScope,
 } from './interact';
@@ -158,11 +158,31 @@ describe('discoverInteractions', () => {
     const orig = d.click.bind(d);
     let rotoAttempts = 0;
     d.click = async (r, n) => { if (n === 'Roto') { rotoAttempts++; throw new Error('boom'); } return orig(r, n); };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const out = await discoverInteractions(d, [boom, btn('Añadir a cesta')], META);
     expect(out).toHaveLength(2);
     expect(out[0].outcome).toBe('none');
     expect(out[1].outcome).toBe('overlay');
     expect(rotoAttempts).toBe(3);
+    // The `none` must carry WHY it gave up — without this the 2026-08-17 re-crawl could not
+    // tell an unresolvable locator from a click that landed and revealed nothing.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(/never resolved.*Roto.*boom/);
+    warn.mockRestore();
+  });
+
+  it('does not blame a throw from an earlier attempt when a later click landed but revealed nothing', async () => {
+    // attempt 1 throws, attempts 2-3 click cleanly against a page that never opens an overlay:
+    // outcome is still 'none', but the cause is NOT an unresolvable locator, so no warn.
+    const d = fakeDriver([D_BASE, D_BASE, D_BASE, D_BASE, D_BASE]);
+    let calls = 0;
+    const orig = d.click.bind(d);
+    d.click = async (r, n) => { calls++; if (calls === 1) throw new Error('boom'); return orig(r, n); };
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const [it1] = await discoverInteractions(d, [btn('Filtrar')], META);
+    expect(it1.outcome).toBe('none');
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it('recovers from a throwing click on an early attempt once a later attempt succeeds (the "Filtrar" hydration-lag shape, root-caused live 2026-08-16, backlog item 4/P4-successor: the desktop PLP filter toolbar took up to ~16s to even appear in the DOM)', async () => {
