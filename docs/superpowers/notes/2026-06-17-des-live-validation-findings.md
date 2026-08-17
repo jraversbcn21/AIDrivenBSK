@@ -6,14 +6,14 @@
 
 ## Status
 
-**The suite tests DES's TRUE DESKTOP layout. Suite is 26 tests; latest full run (2026-08-16, §33's regression gate) 24 passed / 3 flaky / 0 failed, 19.2m — a slow DES window; all three flakes were read from their own `error-context.md` and attributed to named, unrelated noise classes (the suite itself was not re-run after §34's fixes, which touch `explorer`/`analyzer`/`builder`, not `tests/`). Backlog **P6 is CLOSED** (§33): the "cold cart navigation renders member-hub with a valid session" defect was never DES — `CartPage`'s session detector read DES's server-rendered LOGGED-OUT header (visible ~5-8s before hydration, MEASURED) as a dead session, fired an unnecessary re-login, and `logon.html` then bounced the already-authenticated user to member-hub while `actUntil` silently swallowed the resulting error. The tell must now PERSIST 15s before it is believed; the reproducer went 2/2 red → 2/2 green, and legitimate recovery still fires and lands on the cart (3/3 in the full suite). Still open, unfixed by design (one fix at a time): the **150s fixture budget collision** — `cleanCart` is a fixture, so a spec's own `test.setTimeout()` has not applied when it runs, and `waitForLoaded()`'s worst case equals the des test timeout exactly (§33); §34 found evidence this is now MORE likely to bite, not less. **§34 (same day, later)** closed five more real bugs via `/code-review high` + two Jorge-directed follow-up investigations — the Builder's unbounded-click watch item below, the analyzer's §28 vocabulary gap, the crawler's desktop PLP filter/sort blind spot (two fixes: a missing `complementary` overlay role, then a missing retry-on-throw in `discoverInteractions()`), and a `primeCart` cart-count hydration race that was silently sinking the checkout map seed. All five are validated live in isolation; **none has yet been proven together in one committed re-crawl** — that is the standing next action.**
+**The suite tests DES's TRUE DESKTOP layout. Suite is 26 tests; latest full run (2026-08-16, §33's regression gate) 24 passed / 3 flaky / 0 failed, 19.2m — a slow DES window; all three flakes were read from their own `error-context.md` and attributed to named, unrelated noise classes (the suite itself was not re-run after §34's fixes, which touch `explorer`/`analyzer`/`builder`, not `tests/`). Backlog **P6 is CLOSED** (§33): the "cold cart navigation renders member-hub with a valid session" defect was never DES — `CartPage`'s session detector read DES's server-rendered LOGGED-OUT header (visible ~5-8s before hydration, MEASURED) as a dead session, fired an unnecessary re-login, and `logon.html` then bounced the already-authenticated user to member-hub while `actUntil` silently swallowed the resulting error. The tell must now PERSIST 15s before it is believed; the reproducer went 2/2 red → 2/2 green, and legitimate recovery still fires and lands on the cart (3/3 in the full suite). Still open, unfixed by design (one fix at a time): the **150s fixture budget collision** — `cleanCart` is a fixture, so a spec's own `test.setTimeout()` has not applied when it runs, and `waitForLoaded()`'s worst case equals the des test timeout exactly (§33); §34 found evidence this is now MORE likely to bite, not less. **§34 (same day, later)** closed five more real bugs via `/code-review high` + two Jorge-directed follow-up investigations — the Builder's unbounded-click watch item below, the analyzer's §28 vocabulary gap, the crawler's desktop PLP filter/sort blind spot (two fixes: a missing `complementary` overlay role, then a missing retry-on-throw in `discoverInteractions()`), and a `primeCart` cart-count hydration race that was silently sinking the checkout map seed. All five are validated live in isolation. **§35 (2026-08-17) ran that re-crawl:** 140 pages, exit 0, map committed (`0144363`). `primeCart`'s fix and the retry-on-throw fix are now **proven in a real crawl** (checkout seeded first try; filter/sort candidates present in the map at all for the first time, interactions 66 → 119); **`c8b5544`'s `complementary` overlay role is NOT — zero such elements, all 19 filter/sort interactions recorded `none`, still open.** The crawl also exposed a defect in one of the fixes: `01dd927`'s click-retry `catch` was silent, so `none` no longer says WHY — fixed the same session (`d5f9595`).**
 
 - **Desktop enforcement** is a context-level route interceptor — `src/support/layout.ts`, `forceDesktopLayout(context)` — plus `assertDesktopLayout(page)` on every passing test. ⚠ **Every suite claim dated before 2026-08-02 was measured on the MOBILE layout**: the 2026-07-29 "migration" was incomplete and the correction is §24. Read §24 before touching any selector — its closing table is the mobile↔desktop divergence catalogue, and selectors are dual-layout (mobile names deliberately kept).
 - **Login is dual-variant** (§23): DES switches the `/es/logon.html` shape server-side between an e-mail+password form and a "Continuar con e-mail" interstitial. `LoginPage.login()` handles both — do not "simplify" it back to one.
 - **Interaction reliability** is the standing rule (§7): every state-changing interaction must act→verify→retry, every click must be bounded, and every verify must identify *what* it is looking at rather than counting (§28 is the cautionary tale) — and must distinguish "my action worked" from "it was already true" (§29). **Locators must be ANCHORED, not merely disambiguated:** `.first()` switches off strict mode, the only ambiguity detector there is (§31).
 - **Session gate:** DES single-sessions the shared test account, so `login.spec`'s mid-suite re-auth invalidates the `auth.setup`-minted session for the rest of that invocation (§24). `checkout-reach.spec` recovers via `src/support/loginGate.ts` (in-dialog re-login); **`CartPage`/`cleanCart` now recovers too** — `CartPage.waitForLoaded()` detects the header's logged-out tell (`Header.isUserLoggedIn()`) and re-authenticates, bounded to one attempt (§32 completion, Task 8, 2026-08-13, closes backlog P5). ⚠ **That tell must PERSIST before it is believed (§33, 2026-08-16, closes backlog P6):** DES serves its server-rendered LOGGED-OUT header for the first ~5-8s of a cold navigation on a perfectly VALID session, so a single-instant read fires a re-login that then bounces the already-authenticated user to member-hub. "Not found ≠ seen-and-false" does not protect you here — the pre-hydration DOM is not empty, it is the logged-out page.
 - **Environment noise is real and documented** (§7): dead `/q/` loads, degraded app shells, DES maintenance pages. Read §7 before blaming the framework for a red run.
-- **Retry doctrine must cover a THROWING act, not just a no-op one** (§34): a hand-rolled act→verify→retry loop that only retries "the click worked but nothing changed" silently drops the "click never even resolved" failure mode — exactly the one hydration-lag produces most often. Checked `discoverInteractions()`; worth checking any other hand-rolled retry loop the same way.
+- **Retry doctrine must cover a THROWING act, not just a no-op one** (§34): a hand-rolled act→verify→retry loop that only retries "the click worked but nothing changed" silently drops the "click never even resolved" failure mode — exactly the one hydration-lag produces most often. Checked `discoverInteractions()`; worth checking any other hand-rolled retry loop the same way. **Corollary (§35):** when such a fix converts a crash into a recorded outcome, check the REASON survives the conversion — `01dd927`'s catch was silent, and the crawl it was meant to fix could no longer tell "the locator never resolved" from "the click landed and revealed nothing."
 
 ## How this doc is organised — read before appending
 
@@ -705,4 +705,60 @@ Both live crawls above logged `primeCart failed — skipping the checkout seed t
 
 ### Net state at the end of this entry
 
-Both explorer fixes (`01dd927`, `9a9aade`) are validated **in isolation**, live, against DES — but **postdate** both live re-crawls above, so neither crawled map (85-page and 192-page, both uncommitted) demonstrates them together in a real full crawl. The committed map is still the pre-existing 139-page one (2026-07-30). **Standing next action, Jorge-directed:** run one more seeded re-crawl with all fixes in place before anything else — full recipe, detached launch. Until that lands, "the map has the PLP-filter panel and checkout back" is an expectation, not a verified fact.
+Both explorer fixes (`01dd927`, `9a9aade`) are validated **in isolation**, live, against DES — but **postdate** both live re-crawls above, so neither crawled map (85-page and 192-page, both uncommitted) demonstrates them together in a real full crawl. The committed map is still the pre-existing 139-page one (2026-07-30). **Standing next action, Jorge-directed:** run one more seeded re-crawl with all fixes in place before anything else — full recipe, detached launch. Until that lands, "the map has the PLP-filter panel and checkout back" is an expectation, not a verified fact. **(✅ RUN 2026-08-17 — see §35. Two of the three fixes proved out; `c8b5544` did not.)**
+
+---
+
+## 35. The standing re-crawl, run — two fixes proven in a real crawl, the third still unproven, and the crawl found a defect in one of the fixes (2026-08-17)
+
+**Context.** §34's standing next action, executed. Full recipe (`EXPLORER_TIME_BUDGET_MS=1200000`, `EXPLORER_MAX_PAGES=150`, `EXPLORER_SEED_CHECKOUT=on`), launched **detached** via PowerShell `Start-Process` per the 2026-07-30 harness-kill lesson. DES probed HTTP 200 before launch; working tree clean at `65bca07`. Completed cleanly: **exit 0, 140 pages (58 anon + 82 auth), 1 auth error**, ~55 min wall-clock. Map committed as `0144363`.
+
+⚠ **Method note, earned twice in ten minutes: a gate that "fails" in a verification script you have never checked against the real schema is worth nothing.** The first two passes over the written JSON reported `elements: 0` and `must-capture: 0` — both were my script's wrong assumptions, not map defects. Elements and interactions are **top-level collections** (`m.elements`, `m.interactions`, joined by `pageId`/`triggerElementId`), not nested under `pages[]`; and an element's name field is **`label`**, not `name`. Read one sample object before trusting any aggregate over it. B17's "verify against the JSON, not the log prose" needs this corollary or it produces confident nonsense.
+
+### Gates, verified directly against the written JSON
+
+| Gate | Result |
+|---|---|
+| schema / pages / flows | 1.7 / 140 / 140 |
+| unique element ids (B17) | **3896 / 3896**, zero duplicates |
+| Checkout | 1 page, 1 flow, `pageType: Checkout` |
+| must-capture "Añadir a la cesta" | **1 → `overlay`**, 7 revealed |
+| desktop fingerprint (mobile drawer) | 0 — correct |
+| **`complementary` elements** | **0 — FAILED** |
+
+### Against the committed 2026-07-30 map — the only honest way to read the numbers
+
+| | committed (139p) | this crawl (140p) |
+|---|---|---|
+| elements | 3781 | 3896 |
+| interactions | 66 | **119** |
+| outcomes | 19 overlay / 46 none / 1 nav | 22 overlay / 95 none / 2 nav |
+| **filter/sort interactions** | **0** | **19** |
+| `revealedBy` elements | 70 | 86 |
+| PDP / PLP | 50 / 33 | 43 / 36 |
+
+**`9a9aade` (primeCart's cart-count hydration race) — PROVEN in a real crawl.** No `primeCart failed` line anywhere, and `/es/checkout.html` was the auth session's **first** visited page. Both of §34's re-crawls failed at exactly this point; this is the first crawl since the fix and it seeded on the first try.
+
+**`01dd927` (retry a THROWING click) — PROVEN, and visible as a number.** The 19 filter/sort candidates ("Filtrar" ×3, "Precio ascendente"/"descendente" ×4 each, "Color" ×4, "Talla", "Con descuento", "Novedad", "Limpiar") **exist in the map at all** for the first time — the committed map holds zero. Total interactions 66 → 119. They no longer vanish without a record, which is exactly what the fix set out to change.
+
+**`c8b5544` (`complementary` as an overlay role) — NOT proven, still open.** Zero `complementary` elements anywhere, and all 19 filter/sort interactions recorded `outcome: 'none'` with 0 revealed elements. It remains correct in isolation (§34's probe) and unproven in a crawl. **Do not close it on isolated evidence a second time** — that is precisely the mistake §34 had to walk back.
+
+### The crawl's own finding: `01dd927` traded a logged failure for a silent one
+
+§34's diagnosis came from grepping **8 `TimeoutError` lines** out of the previous crawl's log. **This crawl's log contains not one line about "Filtrar"** — no timeout, no "interaction skipped". The reason is inside the fix itself: the new click-retry `catch` (`interact.ts:194`) was written bare — `catch { await wait; continue; }` — so from the map alone `outcome: 'none'` cannot distinguish
+
+- every attempt **threw** (locator never resolved — §34's hydration-lag shape), from
+- a click that **landed** and revealed nothing the crawler recognizes (what a still-missing overlay role looks like).
+
+Those two demand opposite next moves, and the crawl commissioned to settle the question could not answer it. The fix's own comment cites §28 ("a diagnostic must say what it saw") to justify *recording* the `none` — it kept the **what** and dropped the **why**.
+
+**Fixed the same session (`d5f9595`).** The last unresolved click error is retained and logged when attempts are exhausted, and **cleared the moment any attempt lands**, so a later genuine no-op is never blamed on an earlier throw. Two unit tests lock both directions (warn when every attempt throws; **no** warn when a later attempt clicked cleanly). The next crawl's log will name which branch the filter toolbar is actually in.
+
+**Rule earned — a corollary to §28:** *when a fix converts a crash into a recorded outcome, check that the REASON survives the conversion.* Swallowing an exception to keep going is right; swallowing it without a trace turns a diagnosable failure into an ambiguous one, and the loss stays invisible until the next investigation needs exactly that line.
+
+### Honest limits
+
+- **Why the filter clicks yield `none` is unknown, not narrowed.** One plausible-but-unmeasured mechanism: 3 attempts × (5s click bound + 0.5s pause) ≈ 16.5s against §34's measured ~16.1s hydration leaves ~0.4s of margin — a coin flip, not a budget. Not probed; the new log line is the cheap instrument that settles it next crawl, before anyone spends a probe on it.
+- **The 1 auth error's detail is unrecoverable.** The crawler pushes it to an in-memory `errors[]` that neither the log nor the map persists. Ordinary variability (2026-07-30's seeded crawl logged 2), but worth knowing it cannot be read after the fact.
+- **PDP 50 → 43** is a real drop against the committed map, within documented crawl-to-crawl variability, not investigated.
+- **The suite was not re-run** — nothing in this session touches `tests/` or `src/`.
