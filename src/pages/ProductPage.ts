@@ -149,6 +149,20 @@ export class ProductPage extends BasePage {
       // strict mode is re-armed as the ambiguity detector (§31).
       const addBtn = this.mainProductActionsPanel().getByRole('button', { name: /^añadir a la cesta$/i });
       const confirmed = (): Promise<boolean> => this.isAddConfirmed();
+      // Every non-throwing click on addBtn is a REAL server-side add whose only visible
+      // confirmation (the drawer) can lag several act cycles behind it — each pre-drawer
+      // cycle then re-adds a unit that merges into the same line (§32's merge; a line was
+      // observed reach qty 13 that way on 2026-08-13, and qty 8 broke cart-lifecycle's
+      // exact-count assertion on 2026-08-18, findings §37). The confirmed() guard below
+      // cannot see those adds — it reads the same lagging drawer — so the destructive
+      // click is additionally capped at MAX_ADD_CLICKS (the crawler's MAX_CLICK_ATTEMPTS
+      // precedent, §34): past the cap the act degrades to pure polling for the rest of
+      // the deadline, bounding worst-case residue on the shared account to 3 units
+      // instead of one add per cycle (~15-25 on the never-appearing-drawer path). A
+      // THROWING click is deliberately not counted: it never resolved a target, so
+      // nothing landed (§34's retry-on-throw distinction).
+      const MAX_ADD_CLICKS = 3;
+      let addClicks = 0;
       // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
       // unbounded click on a locator the SPA re-rendered away waits to the 150s test
       // timeout, starving actUntil's own deadline (the exact hang mode root-caused in the
@@ -160,18 +174,27 @@ export class ProductPage extends BasePage {
           // guard was ALSO defeated by the old count diff, so a false negative kept
           // re-clicking "Añadir a la cesta" for the full 20s deadline (findings §28).
           if (await confirmed()) return;
+          if (addClicks >= MAX_ADD_CLICKS) return; // poll only — see the cap comment above
           await dismissOnboardingTour(this.page);
           if ((await group.getByRole('button', { pressed: true }).count()) === 0) {
             await group.getByRole('button', { disabled: false }).first().click({ force: true, timeout: 5_000 }).catch(() => undefined);
           }
           await addBtn.click({ force: true, timeout: 5_000 });
+          addClicks++;
         },
         verify: confirmed,
         deadlineMs: 20_000,
         sleepMs: 500,
         sleep: (ms) => this.page.waitForTimeout(ms),
-        onTimeout: () => { throw new Error('ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed)'); },
+        onTimeout: () => { throw new Error(`ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed; ${addClicks} add click(s) fired)`); },
       });
+      // The REASON must survive a late success (§35's d5f9595 lesson): a run that needed
+      // >1 click may have landed >1 unit, and without this line a later exact-quantity
+      // failure (cart-lifecycle's toBe(2)) cannot be told apart from §32's Sumar-unidad
+      // overshoot — the two need opposite fixes.
+      if (addClicks > 1) {
+        console.warn(`[ProductPage] addToCart needed ${addClicks} clicks before the drawer confirmed — up to ${addClicks} units may have landed (findings §37)`);
+      }
       // The drawer stays open and intercepts any subsequent header click — close it before
       // returning. Its close button is USUALLY named "Cerrar", but a live capture
       // (2026-08-04) showed it nameless (icon-only, image not yet resolved), so fall back to
