@@ -63279,6 +63279,33 @@
       "priority": "low",
       "steps": [
         "page_49d2ae779cc2"
+      ],
+      "coveredBy": [
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
+        "tests/checkout/checkout-reach.spec.ts",
+        "tests/checkout/checkout-structure.spec.ts",
+        "tests/footer/footer-navigation.spec.ts",
+        "tests/hombre/camisas.spec.ts",
+        "tests/hombre/combo-wins.spec.ts",
+        "tests/hombre/lo-mas-vendido.spec.ts",
+        "tests/mujer/body-tirantes-escote-redondo.spec.ts",
+        "tests/mujer/bombacho-barrel.spec.ts",
+        "tests/mujer/camiseta-fitted-ranglan.spec.ts",
+        "tests/mujer/camiseta-manga-larga-cuello-redondo.spec.ts",
+        "tests/mujer/camiseta-tirantes-rib.spec.ts",
+        "tests/mujer/chaqueta-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/pantalon-barrel-felpa.spec.ts",
+        "tests/mujer/pantalon-capri-felpa-banda-lateral.spec.ts",
+        "tests/mujer/pantalon-felpa-banda-lateral.spec.ts",
+        "tests/mujer/pantalones-capri.spec.ts",
+        "tests/mujer/pantalones-combo-wins.spec.ts",
+        "tests/mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/top-halter.spec.ts",
+        "tests/mujer/vestidos-tallas-overlay.spec.ts",
+        "tests/search/search-plp-pdp.spec.ts",
+        "tests/wishlist/add-to-wishlist.spec.ts"
       ]
     },
     {
@@ -63290,6 +63317,11 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_fff1e364013c"
+      ],
+      "coveredBy": [
+        "tests/hombre/camisas.spec.ts",
+        "tests/hombre/combo-wins.spec.ts",
+        "tests/hombre/lo-mas-vendido.spec.ts"
       ]
     },
     {
@@ -63301,6 +63333,12 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_b1ec771fc108"
+      ],
+      "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
+        "tests/checkout/checkout-reach.spec.ts",
+        "tests/checkout/checkout-structure.spec.ts"
       ]
     },
     {
@@ -63312,7 +63350,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_0e8d033a0647"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_25d0bfd33d9a",
@@ -63323,7 +63362,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_a37b13978fcd"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cf8d1ea369d7",
@@ -63334,7 +63374,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_546639de89bb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_431456f2555c",
@@ -63345,7 +63386,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_a7c94991c225"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_97c44933c933",
@@ -63356,6 +63398,11 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_7a36631e18d4"
+      ],
+      "coveredBy": [
+        "tests/mujer/bombacho-barrel.spec.ts",
+        "tests/mujer/pantalones-capri.spec.ts",
+        "tests/mujer/pantalones-combo-wins.spec.ts"
       ]
     },
     {
@@ -63367,7 +63414,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_691c7df1f8c3"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_be7938a25166",
@@ -63378,7 +63426,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_991eac4a3c61"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b3184333daa1",
@@ -63389,7 +63438,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_535114b0543b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f590862db9a4",
@@ -63400,7 +63450,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_9fe0dd9b5bfc"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3a65b0a6fe05",
@@ -63411,7 +63462,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_da228e98d81c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_750ed6a269e5",
@@ -63422,7 +63474,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_524a0f19c05a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_7df104b8dc9b",
@@ -63433,7 +63486,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_c866327737aa"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_92ffb23be7fd",
@@ -63444,6 +63498,11 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_1516d420e8fa"
+      ],
+      "coveredBy": [
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts"
       ]
     },
     {
@@ -63455,7 +63514,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_eb56a936af23"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bd6451c34b98",
@@ -63466,7 +63526,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_a1589bee373b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a99c7cf970f2",
@@ -63477,6 +63538,9 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_251afc8c3da2"
+      ],
+      "coveredBy": [
+        "tests/footer/footer-navigation.spec.ts"
       ]
     },
     {
@@ -63488,6 +63552,9 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_c317a8b42f0a"
+      ],
+      "coveredBy": [
+        "tests/mujer/vestidos-tallas-overlay.spec.ts"
       ]
     },
     {
@@ -63499,7 +63566,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_7b6953230791"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8eba28bd55de",
@@ -63510,7 +63578,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_c2e4a136a041"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bca7ff2f5922",
@@ -63521,7 +63590,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_96cc30e974ef"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_132b90914696",
@@ -63532,7 +63602,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_3dbcf32f1e87"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9697245dc42d",
@@ -63543,7 +63614,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_639b6346786b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0acedc1a423f",
@@ -63554,7 +63626,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_1c1de49e5f74"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c4c2c84bb3fd",
@@ -63565,7 +63638,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_ab12ad1a1a6c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_04275ee43a75",
@@ -63576,7 +63650,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_d5f944aa1cc1"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_ac68d2d91941",
@@ -63587,6 +63662,18 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_23cd74b01748"
+      ],
+      "coveredBy": [
+        "tests/mujer/body-tirantes-escote-redondo.spec.ts",
+        "tests/mujer/camiseta-fitted-ranglan.spec.ts",
+        "tests/mujer/camiseta-manga-larga-cuello-redondo.spec.ts",
+        "tests/mujer/camiseta-tirantes-rib.spec.ts",
+        "tests/mujer/chaqueta-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/pantalon-barrel-felpa.spec.ts",
+        "tests/mujer/pantalon-capri-felpa-banda-lateral.spec.ts",
+        "tests/mujer/pantalon-felpa-banda-lateral.spec.ts",
+        "tests/mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/top-halter.spec.ts"
       ]
     },
     {
@@ -63598,7 +63685,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_d4db20306249"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6926c636d9d8",
@@ -63609,7 +63697,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_8f55ebc54306"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b13a294ceff7",
@@ -63620,7 +63709,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_09cac16c9b80"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0050b97a7730",
@@ -63631,7 +63721,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_f198ef5e6251"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c49009e8373f",
@@ -63642,7 +63733,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_2f3e65706788"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_183628ed45dd",
@@ -63653,7 +63745,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_63280a7110a7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_bfcd280d0945",
@@ -63664,7 +63757,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_67f738405883"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0673c5e45f03",
@@ -63675,7 +63769,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_82de0a10e146"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3a1ebda56945",
@@ -63686,7 +63781,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_3ea5f9d42b2d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_188d7aed9f29",
@@ -63697,7 +63793,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_7a9e8469a22f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a1e03629cd40",
@@ -63708,7 +63805,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_fc5d48e08ad2"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_58eb13c6c517",
@@ -63719,7 +63817,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_2289c7be87e1"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5e018f73b820",
@@ -63730,7 +63829,8 @@
       "steps": [
         "page_49d2ae779cc2",
         "page_0341463292ff"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_10dc594b2f58",
@@ -63742,7 +63842,8 @@
         "page_49d2ae779cc2",
         "page_fff1e364013c",
         "page_8993e059bf55"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a4f2977de2db",
@@ -63754,7 +63855,8 @@
         "page_49d2ae779cc2",
         "page_fff1e364013c",
         "page_7287fd9db22c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_15c05c611120",
@@ -63766,7 +63868,8 @@
         "page_49d2ae779cc2",
         "page_fff1e364013c",
         "page_78da8373d121"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_57dbb71a1e1d",
@@ -63778,7 +63881,8 @@
         "page_49d2ae779cc2",
         "page_fff1e364013c",
         "page_ccf2470c744b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc16565522ac",
@@ -63790,7 +63894,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_a0368e9604eb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_98ee683a3c9b",
@@ -63802,7 +63907,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_1fef3f5a601e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_34450eb38390",
@@ -63814,7 +63920,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_faf9a8ff8a4a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e407eaea43a0",
@@ -63826,7 +63933,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_50fbd78c8aa8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4707dbf2f9df",
@@ -63838,7 +63946,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_eee0c97251af"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f14fcac22dad",
@@ -63850,7 +63959,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_029e96e67917"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9b1b603523f7",
@@ -63862,7 +63972,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_35bc01c27f92"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3546ea090d43",
@@ -63874,7 +63985,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_6edcc7dbe1ae"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_925c68f26268",
@@ -63886,7 +63998,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_6dc5f1f2945e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_55149f34befd",
@@ -63898,7 +64011,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_f78924ede3d5"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1488722127bb",
@@ -63910,7 +64024,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_d637614416b2"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_75fca1ff71d8",
@@ -63922,7 +64037,8 @@
         "page_49d2ae779cc2",
         "page_b1ec771fc108",
         "page_723ce63230a9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5eeb09a253b5",
@@ -63932,6 +64048,33 @@
       "priority": "low",
       "steps": [
         "page_954c9446bb45"
+      ],
+      "coveredBy": [
+        "tests/auth/login.spec.ts",
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
+        "tests/checkout/checkout-reach.spec.ts",
+        "tests/checkout/checkout-structure.spec.ts",
+        "tests/footer/footer-navigation.spec.ts",
+        "tests/hombre/camisas.spec.ts",
+        "tests/hombre/combo-wins.spec.ts",
+        "tests/hombre/lo-mas-vendido.spec.ts",
+        "tests/mujer/body-tirantes-escote-redondo.spec.ts",
+        "tests/mujer/bombacho-barrel.spec.ts",
+        "tests/mujer/camiseta-fitted-ranglan.spec.ts",
+        "tests/mujer/camiseta-manga-larga-cuello-redondo.spec.ts",
+        "tests/mujer/camiseta-tirantes-rib.spec.ts",
+        "tests/mujer/chaqueta-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/pantalon-barrel-felpa.spec.ts",
+        "tests/mujer/pantalon-capri-felpa-banda-lateral.spec.ts",
+        "tests/mujer/pantalon-felpa-banda-lateral.spec.ts",
+        "tests/mujer/pantalones-capri.spec.ts",
+        "tests/mujer/pantalones-combo-wins.spec.ts",
+        "tests/mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+        "tests/mujer/top-halter.spec.ts",
+        "tests/mujer/vestidos-tallas-overlay.spec.ts",
+        "tests/search/search-plp-pdp.spec.ts",
+        "tests/wishlist/add-to-wishlist.spec.ts"
       ]
     },
     {
@@ -63942,6 +64085,10 @@
       "priority": "high",
       "steps": [
         "page_a2e5adea07c2"
+      ],
+      "coveredBy": [
+        "tests/checkout/checkout-reach.spec.ts",
+        "tests/checkout/checkout-structure.spec.ts"
       ]
     },
     {
@@ -63953,6 +64100,11 @@
       "steps": [
         "page_954c9446bb45",
         "page_3fc46696be69"
+      ],
+      "coveredBy": [
+        "tests/hombre/camisas.spec.ts",
+        "tests/hombre/combo-wins.spec.ts",
+        "tests/hombre/lo-mas-vendido.spec.ts"
       ]
     },
     {
@@ -63964,6 +64116,12 @@
       "steps": [
         "page_954c9446bb45",
         "page_4d1e2006f73b"
+      ],
+      "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts",
+        "tests/checkout/checkout-reach.spec.ts",
+        "tests/checkout/checkout-structure.spec.ts"
       ]
     },
     {
@@ -63975,7 +64133,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_2922cbf0ef23"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc36a18982b0",
@@ -63986,7 +64145,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_ba73037838ac"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fb780bd51b6e",
@@ -63997,7 +64157,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_849ca323f330"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3dd87891e5ed",
@@ -64008,7 +64169,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_37147bc21cd8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_feb2a0501922",
@@ -64019,6 +64181,11 @@
       "steps": [
         "page_954c9446bb45",
         "page_48af47c522ef"
+      ],
+      "coveredBy": [
+        "tests/mujer/bombacho-barrel.spec.ts",
+        "tests/mujer/pantalones-capri.spec.ts",
+        "tests/mujer/pantalones-combo-wins.spec.ts"
       ]
     },
     {
@@ -64030,7 +64197,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_e9bda83eecfc"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc2bd12c660e",
@@ -64041,7 +64209,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_8cf8af282c8b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_54eecfbcc910",
@@ -64052,7 +64221,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_64062dde82cc"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_de49d2e78923",
@@ -64063,7 +64233,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_9ddecd582eca"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_77dd45947d33",
@@ -64074,7 +64245,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_609d80ea189f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_843af8cdc611",
@@ -64085,7 +64257,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_282fa81716c8"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_170a0baadc00",
@@ -64096,7 +64269,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_a1a957963056"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc2e41957b35",
@@ -64107,7 +64281,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_ed4563bf282a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_b4ebc7533b72",
@@ -64118,7 +64293,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_263a40a71d9b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_665234958331",
@@ -64129,7 +64305,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_70e680bec15b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5dcea398c255",
@@ -64140,6 +64317,9 @@
       "steps": [
         "page_954c9446bb45",
         "page_477199948a4e"
+      ],
+      "coveredBy": [
+        "tests/footer/footer-navigation.spec.ts"
       ]
     },
     {
@@ -64151,6 +64331,9 @@
       "steps": [
         "page_954c9446bb45",
         "page_690b77158b3f"
+      ],
+      "coveredBy": [
+        "tests/mujer/vestidos-tallas-overlay.spec.ts"
       ]
     },
     {
@@ -64162,7 +64345,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_1356ec9ba54c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_58e9b31feac8",
@@ -64173,7 +64357,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_f11ce30b83ed"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_90a619461a20",
@@ -64184,7 +64369,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_168907ae4a0d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fc333e8022ef",
@@ -64195,7 +64381,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_9fc81c679183"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4a137ea7bf73",
@@ -64206,7 +64393,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_3e502fa8185a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_40a672939124",
@@ -64217,7 +64405,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_283d5f584350"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c40ba8c012cf",
@@ -64228,7 +64417,8 @@
       "steps": [
         "page_954c9446bb45",
         "page_e1f3c8b2e7d9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_eb912c3150bf",
@@ -64240,7 +64430,8 @@
         "page_954c9446bb45",
         "page_3fc46696be69",
         "page_c460a7b7472f"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f39d4e9b1890",
@@ -64252,7 +64443,8 @@
         "page_954c9446bb45",
         "page_3fc46696be69",
         "page_bfffcce7d2e7"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_39e6e0f587e6",
@@ -64264,7 +64456,8 @@
         "page_954c9446bb45",
         "page_3fc46696be69",
         "page_ecbabf806c6c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_77fd65e99fe8",
@@ -64276,7 +64469,8 @@
         "page_954c9446bb45",
         "page_3fc46696be69",
         "page_1787c855bf12"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_87ac71b1346f",
@@ -64288,6 +64482,10 @@
         "page_954c9446bb45",
         "page_4d1e2006f73b",
         "page_552dcb8cbcb9"
+      ],
+      "coveredBy": [
+        "tests/cart/add-to-cart.spec.ts",
+        "tests/cart/cart-lifecycle.spec.ts"
       ]
     },
     {
@@ -64300,7 +64498,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_15fa697fa438"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1a6418cefd7d",
@@ -64312,7 +64511,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_21cc5e63d8ba"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_56b9c7fe41bd",
@@ -64324,7 +64524,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_87eab43d2139"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_66eb08c9da7e",
@@ -64336,7 +64537,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_a674cebb930a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4e97dbe44bbb",
@@ -64348,7 +64550,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_65f4bced8720"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_cc674a9b36d2",
@@ -64360,7 +64563,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_01bc2ff1cd8d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_925368436074",
@@ -64372,7 +64576,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_d9a857a12103"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0da2d5955a6c",
@@ -64384,7 +64589,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_201f77334ea6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e5a9a6cbfb99",
@@ -64396,7 +64602,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_6b00f82e89b6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5168da5f8e3f",
@@ -64408,7 +64615,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_b0e6af55e32d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_422f5e6f9c9a",
@@ -64420,7 +64628,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_5737f1ffcb19"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_38763d5ec07b",
@@ -64432,7 +64641,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_a974ccc57c57"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d6a35d4f1f04",
@@ -64444,7 +64654,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_99baf04d3d85"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a0631b3d6466",
@@ -64456,7 +64667,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_dd863db6d799"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_14d9d4726473",
@@ -64468,7 +64680,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_40375e521655"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f5775392e8b9",
@@ -64480,7 +64693,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_1602f1b40504"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5056fc865a53",
@@ -64492,7 +64706,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_570acfa3139d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d20a4da8825a",
@@ -64504,7 +64719,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_d91eda8efdfb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_83a00647fc38",
@@ -64516,7 +64732,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_98783824b573"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_a567d399c08d",
@@ -64528,7 +64745,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_aff80685e0fd"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_189ab1fb478a",
@@ -64540,7 +64758,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_176efb33c6ca"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_322fb0163a0a",
@@ -64552,7 +64771,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_7d72605d68cb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_0491529e459d",
@@ -64564,7 +64784,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_6a27b2cec909"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_1ad2e61f162b",
@@ -64576,7 +64797,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_a126d490a3ee"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_04be411d1612",
@@ -64588,7 +64810,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_96b3c2c013ed"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_4b9d0b3351c7",
@@ -64600,7 +64823,8 @@
         "page_954c9446bb45",
         "page_2922cbf0ef23",
         "page_2c6b86e01f27"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6c136f9ed32d",
@@ -64612,7 +64836,8 @@
         "page_954c9446bb45",
         "page_ba73037838ac",
         "page_68280a1b877b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_c76b820e41bc",
@@ -64624,7 +64849,8 @@
         "page_954c9446bb45",
         "page_ba73037838ac",
         "page_657787e5bc33"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_f62c7387decf",
@@ -64636,7 +64862,8 @@
         "page_954c9446bb45",
         "page_ba73037838ac",
         "page_9fff08b9082e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_d4d4c6ae7971",
@@ -64648,7 +64875,8 @@
         "page_954c9446bb45",
         "page_ba73037838ac",
         "page_b9a4a180bd1c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_246889b093f6",
@@ -64660,7 +64888,8 @@
         "page_954c9446bb45",
         "page_ba73037838ac",
         "page_92ae47fae281"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_486ece73fbc5",
@@ -64672,7 +64901,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_f8118e2dec3b"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_23a03fc3528a",
@@ -64684,7 +64914,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_fd6a515e82c3"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_12a843f55b72",
@@ -64696,7 +64927,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_7c2e6a7a15cf"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_481a1797bfd0",
@@ -64708,7 +64940,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_b4044690e450"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_384c279ef363",
@@ -64720,7 +64953,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_4dddc5ca4f9e"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_e393e6ca08db",
@@ -64732,7 +64966,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_fb15e6689a3a"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_637adc7b2db8",
@@ -64744,7 +64979,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_7c37fd176e3c"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_662f62d8edca",
@@ -64756,7 +64992,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_728872b5391d"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8991ac8cc961",
@@ -64768,7 +65005,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_377bda5898c9"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3e0770870c04",
@@ -64780,7 +65018,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_2999301a84d6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_5b671ecf3f8d",
@@ -64792,7 +65031,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_109c81392911"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_2ad5897dab22",
@@ -64804,7 +65044,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_bf42d03cbcf6"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_3c984dad79b0",
@@ -64816,7 +65057,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_6b732832e0bb"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_fb3388a13031",
@@ -64828,7 +65070,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_1696bde77a36"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_9a4b15fca10b",
@@ -64840,7 +65083,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_3cde9a414074"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_8667b2f6f007",
@@ -64852,7 +65096,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_66fb0ee4be09"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_96bb3044cff5",
@@ -64864,7 +65109,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_7331b9e4d900"
-      ]
+      ],
+      "coveredBy": []
     },
     {
       "id": "flow_6fca95301cb8",
@@ -64876,7 +65122,8 @@
         "page_954c9446bb45",
         "page_849ca323f330",
         "page_ba75f5dc0cb4"
-      ]
+      ],
+      "coveredBy": []
     }
   ],
   "interactions": [
