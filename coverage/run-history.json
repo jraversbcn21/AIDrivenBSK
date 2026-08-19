@@ -335,6 +335,70 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-19T15:01:19.704Z",
+      "failureReportGeneratedAt": "2026-08-19T15:01:14.930Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-08-18T08:55:12.737Z",
+      "totals": {
+        "tests": 26,
+        "passed": 22,
+        "failed": 2,
+        "flaky": 2,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_92ffb23be7fd",
+            "flow_5eeb09a253b5",
+            "flow_5c335c37c325",
+            "flow_87ac71b1346f"
+          ]
+        },
+        {
+          "spec": "hombre/combo-wins.spec.ts",
+          "title": "hombre > combo wins: navigate home -> h-man -> combo wins PLP",
+          "outcome": "failed",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_b69603e41088",
+            "flow_5eeb09a253b5",
+            "flow_99ac410dfdf6"
+          ]
+        },
+        {
+          "spec": "mujer/pantalones-combo-wins.spec.ts",
+          "title": "mujer > pantalones: navigate home -> pantalones PLP -> combo wins % PLP",
+          "outcome": "failed",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_97c44933c933",
+            "flow_5eeb09a253b5",
+            "flow_feb2a0501922",
+            "flow_94d645a5e4e1"
+          ]
+        },
+        {
+          "spec": "search/search-plp-pdp.spec.ts",
+          "title": "search, filter, and open a product detail page",
+          "outcome": "flaky",
+          "category": "timeout",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_5eeb09a253b5"
+          ]
+        }
+      ]
     }
   ]
 }
