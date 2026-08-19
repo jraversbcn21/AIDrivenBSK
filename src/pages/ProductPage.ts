@@ -163,6 +163,22 @@ export class ProductPage extends BasePage {
       // nothing landed (§34's retry-on-throw distinction).
       const MAX_ADD_CLICKS = 3;
       let addClicks = 0;
+      // §39: the header cart badge is a SECOND, FASTER observable for this guard — probed
+      // live 2026-08-19: it updates reactively without navigation ~0.9s before the drawer.
+      // "Badge text changed from its pre-click baseline" proves an add landed even while
+      // the drawer still lags, so the guard stops re-clicking one cycle sooner than the
+      // drawer alone allows. Limits, stated in §39: the badge saturates at "9+" (a ≥9
+      // baseline cannot see an increment — the cap above stays as the backstop), and a
+      // null read (header mid-hydration) means "unknown", never "changed". The VERIFY
+      // stays on the drawer: the drawer is what must be seen and closed before returning.
+      const badgeBaseline = await this.header.cartBadgeText();
+      let lastBadge: string | null = badgeBaseline;
+      const badgeChanged = async (): Promise<boolean> => {
+        if (badgeBaseline === null) return false; // unknown baseline — guard inert, drawer + cap rule
+        const now = await this.header.cartBadgeText();
+        if (now !== null) lastBadge = now;
+        return now !== null && now !== badgeBaseline;
+      };
       // All act-internal actions carry a 5s bound: with no actionTimeout configured, an
       // unbounded click on a locator the SPA re-rendered away waits to the 150s test
       // timeout, starving actUntil's own deadline (the exact hang mode root-caused in the
@@ -174,6 +190,7 @@ export class ProductPage extends BasePage {
           // guard was ALSO defeated by the old count diff, so a false negative kept
           // re-clicking "Añadir a la cesta" for the full 20s deadline (findings §28).
           if (await confirmed()) return;
+          if (await badgeChanged()) return; // §39: an add already landed — stop clicking, keep polling for the drawer
           if (addClicks >= MAX_ADD_CLICKS) return; // poll only — see the cap comment above
           await dismissOnboardingTour(this.page);
           if ((await group.getByRole('button', { pressed: true }).count()) === 0) {
@@ -186,7 +203,10 @@ export class ProductPage extends BasePage {
         deadlineMs: 20_000,
         sleepMs: 500,
         sleep: (ms) => this.page.waitForTimeout(ms),
-        onTimeout: () => { throw new Error(`ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed; ${addClicks} add click(s) fired)`); },
+        // The badge state names which branch this timeout is (§39): baseline→changed means
+        // "an add LANDED, the drawer just never rendered" (environment noise, §37's
+        // drawer-never class); baseline unchanged means "no add landed at all".
+        onTimeout: () => { throw new Error(`ProductPage: the add-to-cart confirmation drawer never appeared (add not confirmed; ${addClicks} add click(s) fired; cart badge "${badgeBaseline ?? '?'}" -> "${lastBadge ?? '?'}")`); },
       });
       // The REASON must survive a late success (§35's d5f9595 lesson): a run that needed
       // >1 click may have landed >1 unit, and without this line a later exact-quantity

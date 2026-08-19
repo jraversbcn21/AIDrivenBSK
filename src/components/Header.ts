@@ -30,7 +30,24 @@ export class Header extends BaseComponent {
    * "Ver cesta" on desktop (2026-08-02 probes, task 6 round 2). */
   async goToCart(): Promise<void> {
     await dismissOnboardingTour(this.page); // the tour can (re)appear asynchronously and block this click
-    await this.root.getByRole('link', { name: /^(ir a la|ver) cesta$/i }).click();
+    await this.cartLink().click();
+  }
+
+  private cartLink() {
+    return this.root.getByRole('link', { name: /^(ir a la|ver) cesta$/i });
+  }
+
+  /** The unit count rendered inside the header cart link — probed live 2026-08-19 (§39):
+   * empty text ⇔ empty cart (no "0" is ever rendered), updates reactively without
+   * navigation ~0.9s BEFORE the add-confirmation drawer, and saturates at "9+".
+   * Returns null when the link cannot be read (header mid-hydration) — callers must
+   * treat null as "unknown", never as a value. */
+  async cartBadgeText(): Promise<string | null> {
+    try {
+      return (await this.cartLink().innerText({ timeout: 2_000 })).trim();
+    } catch {
+      return null;
+    }
   }
 
   cartTab(): CartTab {
