@@ -1,6 +1,6 @@
 # DES Live-Validation Findings
 
-**Created:** 2026-06-17. **Last updated:** 2026-08-18.
+**Created:** 2026-06-17. **Last updated:** 2026-08-19.
 **Environment:** DES (`https://des-ecombknj-test-webecom.bk.apps.axdesecocp1.ecommerce.inditex.grp/es/`)
 **Test account:** `jorge@esqa.com` (in local `.env`, gitignored).
 
@@ -597,3 +597,23 @@ The suite run feeding the coverage update (23 passed / 3 flaky / 0 failed, 18.9m
 - **15 of 374 pages are `/ic/`** — a second locale (`/ic/h-man.html`, `/ic/shop-cart.html`, …) the frontier does not exclude. Duplicate knowledge of pages already crawled under `/es/`, ~4% of the map; downstream agents will treat them as distinct routes. Filed as a backlog item rather than hand-edited out of the JSON: post-processing the map would break the "the map is what the crawl produced" property that makes it reproducible. The fix belongs in the frontier's route rules and costs a fresh crawl to prove.
 - **The 3 flakes were read, not dismissed by count.** Two are §37's drawer class. The third (`vestidos-tallas-overlay`) failed `isOverlayOpen()` *after* `isLoaded()` had already passed — so it is **not** evidence for pending item 6 (`filterButton` lives in `isLoaded()`, which succeeded). Whether it touches §31's still-unprobed `.first()` lead in that same method is unresolved: a false NEGATIVE is not the false-positive shape §31 predicts, so this run neither confirms nor refutes it.
 - **PDP 43 → 186 and PLP 36 → 129 are not verified as all-distinct products** beyond the B17 unique-id gate; breadth this much larger has not been spot-checked for near-duplicate campaign pages.
+
+---
+
+## 39. Pending item 7's trigger fired, and the header cart badge probe answered its two unknowns (2026-08-19)
+
+**Context.** The day's `pnpm qa-cycle` (run #12 in the history; suite 22 passed / 2 failed / 2 flaky, 23.3m — a degraded window) produced, for the first time, the exact evidence pairing pending item 7 was waiting for: `add-to-cart.spec`'s failing attempt logged **`addToCart needed 3 clicks before the drawer confirmed`** and then failed its exact-quantity assertion with **`Expected: 1, Received: 2`** — snapshot confirming a healthy session (`Mi cuenta`), the cart page, `Cesta (2)`. That is §37's cap residue demonstrably breaking a spec, which is what the badge probe's cost was gated on. (The run's two hard failures — `hombre/combo-wins` and `mujer/pantalones-combo-wins`, both attempts each — were read from their own `error-context.md` first: both snapshots are the **Mujer home** with no grid, §26's SPA-bounce shape in a degraded window. NOT pending item 6's trigger, which needs `filterButton` failing on the *correct* page in a *healthy* run. Evidence preserved in the session scratchpad before any re-run.)
+
+**The probe** (`tests/_probe/cart-badge-probe.spec.ts`, deleted after this section, §18 lifecycle; run standalone, `cleanCart` guaranteeing the 0-state; instruments explicit, never `ProductPage.addToCart` itself — §31 method). One discriminating run, 2/2 passed, 2.6m:
+
+| Question | Answer, measured live |
+|---|---|
+| Badge at 0 (empty cart) | **Empty text** — the `link "Ver cesta"`'s inner text is `""` on the cart page, home, AND a PDP. No `"0"`, no digit. "A digit is present" ⇔ "cart non-empty". |
+| Reactive without navigation? | **YES.** After ONE explicit add click on the PDP, with zero navigations, the badge went `""` → `"1"` at **t+1355ms**. |
+| Faster than the drawer? | **YES, by ~0.9s in this window** — badge at t+1355ms vs drawer at t+2261ms. |
+
+**What this proves and what it does not, stated plainly.** The *mechanism* is proven: the badge is a live, reactive observable available on the PDP without navigating, and its 0-state is unambiguous (empty text). The *margin* is a single healthy-window measurement — the fix's whole value lies in degraded windows where the drawer lags by seconds-to-never, and this run's drawer arrived in 2.3s. The reasonable prior is that the badge (a header counter) and the drawer (a full dialog render) have independent latencies, and §37's own failing snapshot showed the badge already rendered (`9+`) while the assertion was failing — but the degraded-window margin is unmeasured.
+
+**One structural limit found by reading the evidence, not the probe:** the badge **saturates at `9+`** (§37's snapshot). A guard of the shape "badge text changed from its pre-click baseline" is therefore blind when the cart already holds ≥9 units — baseline `9+` → add → still `9+`. Fine for every `cleanCart`-anchored spec (baseline is always `""`), degraded-but-bounded (the §37 cap still applies) everywhere else.
+
+**Fix direction this enables (not implemented in this section):** in `addToCart`'s act, read the badge's text once before the first click; treat "badge text differs from that baseline" as add-confirmation for the anti-double-add guard (the *verify* stays on the drawer — the drawer is still what must be closed before returning). That converts the guard's observable from the lagging drawer to a ~1.4s counter, which is the class-eliminating fix item 7 named — the cap stays as the backstop.
