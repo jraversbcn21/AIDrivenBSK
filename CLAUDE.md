@@ -80,6 +80,13 @@ Standing working agreement: confirm with Jorge before starting any of these. Eac
 - CI is **GitHub Actions** (2026-07-14; `.gitlab-ci.yml` retired): `ci.yml` = offline gates on cloud runners per push; `qa-cycle.yml`/`explore.yml` = live jobs on a **self-hosted runner** (labels `[self-hosted, des-vpn]`, Jorge's machine — cloud runners can't reach DES). Runner setup: `docs/ci/github-selfhosted-runner.md`
 - Browser install: `pnpm exec playwright install --with-deps chromium` (not just `pnpm install`)
 
+## Knowledge graph (graphify, since 2026-08-19)
+
+- **`graphify query "<pregunta>"`** before grepping, for *orientation only* — returns a scoped subgraph instead of whole files. Also `graphify path "A" "B"` and `graphify explain "X"`. The payoff here is the **code↔doctrina join**: a query on `addToCart` returns `ProductPage.addToCart()` *and* §37/§28/pending item 7 *and* the standing rule they produced — a grep returns one side or the other, never the causal chain.
+- Outputs live in gitignored **`graphify-out/`** (`graph.json`, `graph.html`, `GRAPH_REPORT.md`) — regenerable, like `reports/`. Built 2026-08-19: 1217 nodes / 2635 edges / 106 communities (871 AST over 199 `.ts` + 374 semantic over 65 `.md`). Tool is `graphifyy` on PyPI, installed per-user; **not** an npm package and **not** in `package.json`.
+- **`graphify update .`** after code edits — AST-only, deterministic, no LLM, free.
+- ⚠ **The docs half is FROZEN at the 2026-08-19 extraction and `update` does not refresh it** (AST only). Every findings section appended since then — the project's living knowledge — is absent from the graph, and re-extracting the 65 `.md` costs a real LLM pass. Treat the graph as a *map of the code plus doctrine as of that date*, never as the current findings doc: read the findings doc itself for anything recent.
+
 ## Environment
 
 Required env vars (see `.env.example`): `ENVIRONMENT` (`prod | des | local`), `BASE_URL` (no trailing path beyond the locale root), `BERSHKA_USER`, `BERSHKA_PASS`. No hardcoded URLs anywhere — specs navigate with relative paths via `loadEnv()`.

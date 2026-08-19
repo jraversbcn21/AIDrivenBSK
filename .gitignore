@@ -9,3 +9,4 @@ playwright-report/
 pnpm-debug.log*
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+graphify-out/
