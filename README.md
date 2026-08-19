@@ -33,7 +33,7 @@ Live anything (e2e, crawl, probing) needs the corp VPN (GlobalProtect) connected
 ## Daily use
 
 ```bash
-pnpm qa-cycle                 # the whole loop in one command (~10-15 min on the 25-test suite); consolidated report in reports/orchestrator/
+pnpm qa-cycle                 # the whole loop in one command (~13-19 min on the 26-test suite); consolidated report in reports/orchestrator/
 pnpm ask "prueba el carrito"  # resolve an intent to a flow and generate its draft spec (--run executes it too)
 ```
 
@@ -58,14 +58,14 @@ pnpm exec playwright show-report reports/html   # videos/screenshots/traces of f
 
 ## The knowledge (committed, versioned)
 
-- `coverage/functional-map.json` — what the platform knows about DES (pages/elements/flows/interactions, schema 1.7)
+- `coverage/functional-map.json` — what the platform knows about DES (pages/elements/flows/interactions, schema 1.7; 374 desktop pages / 374 flows since 2026-08-18)
 - `coverage/run-history.json` — what it remembers across runs (feeds analyzer risk-scores and planner ranking)
-- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha, current behaviour (§2–§7, §23–§31)
-- `docs/superpowers/notes/2026-06-17-des-live-validation-findings-archive.md` — closed milestone reports split out of it (§1, §8–§22)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha, current behaviour (§2–§4, §7, §24, §26–§29, §31, §33–§38)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings-archive.md` — closed milestone reports split out of it (§1, §5, §8–§23, §25, §30, §32)
 
 ## Explorer details
 
-Aria-tree extraction by default (`EXPLORER_EXTRACTION=aria` — DES renders through `bds-` shadow-DOM components invisible to light-DOM parsing). Bounds: `EXPLORER_MAX_PAGES`, `EXPLORER_TIME_BUDGET_MS` (a full crawl runs ~30–40 min: real per-page settle waits). Interaction discovery (`EXPLORER_INTERACTIONS=on`) opens non-destructive overlays; `EXPLORER_MUST_CAPTURE` (semicolon-separated regexes, default `^añadir a (la )?cesta`) guarantees deterministic capture. Classifier: `EXPLORER_MODE=rules|llm|auto` (default `rules`; `llm` needs `ANTHROPIC_API_KEY`). `pnpm explore --update` writes the canonical map (refuses empty crawls); `--diff --fail-on-new` is the drift gate.
+Aria-tree extraction by default (`EXPLORER_EXTRACTION=aria` — DES renders through `bds-` shadow-DOM components invisible to light-DOM parsing). Bounds: `EXPLORER_MAX_PAGES`, `EXPLORER_TIME_BUDGET_MS` — **the time budget is per session** (anon and auth each get it), and crawls are slow by design (real per-page settle waits). Two proven recipes: standard (`150` / `1200000`) ≈ 140 pages in ~40–55 min, widened (`300` / `2400000`) ≈ 374 pages in ~1h20m — the latter produced the committed map. ⚠ **`--update` REPLACES the map, it never accumulates**, so knowledge grows by one pass with bigger bounds, never by repeated small passes; launch long crawls detached. Interaction discovery (`EXPLORER_INTERACTIONS=on`) opens non-destructive overlays; `EXPLORER_MUST_CAPTURE` (semicolon-separated regexes, default `^añadir a (la )?cesta`) guarantees deterministic capture. Classifier: `EXPLORER_MODE=rules|llm|auto` (default `rules`; `llm` needs `ANTHROPIC_API_KEY`). `pnpm explore --update` writes the canonical map (refuses empty crawls); `--diff --fail-on-new` is the drift gate.
 
 ## CI (GitHub Actions, two tiers)
 
@@ -80,3 +80,5 @@ pnpm typecheck && pnpm lint
 ```
 
 House rules: no `any` (error), no import cycles (error), selector priority `testId → role → label → placeholder`, every DES state-changing interaction goes through `actUntil` (`src/support/retry.ts`), agents propose — humans apply.
+
+Optional local aid: a **graphify** knowledge graph over this repo (code + docs) for orientation — `graphify query "<question>"`. External per-user tool, not a project dependency; outputs are gitignored. Setup, payoff and blind spots: CLAUDE.md's "Knowledge graph" section.
