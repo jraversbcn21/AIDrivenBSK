@@ -60,7 +60,7 @@ pnpm exec playwright show-report reports/html   # videos/screenshots/traces of f
 
 - `coverage/functional-map.json` — what the platform knows about DES (pages/elements/flows/interactions, schema 1.7; 374 desktop pages / 374 flows since 2026-08-18)
 - `coverage/run-history.json` — what it remembers across runs (feeds analyzer risk-scores and planner ranking)
-- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha, current behaviour (§2–§4, §7, §24, §26–§29, §31, §33–§38)
+- `docs/superpowers/notes/2026-06-17-des-live-validation-findings.md` — every live-confirmed selector/flow/gotcha, current behaviour (§2–§4, §7, §24, §26–§29, §31, §33–§39)
 - `docs/superpowers/notes/2026-06-17-des-live-validation-findings-archive.md` — closed milestone reports split out of it (§1, §5, §8–§23, §25, §30, §32)
 
 ## Explorer details
