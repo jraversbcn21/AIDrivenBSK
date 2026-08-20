@@ -17,7 +17,7 @@ test('mujer > vestidos: every card under "Con descuento" is actually discounted'
   expect(page.url()).not.toMatch(/[?&]discount=/); // guaranteed starting state (§29)
 
   const filters = new FiltersPanel(page.getByRole('main'));
-  await filters.applyFirstAvailable(); // checks "Con descuento", verifies ?discount=1
+  await filters.applyFirstAvailable({ recover: () => target.ensureOnPlp() }); // §43: survive the §26 SPA bounce
 
   // ORACLE: all readable cards in the first (unscrolled) view carry the discount tell.
   // Polled — the grid re-renders asynchronously after the filter applies (§34's race).
@@ -27,7 +27,7 @@ test('mujer > vestidos: every card under "Con descuento" is actually discounted'
       const n = Math.min(await cards.count(), 8);
       if (n === 0) return 'no cards rendered under the filter';
       for (let i = 0; i < n; i++) {
-        const text = (await cards.nth(i).innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+        const text = (await cards.nth(i).innerText({ timeout: 5_000 }).catch(() => '')).replace(/\s+/g, ' ').trim();
         if (text === '') continue; // still hydrating — the poll retries
         if (!/descuento del/i.test(text)) {
           return `card[${i}] has NO discount signal: "${text.slice(0, 120)}"`;

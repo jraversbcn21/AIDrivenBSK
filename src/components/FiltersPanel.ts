@@ -17,7 +17,7 @@ export class FiltersPanel extends BaseComponent {
    * clicking the "Con descuento" label text is the confirmed-working fallback
    * (data-value flipped to "checked", apply landed on ?discount=1).
    */
-  async applyFirstAvailable(): Promise<void> {
+  async applyFirstAvailable(opts: { recover?: () => Promise<void> } = {}): Promise<void> {
     const page = this.root.page();
     const inDialog = page.getByRole('dialog');
     const inSidebar = page.getByRole('complementary');
@@ -37,6 +37,10 @@ export class FiltersPanel extends BaseComponent {
     // locator starves the deadline (task 6 round 2 review).
     await actUntil({
       act: async () => {
+        // Recovery hook (2026-08-20 qa-cycle, findings §43): the §26 SPA bounce can leave
+        // the page on home mid-loop — a caller-supplied recover() (e.g. ensureOnPlp) is
+        // retried every cycle, openOverlay's proven shape. No hook = old behavior.
+        await opts.recover?.();
         await dismissOnboardingTour(page);
         await page.getByRole('button', { name: 'Filtrar' }).first().click({ timeout: 5_000 });
       },
@@ -77,10 +81,10 @@ export class FiltersPanel extends BaseComponent {
    * it (callers navigate param-less), so it cannot bless an already-true state (§29).
    * Desktop-confirmed only; the mobile sort shape is unprobed.
    */
-  async sortByPriceAscending(): Promise<void> { await this.sortByPrice('Precio ascendente', '1'); }
-  async sortByPriceDescending(): Promise<void> { await this.sortByPrice('Precio descendente', '2'); }
+  async sortByPriceAscending(opts: { recover?: () => Promise<void> } = {}): Promise<void> { await this.sortByPrice('Precio ascendente', '1', opts); }
+  async sortByPriceDescending(opts: { recover?: () => Promise<void> } = {}): Promise<void> { await this.sortByPrice('Precio descendente', '2', opts); }
 
-  private async sortByPrice(label: string, param: '1' | '2'): Promise<void> {
+  private async sortByPrice(label: string, param: '1' | '2', opts: { recover?: () => Promise<void> } = {}): Promise<void> {
     const page = this.root.page();
     const inSidebar = page.getByRole('complementary');
     const sortCheckbox = inSidebar.getByRole('checkbox', { name: label }).first();
@@ -90,6 +94,10 @@ export class FiltersPanel extends BaseComponent {
     // applyFirstAvailable above (§24: off-canvas controls count as "visible" while closed).
     await actUntil({
       act: async () => {
+        // Recovery hook (2026-08-20 qa-cycle, findings §43): the §26 SPA bounce can leave
+        // the page on home mid-loop — a caller-supplied recover() (e.g. ensureOnPlp) is
+        // retried every cycle, openOverlay's proven shape. No hook = old behavior.
+        await opts.recover?.();
         await dismissOnboardingTour(page);
         await page.getByRole('button', { name: 'Filtrar' }).first().click({ timeout: 5_000 });
       },

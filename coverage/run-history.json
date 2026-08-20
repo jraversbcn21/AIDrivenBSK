@@ -399,6 +399,150 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-20T15:16:52.273Z",
+      "failureReportGeneratedAt": "2026-08-20T15:16:46.822Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-08-18T08:55:12.737Z",
+      "totals": {
+        "tests": 31,
+        "passed": 18,
+        "failed": 10,
+        "flaky": 3,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "environment-noise",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_92ffb23be7fd",
+            "flow_5eeb09a253b5",
+            "flow_5c335c37c325",
+            "flow_87ac71b1346f"
+          ]
+        },
+        {
+          "spec": "checkout/checkout-reach.spec.ts",
+          "title": "checkout: cart's \"Tramitar pedido\" reaches /es/checkout.html",
+          "outcome": "flaky",
+          "category": "environment-noise",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "environment-noise",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "mujer/plp-con-descuento.spec.ts",
+          "title": "mujer > vestidos: every card under \"Con descuento\" is actually discounted",
+          "outcome": "failed",
+          "category": "unknown",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/plp-pdp-price-consistency.spec.ts",
+          "title": "mujer > vestidos: the first card's PLP price matches its PDP price",
+          "outcome": "failed",
+          "category": "timeout",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/plp-precio-ascendente.spec.ts",
+          "title": "mujer > vestidos: \"Precio ascendente\" actually sorts the grid by price",
+          "outcome": "failed",
+          "category": "unknown",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/plp-precio-descendente.spec.ts",
+          "title": "mujer > vestidos: \"Precio descendente\" actually sorts the grid by descending price",
+          "outcome": "failed",
+          "category": "unknown",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/plp-tallas-overlay-vs-pdp.spec.ts",
+          "title": "mujer > vestidos: the quick-add overlay offers the same sizes as the PDP",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+          "title": "mujer > combo wins: navigate home -> combo wins PLP -> sudadera capucha cremallera felpa PDP",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_ac68d2d91941",
+            "flow_5eeb09a253b5"
+          ]
+        },
+        {
+          "spec": "mujer/top-halter.spec.ts",
+          "title": "mujer > combo wins: navigate home -> combo wins PLP -> top halter PDP",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_ac68d2d91941",
+            "flow_5eeb09a253b5"
+          ]
+        },
+        {
+          "spec": "mujer/vestidos-tallas-overlay.spec.ts",
+          "title": "mujer > vestidos: open and close the Tallas overlay from a PLP card",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_960ceaa6b799",
+            "flow_5eeb09a253b5",
+            "flow_81523b24130c"
+          ]
+        },
+        {
+          "spec": "search/search-plp-pdp.spec.ts",
+          "title": "search, filter, and open a product detail page",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_5eeb09a253b5"
+          ]
+        },
+        {
+          "spec": "wishlist/add-to-wishlist.spec.ts",
+          "title": "adding a product to the wishlist toggles the button state",
+          "outcome": "failed",
+          "category": "infrastructure",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_5eeb09a253b5"
+          ]
+        }
+      ]
     }
   ]
 }

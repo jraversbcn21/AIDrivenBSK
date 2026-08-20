@@ -24,7 +24,8 @@ test('mujer > vestidos: the quick-add overlay offers the same sizes as the PDP',
   const cards = page.locator('li', { has: page.locator('a[href*="-c0p"]') });
   await expect.poll(() => cards.count(), { timeout: HYDRATION_TIMEOUT_MS }).toBeGreaterThan(0);
   const first = cards.first();
-  const href = await first.locator('a[href*="-c0p"]').first().getAttribute('href');
+  await target.ensureOnPlp(); // §43: re-anchor after a possible §26 bounce
+  const href = await first.locator('a[href*="-c0p"]').first().getAttribute('href', { timeout: 5_000 }).catch(() => null);
   const c0pId = href?.match(/-c0p(\d+)\.html/)?.[1];
   if (!href || !c0pId) throw new Error(`first card has no -c0p href (got: ${href})`);
 
@@ -34,6 +35,7 @@ test('mujer > vestidos: the quick-add overlay offers the same sizes as the PDP',
   await expect
     .poll(async () => {
       if (await overlayDialog.isVisible().catch(() => false)) return true;
+      await target.ensureOnPlp().catch(() => undefined); // §43: survive the §26 bounce mid-loop
       await first.locator('[data-qa-anchor="addToCartSizeBtn"]').first()
         .click({ timeout: 5_000 }).catch(() => undefined);
       return overlayDialog.isVisible().catch(() => false);
@@ -42,7 +44,7 @@ test('mujer > vestidos: the quick-add overlay offers the same sizes as the PDP',
 
   // Overlay sizes: parse the dialog's aria snapshot — the size letter exists ONLY in the
   // buttons' accessible names ("Talla XS"), never in textContent (probed).
-  const snapshot = await overlayDialog.ariaSnapshot();
+  const snapshot = await overlayDialog.ariaSnapshot({ timeout: 5_000 });
   const overlaySizes = [...snapshot.matchAll(/button "Talla ([^"]+)"/gi)].map((m) => m[1].trim());
   expect(overlaySizes.length, `no size buttons parsed from the overlay snapshot:\n${snapshot.slice(0, 400)}`)
     .toBeGreaterThan(0);
@@ -53,6 +55,7 @@ test('mujer > vestidos: the quick-add overlay offers the same sizes as the PDP',
   const link = page.locator(`a[href*="-c0p${c0pId}.html"]`).first();
   const pdpUrl = new RegExp(`-c0p${c0pId}\\.html`);
   for (let attempt = 0; attempt < 3 && !pdpUrl.test(page.url()); attempt++) {
+    await target.ensureOnPlp().catch(() => undefined); // §43: bounce lands on home, link gone
     await link.click({ timeout: 5_000 }).catch(() => undefined);
     await page.waitForURL(pdpUrl, { timeout: 8_000 }).catch(() => undefined);
   }

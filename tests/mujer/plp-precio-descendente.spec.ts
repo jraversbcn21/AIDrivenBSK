@@ -15,14 +15,14 @@ test('mujer > vestidos: "Precio descendente" actually sorts the grid by descendi
   expect(page.url()).not.toMatch(/[?&]sort=/); // guaranteed starting state (§29)
 
   const filters = new FiltersPanel(page.getByRole('main'));
-  await filters.sortByPriceDescending();
+  await filters.sortByPriceDescending({ recover: () => target.ensureOnPlp() }); // §43: survive the §26 SPA bounce
 
   const readPrices = async (): Promise<number[]> => {
     const items = page.locator('li', { has: page.locator('a[href*="-c0p"]') });
     const n = Math.min(await items.count(), 12);
     const out: number[] = [];
     for (let i = 0; i < n; i++) {
-      const eur = parseEuroAmount(await items.nth(i).innerText().catch(() => ''));
+      const eur = parseEuroAmount(await items.nth(i).innerText({ timeout: 5_000 }).catch(() => ''));
       if (eur !== null) out.push(eur);
     }
     return out;

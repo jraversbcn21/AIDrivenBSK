@@ -19,7 +19,7 @@ test('mujer > vestidos: "Precio ascendente" actually sorts the grid by price', a
   expect(page.url()).not.toMatch(/[?&]sort=/);
 
   const filters = new FiltersPanel(page.getByRole('main'));
-  await filters.sortByPriceAscending();
+  await filters.sortByPriceAscending({ recover: () => target.ensureOnPlp() }); // §43: survive the §26 SPA bounce
 
   // Read the first (unscrolled) cards' prices. Known ceiling: parseEuroAmount takes the
   // FIRST € amount in the card's text — confirmed live (§40 probe) to be the CURRENT
@@ -31,7 +31,7 @@ test('mujer > vestidos: "Precio ascendente" actually sorts the grid by price', a
     const n = Math.min(await items.count(), 12);
     const out: number[] = [];
     for (let i = 0; i < n; i++) {
-      const eur = parseEuroAmount(await items.nth(i).innerText().catch(() => ''));
+      const eur = parseEuroAmount(await items.nth(i).innerText({ timeout: 5_000 }).catch(() => ''));
       if (eur !== null) out.push(eur);
     }
     return out;

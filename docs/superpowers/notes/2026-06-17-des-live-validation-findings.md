@@ -710,3 +710,31 @@ The probe died inside `applyFirstAvailable()` — and the failure snapshot showe
 Targeted live run, all four filter/sort/overlay oracles + setup: **5/5 first attempt** — con-descuento 24.4s, ascendente 21.3s (validates the refactor), descendente 21.0s, tallas-overlay-vs-pdp 18.3s. Typecheck/lint clean.
 
 **DES facts verified correct on 2026-08-20 (cumulative for the day):** price sort both directions, cart arithmetic, PLP↔PDP price consistency, the discount filter filters, overlay↔PDP size consistency.
+
+---
+
+## 43. The oracles' first qa-cycle: a three-layer red run, two real defects in the day's own code, and the hardening that followed (2026-08-20, evening)
+
+**Context.** First full `pnpm qa-cycle` with the 31-test suite (run #13 in the history): **18 passed / 10 failed / 3 flaky**. Every failure was evidence-read before classification — and the run decomposed into three clean layers, none of which was a DES product bug and none of which was the pre-existing framework:
+
+1. **All five §40–§42 oracles failed both attempts on §26's SPA bounce** — every snapshot was the Mujer home (no grid, no Filtrar). The bounce hit the vestidos route in a degraded window, and **all five oracles target that same route and run consecutively** (alphabetical order), so one unstable route serialized into five hard failures. DES's sort/filter/pricing did NOT fail — the specs never got to measure.
+2. **Six specs died in ~6s each at the tail: DES went DOWN mid-run** (probed live during the run: HTTP 000, connection refused — an outage or VPN drop, recovered ~10 min later). The analyzer classified all six `infrastructure/persistent` — correctly, with no vocabulary work needed.
+3. Three §39-class cart/checkout flakes, retry-recovered, `environment-noise` — the known standing class.
+
+**Run-history decision, stated with its reasoning:** the entry (13 failure events) was COMMITTED, not reverted. First instinct mid-run was to discard it as pollution; the analyzer's own classification changed the call — the dead tail is cleanly tagged `infrastructure`, the first half is a genuine degraded window, and the project's precedent (runs #10–#12) is to record red runs honestly. Reverting would have been laundering the history the planner and analyzer exist to learn from.
+
+### The two defects the run found in code shipped THIS day
+
+- **Unbounded `innerText()`/`getAttribute()` in the oracle read loops.** With no global `actionTimeout`, a waiting read against a card that no longer exists (bounced page) waits indefinitely — `.catch()` catches the rejection but cannot shorten the wait. Proven cost: `plp-pdp-price-consistency`'s retry burned the full 150s test timeout and died on Playwright's generic message instead of the spec's own diagnostic. This is §26's unbounded-click class, in read form — the doctrine now provably covers WAITING READS, not just clicks.
+- **No bounce recovery in the oracle specs.** `openOverlay()` survives §26's bounce because `ensureOnPlp()` runs inside its act, retried every cycle; the four new oracle specs called `FiltersPanel`/card clicks directly with no equivalent, and all four died where the proven pattern would have recovered.
+
+### Fixes shipped (same session)
+
+- Every waiting read in the five oracle specs is now bounded (`{ timeout: 5_000 }`), including `getAttribute` and `ariaSnapshot`.
+- `FiltersPanel.applyFirstAvailable()`/`sortByPrice*()` accept an optional **`recover` hook executed at the top of the panel-open act each retry cycle** — `openOverlay()`'s exact shape, caller-supplied so the component stays page-agnostic. `VestidosTallasOverlayPage.ensureOnPlp()` was made public and is the hook all four specs pass; the two PDP-navigating specs also re-anchor inside their URL-retry loops (guarded so a reached PDP is never navigated away from).
+- **Re-validated live against the just-recovered (slow) DES: 6/6 first attempt, 21–28s each.** Stated plainly (§26 precedent): this proves no regression and zero happy-path cost; the recovery itself runs only under a real bounce, which this run did not produce — its live validation arrives with the next degraded window.
+
+### Open, recorded for the next session
+
+- **Route concentration:** all five oracles live on the vestidos PLP. Diversifying them across PLPs (hombre camisas, jeans…) would stop one unstable route serializing into five failures — cheap, unstarted.
+- **Analyzer vocabulary:** the new diagnostics (`FiltersPanel: the filter panel did not open`, `no card with a readable price`) classify `unknown`. Deliberately NOT given signatures yet — "panel did not open" reads identically for a §26 bounce and a genuine filter-UI regression, §34's exact ambiguity; classifying it `environment-noise` would risk `heal` never seeing a real one. Revisit if the `unknown` count becomes noise.

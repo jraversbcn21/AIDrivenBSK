@@ -38,7 +38,7 @@ export class VestidosTallasOverlayPage extends BasePage {
    * if the page never comes back, the caller's bounded click fails and the caller's own
    * deadline reports the single, real diagnostic.
    */
-  private async ensureOnPlp(): Promise<void> {
+  async ensureOnPlp(): Promise<void> {
     if (await this.isLoaded()) return;
     await this.open();
     await actUntil({
