@@ -431,6 +431,18 @@ export class CartPage extends BasePage {
     return this.page.locator('main').locator('div.total-amount-module');
   }
 
+  /** The first line's own € amount — at quantity 1 this IS the unit price, which is the
+   *  only state the delta oracle reads it in (findings §41). First € amount in the line
+   *  card's text via parseEuroAmount; at higher quantities the text's amount semantics
+   *  (unit vs line subtotal) are unprobed, so don't read it there. Null while
+   *  unreadable — poll-friendly. */
+  async firstLineAmount(): Promise<number | null> {
+    // Bounded like lineQuantity() above (§26) — innerText waits/retries with no global
+    // actionTimeout to fall back on.
+    const text = await this.firstLine().innerText({ timeout: 5_000 }).catch(() => null);
+    return text === null ? null : parseEuroAmount(text);
+  }
+
   /** Null while not rendered/parseable — poll-friendly on purpose (`expect.poll` aborts
    *  on a throw), never throws itself. */
   async totalAmount(): Promise<number | null> {

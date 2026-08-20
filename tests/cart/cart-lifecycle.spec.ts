@@ -31,6 +31,12 @@ test('cart lifecycle: add → quantity up/down → remove → empty', async ({ c
   const totalAt1 = await cartPage.totalAmount();
   if (totalAt1 === null) throw new Error('cart-lifecycle: total unreadable right after it polled > 0');
 
+  // ORACLE (§41): read the line's own price while quantity is provably 1 — the only
+  // state where the line amount IS the unit price (see firstLineAmount's contract).
+  await expect.poll(() => cartPage.firstLineAmount(), { timeout: HYDRATION_TIMEOUT_MS }).not.toBeNull();
+  const unitPrice = await cartPage.firstLineAmount();
+  if (unitPrice === null) throw new Error('cart-lifecycle: line price unreadable at quantity 1');
+
   // 1 → 2: line quantity AND total react.
   await cartPage.increaseQuantity();
   await expect.poll(() => cartPage.lineQuantity(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(2);
@@ -41,6 +47,15 @@ test('cart lifecycle: add → quantity up/down → remove → empty', async ({ c
   // 2 → 1: and the total comes back down.
   const totalAt2 = await cartPage.totalAmount();
   if (totalAt2 === null) throw new Error('cart-lifecycle: total unreadable after the quantity increase');
+
+  // ORACLE (§41): the 1→2 delta must equal the unit price EXACTLY (cents comparison —
+  // floats never compared raw). Delta form on purpose: any cart-level constant (shipping,
+  // fees) cancels out, so this asserts the ARITHMETIC, not the total's composition.
+  // Falsifiable by a quantity promo (2×1) exactly like the strict > above — same
+  // documented trade (design §Totals). A failure here with both quantity asserts green
+  // means DES charged a wrong amount: a real product bug, report it.
+  expect(Math.round((totalAt2 - totalAt1) * 100), `total delta 1→2 (${totalAt1} → ${totalAt2}) should equal the unit price ${unitPrice}`)
+    .toBe(Math.round(unitPrice * 100));
   await cartPage.decreaseQuantity();
   await expect.poll(() => cartPage.lineQuantity(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(1);
   await expect.poll(() => cartPage.totalAmount(), { timeout: HYDRATION_TIMEOUT_MS }).toBeLessThan(totalAt2);

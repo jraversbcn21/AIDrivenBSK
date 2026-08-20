@@ -653,3 +653,32 @@ First real run of the risk module since it shipped (its only prior report was da
 **The method's own first version had a §28-class bug, caught by its first live run:** it verified panel-open by trial-clicking a `button "Precio ascendente"` — wrong role — so it reported "the filter panel did not open" while the failure snapshot showed `complementary "Filtros" [active]` open on screen with the checkbox plainly visible. The probe had masked this via an `.or(getByText)` branch. Fixed to checkbox + label-text fallback (the `applyFirstAvailable` shape); re-run green first attempt, 23.6s. Typecheck/lint clean, unit 434/434.
 
 **Direction this sets (Jorge's, this session):** the oracle program — specs that assert what DES *should do*, not what is *present* — is the path to the platform's actual purpose. This spec is the template: sorted prices, filter results actually filtered, result counts matching cards. The risk-diff module stays parked unless the crawler ever becomes deterministic.
+
+---
+
+## 41. Oracles #2 and #3: the cart's arithmetic and PLP↔PDP price consistency (2026-08-20, later)
+
+**Context.** Same-day continuation of §40's oracle program, Jorge-directed (O1+O2 of the proposed list). Also recorded: a dedicated DES account for this project now exists (`aidriven@bsk.com` — e-mail here per the §status convention, credentials only in local `.env`/private memory, NEVER in the repo). It is a SPARE; the active account is unchanged.
+
+### O1 — the cart's price arithmetic (`cart-lifecycle.spec.ts` + `CartPage.firstLineAmount()`)
+
+The lifecycle spec asserted the total *reacts* (`>`/`<` across quantity changes); now it asserts the number is *right*: **`totalAt2 − totalAt1 == unit price`, compared in cents** (floats never compared raw). Two design points worth keeping:
+
+- **Delta form on purpose:** any cart-level constant (shipping, fees) cancels out, so the oracle asserts the ARITHMETIC without needing to know the total's composition. Falsifiable by a quantity promo (2×1) exactly like the pre-existing strict `>` — same documented trade.
+- **`firstLineAmount()` is contract-bound to quantity 1** — the only state where the line's first € amount provably IS the unit price. At higher quantities the line text's amount semantics (unit vs line subtotal) are unprobed; the method's doc says don't read it there.
+
+A failure with both quantity asserts green means DES charged a wrong amount — a real product bug, report it.
+
+### O2 — PLP card price == PDP price (`tests/mujer/plp-pdp-price-consistency.spec.ts`)
+
+Probed live first (probe deleted per §18): the desktop PDP's price container is **`div.product-detail-info`** (1 match; the §31 BEM family), and the CURRENT price is the first € amount in its text — `parseEuroAmount` reads it directly. The card→PDP click navigates cleanly and keeps `?colorId`.
+
+The spec: first card WITH a readable price (promo/banner tiles parse to null and are skipped — §7's firstProduct lesson), then act→verify→retry on **that card's own `-c0p` id** in the URL (anchored to the card we read, not "some PDP" — §28/§31), then a polled comparison whose failure message carries BOTH texts, so a pricing bug and a readout artifact each name themselves.
+
+**Known ceiling, stated plainly:** the probed product was undiscounted. Whether a discounted PDP renders the crossed-out "Antes" price *first* (which would misread via parseEuroAmount's first-amount rule) is unprobed on the PDP side — the PLP side was settled in §40 (current price first, discounted cards included). If this spec ever fails with a mismatch where `pdp > card`, suspect that ordering before suspecting DES.
+
+### Validation
+
+Targeted live run, both specs + setup: **3/3 first attempt** — `cart-lifecycle` 49.3s (the §39 badge guard visibly working: `addToCart needed 2 clicks`, quantity still verified exactly 1→2→1, and the delta matched to the cent), `plp-pdp-price-consistency` 14.9s. Typecheck/lint clean. Suite is now **28 tests, 3 of them correctness oracles.**
+
+**DES facts verified correct on 2026-08-20:** price sort (§40), cart arithmetic (delta == unit price), PLP↔PDP price consistency (49,99 € both sides).
