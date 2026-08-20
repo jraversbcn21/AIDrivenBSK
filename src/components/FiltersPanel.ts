@@ -56,4 +56,58 @@ export class FiltersPanel extends BaseComponent {
     await inDialog.getByRole('button', { name: /ver resultados/i })
       .or(inSidebar.getByRole('button', { name: /ver resultados/i })).first().click({ timeout: 10_000 });
   }
+
+  /**
+   * Sort the PLP grid by ascending price. Confirmed live (2026-08-20 probe, findings §40):
+   * the sort controls live INSIDE the Filtrar sidebar (`role=complementary`) — they are
+   * NOT page-level toolbar buttons (a 45s page-level poll never saw one), which is also
+   * why the crawler's 37/37 candidate clicks never resolved (§38: it clicked them as
+   * page-level candidates). The control is a `checkbox "Precio ascendente"` — NOT a
+   * button (this method's first version verified on the button role and reported
+   * "panel never opened" while the snapshot showed it open, §28's exact class).
+   * Clicking it applies IMMEDIATELY — no "Ver resultados" needed — and lands on
+   * `?sort=1`; that URL param is the act's verify, a transition from a URL guaranteed
+   * not to carry it (callers navigate param-less), so it cannot bless an already-true
+   * state (§29). Desktop-confirmed only; the mobile sort shape is unprobed.
+   */
+  async sortByPriceAscending(): Promise<void> {
+    const page = this.root.page();
+    const inSidebar = page.getByRole('complementary');
+    const sortCheckbox = inSidebar.getByRole('checkbox', { name: /precio ascendente/i }).first();
+    const sortLabel = inSidebar.getByText('Precio ascendente', { exact: true }).first();
+
+    // Open the panel — same act→verify→retry + trial-click discriminator as
+    // applyFirstAvailable above (§24: off-canvas controls count as "visible" while closed).
+    await actUntil({
+      act: async () => {
+        await dismissOnboardingTour(page);
+        await page.getByRole('button', { name: 'Filtrar' }).first().click({ timeout: 5_000 });
+      },
+      verify: () => sortLabel.click({ trial: true, timeout: 1_000 }).then(() => true).catch(() => false),
+      immediateFirstCheck: true,
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error('FiltersPanel: the filter panel did not open within the deadline'); },
+    });
+
+    // Repeated clicks are idempotent here (same sort re-applied), so §37's destructive-act
+    // hazard does not apply; the URL param is a fast, unambiguous observable. Same
+    // check-then-label-click fallback as applyFirstAvailable: the raw bds-checkbox can
+    // reject check() (visually replaced by its label).
+    await actUntil({
+      act: async () => {
+        try {
+          await sortCheckbox.check({ timeout: 3_000 });
+        } catch {
+          await sortLabel.click({ timeout: 5_000 });
+        }
+      },
+      verify: () => Promise.resolve(/[?&]sort=1\b/.test(page.url())),
+      deadlineMs: 20_000,
+      sleepMs: 500,
+      sleep: (ms) => page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error(`FiltersPanel: sort=1 never landed in the URL (now at ${page.url()})`); },
+    });
+  }
 }

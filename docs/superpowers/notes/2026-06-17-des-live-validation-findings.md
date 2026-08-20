@@ -619,3 +619,37 @@ The suite run feeding the coverage update (23 passed / 3 flaky / 0 failed, 18.9m
 **Fix direction this enables (not implemented in this section):** in `addToCart`'s act, read the badge's text once before the first click; treat "badge text differs from that baseline" as add-confirmation for the anti-double-add guard (the *verify* stays on the drawer — the drawer is still what must be closed before returning). That converts the guard's observable from the lagging drawer to a ~1.4s counter, which is the class-eliminating fix item 7 named — the cap stays as the backstop.
 
 **Fix shipped and live-validated the same session.** `Header.cartBadgeText()` (null = "unreadable, never a value") + the badge-baseline guard in `addToCart`'s act, exactly the shape above; the timeout diagnostic now also reports `cart badge "<baseline>" -> "<last>"`, so the drawer-never failure names its own branch (add landed vs nothing landed). Live validation, targeted run of all four `addToCart` consumers (cart + checkout) in a visibly degraded window (every add's drawer lagged): **4 passed / 1 flaky, 6.9m**. The guard was seen working twice — `needed 2 clicks` where the pre-fix cap would have burned 3 (and pre-cap ~15-25) — and the one flaky (`cart-lifecycle` attempt 0, retry green) was §37's drawer-never environment class with the new diagnostic reading `cart badge "" -> "1"`: one unit landed, the drawer simply never rendered. Residue is now bounded by badge latency (~1-2 clicks), not drawer latency. **Honest limit:** the drawer-never window still fails the attempt — the verify deliberately stays on the drawer (it must be seen and closed; returning early on the badge would let a late drawer intercept the next header click, §28's interception hazard). If that trade ever costs more than the retry it triggers, the next move is a badge-confirmed verify plus a bounded late-drawer sweep — measured first, not assumed. Validation-run note: the harness killed two foreground attempts of this same targeted run mid-flight; the run that completed was launched detached (`Start-Process`) — the 2026-07-30 lesson applies to plain suite runs too, not just crawls.
+
+---
+
+## 40. The pivot session: the risk diff measured as ~100% noise, and the suite's first CORRECTNESS oracle shipped (2026-08-20)
+
+**Context.** Jorge asked the platform's hardest question directly: two months in, zero real DES bugs reported — is the framework only capable of finding its own defects? An audit of §1–§39 confirmed it: every red run traced to our code or to documented environment noise; **~23 of the suite's ~27 behavioral asserts were `isLoaded()` presence checks**, which can only fail on our-selector-wrong or page-entirely-down. The session ran two experiments, A then B, to answer "is more crawled knowledge the path to real-bug detection?"
+
+### A — `pnpm analyze --risk` on two same-recipe maps: the verdict is noise
+
+First real run of the risk module since it shipped (its only prior report was dated 14-jul). Baseline `3b901bf` (139p, 30-jul) vs `0144363` (140p, 17-ago) — same bounds, same seeding, 18 days apart. Result: **6536 diff entries, 2547 scored high — and every reviewed high item had an innocent explanation:**
+
+- Only **33 unique paths were common** to both crawls (~91 and ~110 uniques each once anon/auth duplicates collapse). The frontier is nondeterministic; each pass visits a different subset. This single number is the verdict.
+- The three "removed PLP/Other" pages scored 1.0 (`capri`, `combo-wins`, `bombacho`) are provably still live — our own specs visited them green on 18-ago. Frontier variance.
+- `'filtrar'` "lost" on 4 PLPs = §38's ~16s toolbar-hydration coin flip. `'iniciar sesión'` "lost" on cart/store-locator = §33's pre-hydration logged-out header — both are snapshot-timing artifacts, not site changes.
+- Dozens of `'añadir a la cesta {producto}'` lost/gained = catalog rotation on a fashion site — the business, not a bug.
+- Common pages with inventory swings up to 43→20 elements = §10's settle-plateau variance.
+
+**Conclusion, stated plainly: diffing two crawls at this granularity detects crawl nondeterminism, not site change.** Making it signal-bearing would need a deterministic frontier + stabilized extraction — large internal work, i.e. exactly the loop the question was about. More crawled knowledge is NOT the path to real-bug detection. The oracle is.
+
+### B — the first oracle: "Precio ascendente" really sorts the grid
+
+**The desktop sort control, probed live for the first time** (probe `tests/_probe/sort-price-probe.spec.ts`, deleted per §18; two rounds):
+
+- **"Precio ascendente" is NOT a page-level toolbar button** — a 45s page-level poll never saw it. It lives INSIDE the Filtrar sidebar (`role=complementary "Filtros"`), as a **`checkbox`**, not a button. (The crawler's 37/37 failed candidates, §38, were aimed at page-level candidates.)
+- The panel opens via the `FiltersPanel.applyFirstAvailable` pattern (Filtrar click → trial-click verify); open at ~t+14s on a healthy window; grid cards at ~t+12s.
+- **Clicking the checkbox applies IMMEDIATELY — no "Ver resultados" — and lands on `?sort=1`.** The URL param is a clean, fast act-verify (a transition, §29-safe when the caller navigates param-less).
+- **Card prices are readable**: nearest `li` ancestor of each `-c0p` link → `innerText` → `parseEuroAmount`; 12/12 parsed, and the FIRST € amount in card text is the CURRENT price (discounted cards included — verified by the sorted sequence `9.99, 16.09, 16.09, 18.19…` being coherent).
+- **DES's price sort verified CORRECT on 2026-08-20** — the first assertion about the product, rather than about our selectors, in the project's history.
+
+**Shipped:** `FiltersPanel.sortByPriceAscending()` + `tests/mujer/plp-precio-ascendente.spec.ts` (suite 26 → 27). The spec asserts: fresh param-less navigation → sort → first 12 unscrolled cards' prices non-decreasing, polled (a single-shot read is §34's race), with the failure message listing every price read so a readout artifact names itself. Known ceiling, documented in-spec: if a future card layout renders the crossed-out "Antes" price first, `parseEuroAmount`'s first-amount rule misreads it — the failure listing is the diagnostic.
+
+**The method's own first version had a §28-class bug, caught by its first live run:** it verified panel-open by trial-clicking a `button "Precio ascendente"` — wrong role — so it reported "the filter panel did not open" while the failure snapshot showed `complementary "Filtros" [active]` open on screen with the checkbox plainly visible. The probe had masked this via an `.or(getByText)` branch. Fixed to checkbox + label-text fallback (the `applyFirstAvailable` shape); re-run green first attempt, 23.6s. Typecheck/lint clean, unit 434/434.
+
+**Direction this sets (Jorge's, this session):** the oracle program — specs that assert what DES *should do*, not what is *present* — is the path to the platform's actual purpose. This spec is the template: sorted prices, filter results actually filtered, result counts matching cards. The risk-diff module stays parked unless the crawler ever becomes deterministic.
