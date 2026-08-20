@@ -682,3 +682,31 @@ The spec: first card WITH a readable price (promo/banner tiles parse to null and
 Targeted live run, both specs + setup: **3/3 first attempt** — `cart-lifecycle` 49.3s (the §39 badge guard visibly working: `addToCart needed 2 clicks`, quantity still verified exactly 1→2→1, and the delta matched to the cent), `plp-pdp-price-consistency` 14.9s. Typecheck/lint clean. Suite is now **28 tests, 3 of them correctness oracles.**
 
 **DES facts verified correct on 2026-08-20:** price sort (§40), cart arithmetic (delta == unit price), PLP↔PDP price consistency (49,99 € both sides).
+
+---
+
+## 42. Oracles #4–#6 in one pass: sort descendente, the discount filter, and overlay↔PDP size consistency — plus a real `applyFirstAvailable` fix (2026-08-20, later)
+
+**Context.** Jorge directed O3+O4+O5 of the §40 oracle program as a single pass. One combined probe (deleted per §18) answered all three unknowns; a fourth finding fell out of the probe's own failure.
+
+### The probe's answers
+
+- **"Precio descendente" lands on `?sort=2`** and the grid re-sorted 49.99 → 39.99 (mirror of §40's `?sort=1`).
+- **A discounted card's text signal** (read from the filtered grid's own snapshot): `"Precio con descuento 25,19 € Descuento del -30% Antes 35,99 €"` — `/descuento del/i` is the explicit tell, and the FIRST € amount is the CURRENT price even on discounted cards (re-confirming §40's ordering on the card side).
+- **The Tallas quick-add overlay is a real `dialog`** whose size buttons carry the size ONLY in the accessible name (`"Talla XS"`) — their `textContent` is literally `"Talla "` (read via the dialog's `ariaSnapshot`, regex `button "Talla ([^"]+)"`). The card-scoped trigger `[data-qa-anchor="addToCartSizeBtn"]` is 1 match per card. The same product's PDP renders `group "Selecciona talla"` with plain-text buttons (XS | S | M | L) — 4 vs 4, matching, on the probed product.
+
+### The bug the probe's failure found: `applyFirstAvailable`'s apply click waits for a button that no longer exists
+
+The probe died inside `applyFirstAvailable()` — and the failure snapshot showed `checkbox "Con descuento" [checked]` with the grid ALREADY filtered (every visible card carried the discount signal) while the method's unconditional 10s "Ver resultados" click timed out. **The 2026-08-20 desktop sidebar has NO apply button — checking the box applies immediately**, exactly like the sort checkboxes. The 2026-08-02 capture (which had the button) is either stale or context-specific. Fix: the "Ver resultados" click is now tolerant (3s, catch), and the method verifies on the URL (`?discount=1`, §24's confirmed landing) either way — verify-anchored like the sort methods. Same session, `sortByPriceAscending`/`Descending` were deduplicated into a shared private `sortByPrice(label, param)`.
+
+### Shipped (suite 28 → 31, six correctness oracles)
+
+- **O4 — `plp-precio-descendente.spec.ts`:** twin of §40's ascendente; non-increasing prices under `?sort=2`.
+- **O3 — `plp-con-descuento.spec.ts`:** after `applyFirstAvailable()`, every readable card in the first view must match `/descuento del/i` — a full-price product under the discount filter is a real DES bug, and the failure message names the offending card's text.
+- **O5 — `plp-tallas-overlay-vs-pdp.spec.ts`:** the FIRST card's overlay sizes (pinned by that card's own `-c0p` id — §28/§31, never a page-wide `.first()` trigger) must equal its PDP size group's list, same order. **Known ceiling, stated plainly: availability (disabled sizes) is NOT compared — only the size list; the probed product had no disabled sizes, so that shape is unprobed.**
+
+### Validation
+
+Targeted live run, all four filter/sort/overlay oracles + setup: **5/5 first attempt** — con-descuento 24.4s, ascendente 21.3s (validates the refactor), descendente 21.0s, tallas-overlay-vs-pdp 18.3s. Typecheck/lint clean.
+
+**DES facts verified correct on 2026-08-20 (cumulative for the day):** price sort both directions, cart arithmetic, PLP↔PDP price consistency, the discount filter filters, overlay↔PDP size consistency.

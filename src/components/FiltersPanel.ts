@@ -53,28 +53,38 @@ export class FiltersPanel extends BaseComponent {
     } catch {
       await labelText.click({ timeout: 5_000 });
     }
+    // Apply. The 2026-08-02 capture had a "Ver resultados" apply button; the 2026-08-20
+    // desktop sidebar has NONE — checking the box applies IMMEDIATELY (observed live:
+    // the grid was already filtered while the old unconditional 10s click here timed
+    // out, findings §42). Handle both shapes: give the button a short window, then
+    // verify on the URL either way — `?discount=1` is the confirmed landing (§24).
     await inDialog.getByRole('button', { name: /ver resultados/i })
-      .or(inSidebar.getByRole('button', { name: /ver resultados/i })).first().click({ timeout: 10_000 });
+      .or(inSidebar.getByRole('button', { name: /ver resultados/i })).first()
+      .click({ timeout: 3_000 }).catch(() => undefined);
+    await this.waitForUrlParam(/[?&]discount=1\b/, 'discount=1');
   }
 
   /**
-   * Sort the PLP grid by ascending price. Confirmed live (2026-08-20 probe, findings §40):
+   * Sort the PLP grid by price. Confirmed live (2026-08-20 probes, findings §40/§42):
    * the sort controls live INSIDE the Filtrar sidebar (`role=complementary`) — they are
    * NOT page-level toolbar buttons (a 45s page-level poll never saw one), which is also
    * why the crawler's 37/37 candidate clicks never resolved (§38: it clicked them as
-   * page-level candidates). The control is a `checkbox "Precio ascendente"` — NOT a
-   * button (this method's first version verified on the button role and reported
-   * "panel never opened" while the snapshot showed it open, §28's exact class).
-   * Clicking it applies IMMEDIATELY — no "Ver resultados" needed — and lands on
-   * `?sort=1`; that URL param is the act's verify, a transition from a URL guaranteed
-   * not to carry it (callers navigate param-less), so it cannot bless an already-true
-   * state (§29). Desktop-confirmed only; the mobile sort shape is unprobed.
+   * page-level candidates). Each control is a `checkbox` — NOT a button (the first
+   * version verified on the button role and reported "panel never opened" while the
+   * snapshot showed it open, §28's exact class). Checking it applies IMMEDIATELY — no
+   * "Ver resultados" — and lands on `?sort=1` (ascendente) / `?sort=2` (descendente);
+   * that URL param is the act's verify, a transition from a URL guaranteed not to carry
+   * it (callers navigate param-less), so it cannot bless an already-true state (§29).
+   * Desktop-confirmed only; the mobile sort shape is unprobed.
    */
-  async sortByPriceAscending(): Promise<void> {
+  async sortByPriceAscending(): Promise<void> { await this.sortByPrice('Precio ascendente', '1'); }
+  async sortByPriceDescending(): Promise<void> { await this.sortByPrice('Precio descendente', '2'); }
+
+  private async sortByPrice(label: string, param: '1' | '2'): Promise<void> {
     const page = this.root.page();
     const inSidebar = page.getByRole('complementary');
-    const sortCheckbox = inSidebar.getByRole('checkbox', { name: /precio ascendente/i }).first();
-    const sortLabel = inSidebar.getByText('Precio ascendente', { exact: true }).first();
+    const sortCheckbox = inSidebar.getByRole('checkbox', { name: label }).first();
+    const sortLabel = inSidebar.getByText(label, { exact: true }).first();
 
     // Open the panel — same act→verify→retry + trial-click discriminator as
     // applyFirstAvailable above (§24: off-canvas controls count as "visible" while closed).
@@ -95,6 +105,7 @@ export class FiltersPanel extends BaseComponent {
     // hazard does not apply; the URL param is a fast, unambiguous observable. Same
     // check-then-label-click fallback as applyFirstAvailable: the raw bds-checkbox can
     // reject check() (visually replaced by its label).
+    const urlRe = new RegExp(`[?&]sort=${param}\\b`);
     await actUntil({
       act: async () => {
         try {
@@ -103,11 +114,23 @@ export class FiltersPanel extends BaseComponent {
           await sortLabel.click({ timeout: 5_000 });
         }
       },
-      verify: () => Promise.resolve(/[?&]sort=1\b/.test(page.url())),
+      verify: () => Promise.resolve(urlRe.test(page.url())),
       deadlineMs: 20_000,
       sleepMs: 500,
       sleep: (ms) => page.waitForTimeout(ms),
-      onTimeout: () => { throw new Error(`FiltersPanel: sort=1 never landed in the URL (now at ${page.url()})`); },
+      onTimeout: () => { throw new Error(`FiltersPanel: sort=${param} never landed in the URL (now at ${page.url()})`); },
+    });
+  }
+
+  /** Bounded URL-param wait shared by the apply paths — pure polling, no act. */
+  private async waitForUrlParam(re: RegExp, name: string): Promise<void> {
+    const page = this.root.page();
+    await actUntil({
+      verify: () => Promise.resolve(re.test(page.url())),
+      deadlineMs: 10_000,
+      sleepMs: 500,
+      sleep: (ms) => page.waitForTimeout(ms),
+      onTimeout: () => { throw new Error(`FiltersPanel: ${name} never landed in the URL (now at ${page.url()})`); },
     });
   }
 }
