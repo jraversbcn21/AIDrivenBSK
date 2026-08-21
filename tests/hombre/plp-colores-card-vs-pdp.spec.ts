@@ -12,7 +12,6 @@ import { HombreComboWinsPage } from './pages/HombreComboWinsPage';
 const HYDRATION_TIMEOUT_MS = 20_000;
 // §45: the PDP's active/selected color is a plain `option` inside the listbox
 // ([selected], not excluded or rendered separately) — it counts as one of the N.
-const ACTIVE_COLOR_COUNTS = true;
 
 test('hombre > combo wins: the first multicolor card\'s "N COLORES" matches its PDP color count', async ({ page }) => {
   const target = new HombreComboWinsPage(page);
@@ -58,10 +57,11 @@ test('hombre > combo wins: the first multicolor card\'s "N COLORES" matches its 
     .poll(async () => {
       const options = page
         .locator('div.product-detail-info')
+        .first()
         .getByRole('listbox', { name: 'Colores disponibles' })
         .getByRole('option');
-      const rendered = (await options.count()) + (ACTIVE_COLOR_COUNTS ? 0 : 1);
-      if (rendered <= (ACTIVE_COLOR_COUNTS ? 0 : 1)) return `PDP color selector not hydrated yet (0 options visible)`;
+      const rendered = await options.count();
+      if (rendered === 0) return 'PDP color selector not hydrated yet (0 options visible)';
       return rendered === declared
         ? 'match'
         : `MISMATCH: card declares ${declared} (card text: "${cardText.slice(0, 100)}") but PDP renders ${rendered} colors`;
