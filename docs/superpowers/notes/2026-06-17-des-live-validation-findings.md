@@ -793,3 +793,45 @@ Jorge asked for the full cycle (test → analyze → learn → heal → plan) ag
 **Net for Task 2:** route = Hombre Combo Wins (no new page object needed beyond the existing `HombreComboWinsPage`); card pattern = `/\d+\s+COLORES/i` immediately after the price; PDP color count = `getByRole('listbox', { name: 'Colores disponibles' }).getByRole('option').count()` scoped inside `div.product-detail-info`, active color included.
 
 **Task 2 closure, same day: the oracle shipped and validated live, 2/2 first attempt.** `tests/hombre/plp-colores-card-vs-pdp.spec.ts` uses exactly the locator this probe measured (never the unscoped `a[href*="colorId"]` candidate — the 4x overcount hazard above). Two standalone runs, `pnpm exec playwright test tests/hombre/plp-colores-card-vs-pdp.spec.ts`: **PASS both times, first attempt, no retry** (22.7s and 22.1s respectively, ~1.6m including `auth.setup` each run). **DES color-count consistency (PLP card "N COLORES" vs PDP color listbox) verified correct on 2026-08-21** — Hombre Combo Wins' sudadera-capucha-cremallera card declared 4 COLORES and its PDP rendered exactly 4, both times. Suite is now **32 tests, 7 correctness oracles.**
+
+---
+
+## 46. Size-availability probe: route + disabled-size marker shapes, overlay vs PDP (2026-08-21)
+
+**Context.** Task 1 of a new SDD plan (`.superpowers/sdd/2026-08-21-oracle-size-availability/`) for a future oracle asserting overlay↔PDP size *availability* consistency — §42's O5 explicitly left this out of scope (it only compares the size list, not which sizes are disabled). Temporary probe `tests/_probe/size-availability-probe.spec.ts` (deleted after this section, §18 lifecycle; instruments explicit — the probe opens overlays and reads snapshots directly, never §42's oracle/`FiltersPanel` code under design, §31 method), run live via `pnpm exec playwright test tests/_probe/size-availability-probe.spec.ts`, launched detached (`Start-Process -FilePath cmd.exe -ArgumentList "/c","pnpm exec playwright test ..."` — the same `cmd.exe` wrapper §45 needed, `pnpm`'s shim being a `.cmd`; plain `Start-Process -FilePath pnpm` fails "no es una aplicación Win32 válida"). DES probed HTTP 200 before launch. Result: **2 passed, 6.8m** (`auth.setup` 1.1m + probe 5.5m).
+
+**(a) Route — the third route tried, on its 6th card scanned.** The probe walked the 6 maintained PLPs in the brief's declared order. `hombre-lo-mas-vendido` (6/6 overlays opened, 0 disabled) and `hombre-camisas` (6/6 opened, 0 disabled) were exhausted clean. `hombre-combo-wins` scanned **0/6** — every card's overlay-open attempt failed (`overlay nunca abrió`, all 6 cards) — a route-specific anomaly, not investigated further (out of scope for this probe, recorded honestly rather than guessed at; Hombre Combo Wins is already known from §44 to differ structurally from the other PLPs, having no "Con descuento" filter either — a second observed way it is not a like-for-like PLP). `mujer-pantalones-capri` opened **5/6** overlays (card 2 also `overlay nunca abrió` — ordinary act-retry noise inside an otherwise-clean route, not chased) and its **6th card** (`pantalón-capri-bajo-aberturas-c0p226931517.html?colorId=716`) carried the first and only disabled size found: **"Talla 38"** (of 7 sizes, 32–44). The remaining two routes (`mujer-pantalones-combo-wins`, `mujer-vestidos`) were never reached — the brief's "first route with evidence" rule short-circuited the walk once this candidate landed. **Chosen route for Task 2: Pantalones Capri (mujer), `PantalonesCapriPlpPage`, product `c0p226931517`.**
+
+Across all cards where an overlay actually rendered (17 of 24 attempted: 6+6+0+5), the broad heuristic regex (`/\[disabled\]|disabled|agotad|avísame|avisame|sin stock/i`) matched **zero false positives** — every one of the 16 clean overlays' snapshots came back with a plain, unbroken `button "Talla {size}"` list, no stray "disabled"-adjacent text anywhere else in the dialog. The one true match is documented below.
+
+**(b) Overlay marker — exact form.** The disabled size's `listitem` renders as:
+```
+- listitem:
+  - button "Talla 38" [disabled]
+```
+Playwright's `ariaSnapshot()` appends a literal **`[disabled]`** suffix directly after the accessible name, on the same line, for a genuinely disabled button — no DES-specific wording, no separate "agotado" text node, indistinguishable in form from any other Playwright-detected `disabled` state. Every enabled sibling in the same list renders as plain `button "Talla {N}"`, no suffix.
+
+**(c) PDP marker — exact form, and a naming divergence from the overlay worth flagging for Task 2.** The PDP's `group "Selecciona talla"` snapshot:
+```
+- group "Selecciona talla":
+  - button "32"
+  - button "34"
+  - button "36"
+  - button "38" [disabled]
+  - button "40"
+  - button "42"
+  - button "44"
+```
+Same `[disabled]` ariaSnapshot suffix as the overlay — but **the PDP button's accessible name is the bare size ("38"), not "Talla 38"** (the overlay's name). Task 2's size-matching logic must normalize the "Talla " prefix (or match on the trailing token) to compare overlay and PDP names as the same size — the same divergence §42's O5 already had to handle for the plain size list, re-confirmed here on the availability side.
+
+Per-button attribute read (Playwright's own `isDisabled()`/`getAttribute`, not just the snapshot text) for the PDP's size 38:
+```
+disabled=true  aria-disabled="true"  aria-pressed="false"
+```
+All 6 enabled siblings read `disabled=false  aria-disabled="null"  aria-pressed="false"`. **`aria-pressed` carries no availability signal on this PDP** (constant `"false"` across every button, enabled or disabled, none pre-selected) — not a candidate marker for Task 2, only `disabled`/`aria-disabled` are.
+
+**(d) Concrete extraction for Task 2.** Two equally valid readings, both confirmed live:
+- **Text-level** (parses the ariaSnapshot string directly, works on either side): `/button "(?:Talla )?([^"]+)"(\s*\[disabled\])?/g` — capture group 1 is the size token (strip "Talla " if present to normalize overlay↔PDP), capture group 2 present/absent is the disabled flag.
+- **DOM-level** (no snapshot-string parsing, the shape this probe used for the PDP side): for each `getByRole('button')` in the relevant scope (`overlayDialog` for the overlay, `getByRole('group', { name: /selecciona talla/i })` for the PDP — §42's O5 locator), read `.textContent()` for the size label and `.isDisabled()` for availability. **Recommendation for Task 2: DOM-level for both sides** — it is what this probe actually validated attribute-by-attribute (the ariaSnapshot's `[disabled]` suffix and Playwright's own `isDisabled()` agreed on all 7 PDP buttons), and it sidesteps the "Talla " prefix parsing being a silent source of a missed match if a future card ever uses different wording.
+
+**Net for Task 2:** route = `PantalonesCapriPlpPage` (existing page object, no new one needed), target product `c0p226931517` (talla 38 of 7 disabled), overlay scope = the same `overlayDialog` locator shape this probe used (`getByRole('dialog').filter({ has: getByRole('button', { name: /^talla /i }) })`), PDP scope = `getByRole('group', { name: /selecciona talla/i })`, availability read = `.isDisabled()` per button on both sides, name-normalize by stripping a leading "Talla " before comparing overlay↔PDP tuples. No "sin stock hoy" fallback path was needed — a genuine stockout was found live on the third route tried.
