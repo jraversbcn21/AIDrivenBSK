@@ -1,4 +1,4 @@
-# DES Live-Validation Findings — Archive (§1, §5, §8–§23, §25, §30)
+# DES Live-Validation Findings — Archive (§1, §5, §8–§23, §25–§30, §32–§35, §37)
 
 **Split out of [`2026-06-17-des-live-validation-findings.md`](./2026-06-17-des-live-validation-findings.md) on 2026-08-06.** The parent doc is `@`-imported by `CLAUDE.md` and had crossed its 150k-char budget; these sections were moved here **verbatim, unedited**.
 
@@ -848,4 +848,306 @@ covering-gates instruction for this round scoped to the targeted recipe specific
 4. **Dead-code scan: clean.** Every public method of the session's new code (`CartPage`, `cartCleanup`, `price`) has a live consumer (`CartPage.header` is used internally by the recovery detector); no probes or throwaway specs remain on disk.
 
 ---
-
+
+---
+
+*Tranche archived 2026-08-21 (parent was 157.5k chars, over its 150k budget): §26–§29, §33–§35, §37 — full text verbatim below, in numeric order.*
+
+## 26. Coverage expansion by promoting Builder drafts — 6 promoted, suite 8 → 14 (2026-08-04)
+
+**Context.** First deliberate use of the platform to *widen* the manual suite rather than fix something: `pnpm build-tests --top 10` → review → promote. Not a crawl — the map (140 desktop pages) already knew far more flows than any spec visited; the bottleneck was promotion, not knowledge. `pnpm test:generated`: **12/12 PASS, zero retries.**
+
+**What was promoted (6 of 11 drafts).** The 11 drafts held real redundancy, verified by reading them rather than assumed: two *byte-identical* pairs (`camisas-n3700`, `combo-wins-n5324` — anon/auth session twins of the same flow), and **all five PDP drafts sharing one chain** (`h-woman → /es/mujer/ropa/combo-wins-n5214.html → PDP`), differing only in which signal the Builder picked (3 × `role button "Anterior"`, 2 × `testId addToCartBtn`). Promoted: 3 Hombre PLPs (`camisas`, `combo-wins`, `lo-mas-vendido` — a category the suite never touched), one PDP per signal shape (`body-tirantes-escote-redondo`, `camiseta-tirantes-rib`), and the Tallas-overlay interaction spec (`vestidos-n3802`). The rest were left to be pruned by the next `build-tests`.
+
+`camiseta-tirantes-rib` was kept deliberately: it is the known **Personalizable** product (§16/§18) that `add-to-cart.spec` filters out of the search grid. This spec only asserts the PDP renders — it never adds to cart — so it guards that variant's reachability without re-hitting the A5 incompatibility.
+
+**Signal hardening without a live probe — the map's `title` field.** Every Builder loaded-signal here was page-*type*-specific, not page-specific (`filterButton` on any PLP, `Anterior`/`addToCartBtn` on any PDP) — the exact weakness B14 exists for, and the reason `bombacho-barrel` was hardened to a heading in §24. The cheap fix: `MapPage.title` is already in the committed map, captured live by the crawl, so each `isLoaded()` gained a **prefix** title check ahead of the structural one, with **zero live probing**. Prefix, not exact, for a reason read straight off the map: the same PDP was captured as `"Camiseta tirantes rib - Camisetas - Mujer | Bershka"` (anon) and `"Camiseta tirantes rib - Mujer | Bershka"` (auth). Bonus: a title check also catches the degraded-app-shell signature (`"Bershka | Bershka"`, §7/§13). Honest limit recorded at the call site: `"COMBO WINS %"` is the title of the **Mujer** combo-wins pages too, so there the title proves the right campaign page, not the right gender.
+
+**The one real failure, root-caused (systematic-debugging, not retried away).** `vestidos-tallas-overlay` failed **both attempts** in the first full-suite run, each burning the full 150s test timeout — despite `openOverlay()`'s own `deadlineMs: 20_000`. Two separable defects:
+
+1. **Ours, certain — an unbounded click starves `actUntil`.** The act's `.click()` carried no `timeout`, so a click on a locator the SPA had re-rendered away waited out the *test* timeout and `actUntil` never regained control; its diagnostic never fired. This is the exact hang mode already root-caused in the checkout login gate and guarded in `ProductPage.addToCart` (§24) — and it is inherited from **the Builder's interaction template**, which omits the bound, so *every* future generated interaction spec carries it. Fixed on promotion (`click({ timeout: 5_000 })`); the template gap is filed as a backlog item, not fixed here.
+2. **Environmental — the page bounced off the PLP.** The failure snapshots decided this, not inference: `isLoaded()` had already passed (title + `filterButton`), yet at failure the page was the **Mujer home** (`Categorías destacadas`, `Get the look`, no grid), the header read `button "Iniciar sesión"` (§24's session tell), and attempt 1 additionally carried the degraded-shell title `"Bershka | Bershka"`. That run took **15.3m vs the ~5.5m baseline** and `add-to-cart` also failed its first attempt — a visibly degraded DES window (§7).
+
+**Discriminating run, and what it proved.** The same spec **passes in isolation (19.3s, no retry)** and passed in `pnpm test:generated` (21.4s) — and that config, read directly, runs *only* the generated specs, i.e. **without `login.spec`**, whose mid-suite re-auth invalidates the shared account's storageState session (§24). So the failure is **context-dependent**, confirmed. The causal chain from session invalidation to the SPA bounce is a **hypothesis, not a proven mechanism** — stated plainly rather than dressed up.
+
+**Recovery shipped (Jorge's call, over the conservative option of un-promoting it).** `ensureOnPlp()` re-navigates when the SPA has left the PLP, then waits out hydration via `actUntil`'s pure-polling shape (no `act`) so the next cycle doesn't re-navigate a still-hydrating page and thrash. Legitimate here precisely because a category PLP **is** server-routable — unlike `/es/q/{term}`, which §7 forbids reloading. `openOverlay`'s deadline went 20s → 60s **only** to fit one recovery cycle (documented at the call site so it isn't misread as the blind timeout increase the project's doctrine forbids); the happy path pays nothing, `ensureOnPlp()` returning immediately when already loaded.
+
+**Re-validation: `pnpm test` 13 passed / 1 flaky / 7.8m** — `vestidos-tallas-overlay` green in 18.9s. Stated plainly: **this run does not validate the recovery.** DES was healthy (7.8m vs 15.3m) and 18.9s indicates the recovery path never ran; what it proves is no regression on the happy path and zero added cost. The recovery stays unvalidated under the degraded conditions it was written for.
+
+**Watch-item escalation. ✅ CLOSED — see §28: the probe this paragraph proposes was run and its hypothesis REFUTED (the drawer was always there; the detector could not identify it).** Original text: the desktop add-confirmation drawer (§24's watch item, 4× on 2026-08-02) failed the first attempt in **both** full-suite runs today — 6 occurrences now, always recovered on retry. It has hardened into a pattern; §24's own suggested probe (is the drawer suppressed when the product is already in the cart?) is now worth running when someone has the window.
+
+**Net: the manual reference suite goes from 8 to 14 tests** — Hombre PLPs, two PDP shapes, and PLP-card overlay interaction, all live-green.
+
+---
+
+## 27. Footer component — `pnpm ask` correctly finds no flow; selectors confirmed live on desktop (2026-08-04)
+
+**Why `pnpm ask "Navega por el footer"` answers no-match, and why that is right.** The resolver matches *flows* — navigation chains between pages. The footer is not a destination; it is chrome repeated inside every page, which is exactly why the crawler tags ~760 map elements `component: 'Footer'` (B14) and why no Footer flow exists to resolve. The honest no-match is the correct answer here, not a resolver gap — worth recording so a future session does not file it as P1 evidence (the LLM-seam item wants intentions a human *would* have resolved; this is not one).
+
+**Architectural placement:** shared chrome ⇒ **Component Object** (`src/components/Footer.ts`, alongside `Header`/`SearchBar`/`CartTab`), not a Page Object. Scoped by accessible name — `getByRole('contentinfo', { name: 'Pie de página' })` — mirroring Header's own reasoning about unscoped landmark locators.
+
+**Confirmed live (desktop, 2026-08-04):**
+- `contentinfo "Pie de página"` — the footer landmark, one per page.
+- `link "Nuestras tiendas"` → `/es/store-locator.html`, inside the "We are BERSHKA" block.
+- **The click actually navigates.** This was the real open question, not the selector: §24 established that on desktop a correct-looking affordance can still leave you elsewhere (Enter on `/q/` reaches the results page and the SPA then bounces home ~1s later). The footer link does not do this — it lands and stays. Verified by the spec, twice.
+
+**Deliberately NOT asserted: the footer's section inventory** ("¿Necesitas ayuda?", "Ayuda", "We are BERSHKA", "Te puede interesar", "Síguenos en redes sociales", the legal block, `button "Configurar cookies"`, `button "España | Español"`). All were captured live and are recorded here as knowledge, but the spec asserts only the landmark: those sections are marketing content Bershka reorganizes, so asserting them would generate noise on every reshuffle instead of catching a defect. The landmark is semantic and stable.
+
+**Shipped:** `Footer.isVisible()` (landmark = render signal, doubles as the click precondition) and `Footer.goToStoreLocator()` (act → verify → retry on the URL). Two guards carried over from the same day's failures rather than re-learned: the click is **bounded** (`timeout: 5_000` — an unbounded click on a re-rendered locator burns the whole test timeout and starves `actUntil`'s deadline, §24/§26) and the act **returns early once the URL has changed**, so a navigation slower than one cadence cannot fire a second stray click (`ProductPage.addToCart` precedent). `HomePage` exposes `footer` alongside `header`.
+
+**Live validation:** standalone **PASS first attempt, 16.1s, no retry**; then full suite **14 passed / 1 flaky / 9.3m** with the footer spec green in 11.0s — second confirmation plus the no-regression check for the shared `HomePage.ts` edit. Suite is now **15 tests**.
+
+**⚠ Watch item escalates again — 7 occurrences.** That run's flaky was the *same* add-confirmation-drawer failure (`ProductPage: no confirmation dialog appeared`), this time in `checkout-reach.spec` while `add-to-cart.spec` passed clean — so it is **not spec-specific**: it lives in the shared `ProductPage.addToCart` desktop branch and moves between whichever spec adds to cart. §24's untested hypothesis (is the drawer suppressed when the product is already in the cart?) is now the obvious next probe; it has earned a real investigation rather than another tally mark.
+
+---
+
+## 28. The add-confirmation "watch item" was never a DES problem — the detector was (2026-08-04)
+
+**Closes the watch item opened in §24 and escalated in §26/§27.** Seven `ProductPage: no confirmation dialog appeared after "Añadir a la cesta"` failures between 2026-08-02 and 2026-08-04, always retry-recovered, had been characterized as DES environment noise with an untested hypothesis (*is the drawer suppressed when the product is already in the cart?*). **That hypothesis is refuted, and the noise characterization was wrong.**
+
+**The evidence that settled it** — the failing run's own `error-context.md`, read instead of retried. At the moment the test declared the drawer absent, the page snapshot contained exactly one `dialog`, and it was unmistakably the drawer:
+
+```yaml
+- dialog [active]:
+    - alert: Producto añadido
+    - heading: Camiseta manga corta fruncido
+    - 19,99 €  /  Talla XS
+    - button: Tramitar pedido
+    - button: Ver cesta (10)
+```
+
+The add had **succeeded** and the drawer was **on screen announcing it**. Stated plainly: for two days the suite was reporting a DES failure that never happened.
+
+**Root cause — a count cannot identify *which* dialog appeared.** `addToCart`'s desktop branch measured `baseline = getByRole('dialog').count()` before acting and verified `count() > baseline`. Two documented facts make that unsafe on this site: dialogs stay **mounted while visually closed** (§17, the mobile nav drawer), and desktop renders the **search overlay as a dialog** (§24). So any concurrent dialog churn — one closing as the drawer opens — leaves the count flat while the real drawer is plainly there. The original comment's premise ("a page with no permanent dialog — desktop has no mobile nav drawer") was true about the *mobile* drawer specifically and wrong as a general assumption.
+
+**Second-order damage the false negative caused, previously invisible.** The act's own anti-double-add guard used the same count diff, so it never fired either: every failing run kept re-clicking "Añadir a la cesta" for the full 20s deadline. Cart counts of 10 on the shared account (§7's accumulation lead) are partly this, not just missing cleanup.
+
+**Fix — identify the drawer by its CONTENT.** New `addConfirmationDrawer()`: `getByRole('dialog').filter({ hasText: /producto añadido|ver cesta/i }).first()`, with `isAddConfirmed()` over it, used by the verify AND the anti-double-add guard. Either text alone proves the drawer; "Ver cesta" is also the desktop header cart link (§24) but the locator is scoped to dialogs and the header is not one. The count-diff mechanism is **deleted**, not patched — this removes the whole failure class rather than the day's instance.
+
+**A second, smaller bug found in the same snapshot.** The drawer's close button was **nameless** there (icon-only, image unresolved), while the close step located it as `getByRole('button', { name: 'Cerrar' })` — and its verify was *also* count-based, so it could report a still-open drawer as closed. Now: click "Cerrar" when present, otherwise **Escape**, verifying on the content locator. Escape rather than a positionally-guessed button on purpose — the drawer's other two buttons are "Tramitar pedido" and "Ver cesta", and **both navigate**. Recorded honestly: Escape is this site's established overlay-close idiom (M9 §17) but is *not* separately confirmed against this drawer; if it ever fails to close it, the 10s timeout says so explicitly.
+
+**Live validation: `pnpm test` 15/15 PASS, zero retries, 7.1m** — the day's first fully clean full suite, with `add-to-cart` (28.2s) and `checkout-reach` (36.5s) both green on the first attempt. What this does and does not prove, plainly: it proves no regression across the four specs sharing `ProductPage.ts`; it does **not** prove the intermittent failure is gone, because earlier runs today also saw one of those two pass clean. The proof is the snapshot, not the green run — the detector demonstrably could not see a drawer that was there, and that cause no longer exists. Confirmation comes from repeated use over the coming days.
+
+**Method note worth keeping.** Three real bugs this session (§25's strict-mode violation, §26's unbounded click, and this one) were all found by **reading the failure's own `error-context.md`** rather than re-running. Two of the three had been sitting behind a "documented environment noise" label. `test-results/` is overwritten by the next run, so the artifact must be read before re-running — the earlier six occurrences of this bug left no evidence behind.
+
+**Watch item: CLOSED as a DES issue, resolved as a framework defect.**
+
+---
+
+## 29. The wishlist spec was structurally incapable of failing — found by injecting a bug (2026-08-06)
+
+**How it surfaced.** Onboarding Fase 6 (Debugging), run interactively. The exercise was to inject a realistic selector defect and practise diagnosing it from evidence: the add-locator's accessible name lost one word — `'Añadir a la lista de deseos'` → `'Añadir a lista de deseos'` (not a substring of the real name, so `getByRole`'s default substring matching cannot rescue it; the trace's Log confirmed the locator never resolved).
+
+**The test passed anyway. Twice.** That is worse than a red suite: a spec that cannot fail reports safety it does not provide, and nobody re-reads a green test.
+
+**Root cause — the spec asserted a STATE, not a TRANSITION.** `add-to-wishlist.spec.ts` did `addToWishlist()` then `expect.poll(isInWishlist).toBe(true)`, with no guaranteed starting state. The shared DES account carries wishlist items across runs (§7's no-cleanup lead, previously filed as cosmetic — it is not), so the asserted `true` was already true before the test acted. Compounding it, a hydration race defeated `addToWishlist()`'s own idempotency guard: on a PDP whose body had not painted yet, `isInWishlist()` answers `false` for "not rendered", which is indistinguishable from a genuine "not in the wishlist" — so the guard did not short-circuit either, and the run burned a full 5s click timeout against a locator that matched nothing before the page hydrated and made the verify true on its own.
+
+**This is §28's defect class, one layer up.** There, a dialog-COUNT diff could not identify *which* dialog appeared. Here, the verify cannot distinguish **"my action worked"** from **"it was already true when I started"**. Any `actUntil` whose `verify` cannot make that distinction will bless a no-op — and `actUntil` swallows the act's error *by design* ("the verify is the truth", `src/support/retry.ts`), so a completely broken act is invisible to it. That contract is sound; it just puts the entire burden of correctness on the verify.
+
+**Platform consequence worth stating explicitly.** A false green is invisible to the whole agentic stack: `pnpm analyze` classifies failures out of `reports/results.json`, and `pnpm heal` only acts on `selector-drift` failures. No failure, no classification, no healing proposal. The Risk Analyzer would never have reported this broken selector — not because it misjudged it, but because it never saw it.
+
+**Fix (`src/pages/ProductPage.ts`, `tests/wishlist/add-to-wishlist.spec.ts`).** `waitForWishlistControl()` polls until *either* wishlist button is visible — the same either-state readiness shape as the file's existing `detectAddFlow()` — which is what makes `isInWishlist()`'s answer information rather than a guess; `isInWishlist()`'s docstring now says so. `removeFromWishlist()` (mirror of `addToWishlist()`) establishes the "not in wishlist" starting state. The spec asserts the transition: `removeFromWishlist()` → `expect.poll(...).toBe(false)` → `addToWishlist()` → `expect.poll(...).toBe(true)`. The intermediate assertion is deliberate even though `removeFromWishlist()` throws on failure — it documents in the spec *why* the final `true` means anything.
+
+**Validation — a controlled experiment, not a green run.** Broken selector + old spec: PASS (×2). Broken selector + new spec: **FAIL** (`neither wishlist button rendered`, from `removeFromWishlist`). Correct selector + new spec: PASS (31.9s vs the false green's 21.8s — the extra time is the work it was skipping). One variable changed between the last two, so the green is causally attributable to the selector. Full suite **15/15, zero retries, 6.7m** (no regression across the four specs sharing `ProductPage.ts`); unit 421/421, typecheck/lint clean.
+
+**Two open items, recorded honestly rather than smoothed over:**
+
+1. **One intermediate run passed in 21.8s and is still unexplained — STILL OPEN as of 2026-08-10** (§31 confirmed lead 2 below, which makes the unanchored locator a *plausible* mechanism for this too, but the evidence is gone so it cannot be closed). With the new spec and the broken selector, both code paths should have thrown; the timing leaves no room for a 20s `actUntil` deadline. **The evidence was destroyed by re-running** — `test-results/` is overwritten by the next run, which is exactly §28's own method note, hit live within two sessions of writing it. If this recurs, capture the trace before re-running.
+2. **✅ CONFIRMED AND FIXED 2026-08-10 — see §31.** The hypothesis below was proven live with a discriminating-state probe and the locators are now anchored; kept verbatim because it was §31's pre-registered hypothesis. ~~**Unverified lead**~~ — **`.first()` on the remove-button locator is not anchored to the main product.** §25 added `.first()` to silence a strict-mode violation caused by the "También te puede gustar" carousel repeating the same accessible name, reasoning that "the main product's button always renders before the carousel". That reasoning only holds *while the main product is in the wishlist*: once it is not, its button is named "Añadir…", stops matching the remove locator, and `.first()` slides silently to the first carousel card that *is* in the wishlist. If so, `isInWishlist()` answers **"is ANY product on this page in the wishlist"**, not "is *this* product". This is a plausible mechanism for item 1 but was **not** confirmed — the failing run showed no "Eliminar" button anywhere, carousel included. Probing it means scoping the locator to the PDP's own product panel instead of the page; it needs a live probe to find the right scope. `.first()` fixed the symptom (ambiguity) rather than the cause (an unanchored locator) — a pattern worth watching for elsewhere in the suite.
+
+---
+
+## 33. Backlog P6 root-caused and CLOSED — the "cold-navigation defect" was our own session detector misfiring (2026-08-16)
+
+**P6 was never a DES defect.** For three sessions it was filed as "a cold cart navigation can render `/es/member-hub.html` content with a genuinely valid session", with two competing hypotheses about DES (backend session-propagation timing, or an SPA bootstrap restoring a persisted route). Both are wrong. The cart navigation is healthy; what fails is `CartPage`'s own session-invalidation detector, which fires on a **valid** session and triggers a re-login that cannot possibly work. Every observed symptom — member-hub content, the "degraded" title, the authenticated header, the 150s death — is downstream of that one misfire.
+
+### The measurement that settled it
+
+Temporary probe `tests/_probe/p6-cold-nav-probe.spec.ts` (deleted after this section, §18 lifecycle), run standalone so `auth.setup` → cold cart navigation is the exact P6 ordering. Instruments were explicit and never the suspect (§31): the navigation's own `Response`, the redirect chain, `page.url()`, and content identified by CONTENT (§28), not counted.
+
+**Round 1 — the cold navigation is perfectly healthy, and it did NOT reproduce.** Status `200`, **no redirect chain at all**, `page.url()` stays on `/es/shop-cart.html`, title `"Cesta | Bershka"` (the healthy one — *not* the `"Bershka | Bershka"` degraded shell the reports described), cart content rendered at t+10s, `memberHub=0` at every mark. A `page.reload()` changed nothing because nothing was wrong. **The non-reproduction was the clue**: the probe had navigated exactly like `cleanCart` does, but never ran `waitForLoaded()`'s act — so whatever P6 is, it is not in the navigation.
+
+**Round 2 — the same run, sampled densely from t=0 and reading the header.** This is the whole finding:
+
+| mark | `loginBtn` visible | `isUserLoggedIn()` | cart lines |
+|---|---|---|---|
+| t+0 … t+5000ms | **true** | **false** | 0 |
+| t+8000ms onward | false | true | 1 |
+
+**For the first ~5-8s of a cold cart navigation, on a perfectly valid, freshly-minted session, DES serves its server-rendered header in the LOGGED-OUT state — a real, visible "Iniciar sesión" button — and only then does hydration swap it for "Mi cuenta" and render the cart.**
+
+### The causal chain, end to end
+
+1. `waitForLoaded()`'s `act` runs at **t≈0** (`immediateFirstCheck` makes the verify fail against the skeleton, so the act fires immediately) — squarely inside that window.
+2. `Header.isUserLoggedIn()` returns `false`. The detector believes the session is dead. It is not.
+3. `recoverInvalidSession()` runs a full re-login: `LoginPage.open()` → `/es/` → `logon.html`.
+4. The user is **already authenticated**, so `logon.html` never renders a login form (the run ends on `/es/member-hub.html`, and no form was ever reached — see "honest limits" below).
+5. `LoginPage.login()`'s variant-detection `actUntil` throws at its 30s deadline ("neither the e-mail form nor the interstitial rendered").
+6. **`actUntil` swallows the act's error by design** (`retry.ts`, §29's "the verify is the truth") — so the broken recovery is invisible. `recovered` is already `true`, so the act no-ops from then on and the loop just spins against member-hub.
+7. The test dies at **150s**, page sitting on member-hub with a valid session. That snapshot is what three sessions filed as a mysterious DES defect.
+
+Confirmed directly in the failing run's own trace: exactly **three** navigations — `shop-cart` → `""` → `logon.html`. `recoverInvalidSession()`'s own final `this.open()` **never executed**, which is only possible if `login()` threw.
+
+### What this falsifies
+
+- **Backlog hypothesis (b), "the SPA bootstrap restores a persisted route" — falsified OFFLINE**, before any live run. `.auth/state.json`'s only SPA-owned key, `piniaLocal-navigation`, holds `{"genderCategoryKey":"BERSHKA_WOMAN","targetGroupKey":"BERSHKA_WOMAN"}`; `firstPageSession` holds `/es/logon.html`. **No stored key contains a member-hub URL or any route** — there is nothing for a bootstrap to restore.
+- **Backlog hypothesis (a), "DES redirects / backend propagation" — falsified LIVE**: 200, no redirect chain, URL unchanged, 2/2 runs.
+- **The "degraded shell" reading** — `"Bershka | Bershka"` was member-hub's generic title mid-load, not §7/§13's degraded shell.
+- **The `Header.isUserLoggedIn()` member-hub URL short-circuit (the documented P6 confounder) never intervened**: measured `false` on the real cold navigation. It was a red herring.
+- **The `CartPage.waitForLoaded()` doc comment was itself wrong**, and had been since Task 8: *"a not-yet-hydrated header cannot misfire this into an unnecessary re-login — only an actually-rendered logged-out header can."* The premise is false. A not-yet-hydrated header on this site is not an **absent** header, it is the **logged-out** one, button and all. Corrected in place.
+
+### The fix — one change, one place
+
+`CartPage.waitForLoaded()`'s act now requires the logged-out tell to **persist** across `SESSION_TELL_CONFIRM_MS` (15s, ~2× the measured 5-8s window) before believing it: read the tell, settle, read again. A hydrating header flips to "Mi cuenta" and the act returns without acting; a genuinely dead session still reads logged-out and recovery proceeds. Nothing else changed — not `Header`, not `LoginPage`, not the fixture, not `actUntil`.
+
+### Validation — a controlled experiment, both directions
+
+- **Offline:** `typecheck` clean, `lint` clean, unit **428/428**.
+- **True negative (valid session, the P6 trigger):** the documented reproducer `pnpm exec playwright test tests/cart/cart-lifecycle.spec.ts`, which failed **both attempts** pre-fix (6.6m, ending on member-hub), now passes **2/2, first attempt each time** (1.2m and 54.9s), with **no recovery line logged** — the misfire is gone.
+- **True positive (genuinely dead session):** full suite **24 passed / 3 flaky / 0 failed** (19.2m, a slow DES window). Recovery fired **3 times** — `add-to-cart` attempt 0, `cart-lifecycle` attempts 0 and 1 — and **all three logged completion and landed on `/es/shop-cart.html`**, not member-hub (read from `reports/results.json`'s per-test stdout, not inferred). The 15s confirmation does not block legitimate recovery; and this is the positive proof that the member-hub landing was only ever a consequence of re-logging-in an already-authenticated session.
+- The 3 flakes were each read from their own `error-context.md` before being dismissed: `cart-lifecycle` attempt 0 failed on the quantity assertion (`Expected: 2, Received: 11`) with a demonstrably healthy session (header `"Mi cuenta"`, **zero** "Iniciar sesión" occurrences) and *after* `cleanCart` had already succeeded — the documented `setQuantity` residual-overshoot class (§32 Task 7 completion); `checkout-structure` and `pantalones-capri` are unrelated specs this change does not touch.
+
+### Why the full suite was always immune — now explained, not guessed
+
+In the full suite the cart specs run after `login.spec`, which genuinely invalidates the shared session (§24), so the tell is **real**, recovery is **correct**, and `logon.html` renders a real form because the user really is logged out. The misfire needs the opposite state — a **valid** session plus a cold cart navigation — which only the standalone/targeted ordering produces. Same code, opposite session state, opposite outcome. That is why three sessions of full-suite green never contradicted a 2/2 standalone red.
+
+### Rules earned
+
+- **"Not found ≠ seen-and-false" is only safe when the pre-hydration DOM is genuinely EMPTY.** On a server-rendered site it is the *logged-out page* — a positively rendered **wrong** answer, which satisfies a "positive tell" check perfectly. Prefer requiring a tell to **persist** over trusting a single instant.
+- **§29's rule applies to detectors, not just to specs' verifies.** A detector that cannot tell its target state from a transient that looks identical will act on the transient — and here the action was destructive (an unnecessary re-login), not merely a false green.
+- **`actUntil` swallowing the act's error hides a broken recovery, not just a broken click.** When an act does something expensive and fallible, its failure surfaces only as the generic deadline. Worth knowing before putting more work inside an act.
+- **A probe that does NOT reproduce is evidence.** Round 1's healthy navigation is what eliminated the navigation and pointed at the detector; without it the investigation would still be chasing DES.
+
+### Honest limits and what stays open
+
+- **The `logon.html` → member-hub redirect for an authenticated user is inferred, not instrumented.** It is the only reading consistent with the three observations (final URL is member-hub; no login form was reached; `login()` threw rather than returned), but no probe captured that redirect directly. Cheap to confirm if it ever matters.
+- **The 150s budget collision is REAL, CONFIRMED, and deliberately NOT fixed here** (one fix at a time). Proven by the pre-fix attempt 1's raw `Test timeout of 150000ms exceeded while setting up "cleanCart"`: `cleanCart` is a **fixture**, so `cart-lifecycle.spec`'s own `test.setTimeout(240_000)` — which lives in the test **body** — has not applied yet when it runs, and `waitForLoaded()`'s own budget (`SKELETON_DEADLINE_MS` 30s + `RECOVERY_DEADLINE_MS` 120s) equals the des 150s test timeout exactly. Consequence: a slow-but-legitimate recovery can still be killed by Playwright's generic timeout before the crafted diagnostic fires. Much less likely now that the misfire is gone, but unchanged as a defect. Stays in the backlog.
+- **`SESSION_TELL_CONFIRM_MS = 15_000` is sized against one live measurement** (~5-8s, sampled every 250ms) with a 2× margin, not against a bounded worst case DES publishes. If a future session sees a legitimate recovery skipped, that constant is the first suspect.
+
+---
+
+## 34. `/code-review high` on the cart-regression diff, then two Jorge-directed follow-ups — five real fixes, two of them multi-part (2026-08-16, same day as §33)
+
+**Context.** Immediately after §33 closed, Jorge asked for a multi-agent code review of the cart-regression effort (`e2272a9..HEAD`) specifically framed as "keep the platform in use-and-maintain until more coverage is added" — i.e. hunt real bugs, don't redesign. `/code-review high` ran 8 finder agents + an independent verification pass; every finding below was re-verified by hand (reading the actual source, and in one case Playwright's own bundled source) before being acted on, not taken on the sub-agents' word.
+
+### P0 — `ensureEmptyCart`'s session-blind-spot, and a self-caught regression while fixing it
+
+**Finding, verified against `CartPage.ts`/`Header.ts`:** `src/support/cartCleanup.ts`'s drain loop only routed through `CartPage.waitForLoaded()` (the session-aware detector §33 just hardened) when a removal happened to bring the line count to exactly 0 — so a session death mid-drain, with lines still remaining, fell through to the loop's own bare `isEmpty()` check next tick, which reads `false` on a wrong-page render, and `removeFirstItem()` then threw its generic "no line items to remove" instead of the crafted session diagnostic. Fix: call `waitForLoaded()` unconditionally after every removal (commit `0a9b8ca`) — free on the happy path via `actUntil`'s `immediateFirstCheck`.
+
+**The fix's own first live-validation attempt failed — and the failure was mine, not DES's.** The first `Edit` accidentally deleted the `await cart.removeFirstItem();` line while replacing its neighbouring comment; the live rerun showed `ensureEmptyCart` looping 15 times against an unchanged `Cesta (2)` cart with zero clicks fired. Caught by reading the failure's own state (not assumed passing) exactly as §28's method note prescribes — corrected in place, re-validated live: the drain now completes cleanly, and the run's two remaining failures were independently attributed to already-named, unrelated noise (`§28`'s drawer message; the `setQuantity` overshoot class). Worth recording as its own lesson: **live-validating a fix is what caught a bug the fix itself introduced** — the review→fix→validate loop worked as designed, including on its own mistake.
+
+**Second evidence pass on the still-open 150s budget item (backlog item 5, no code change).** The same review found that `SESSION_TELL_CONFIRM_MS` (15s, §33) fires on *every* cold cart navigation, not only genuine misfires, and that `RECOVERY_DEADLINE_MS` (120s) was never re-sized after that addition landed on top of `LoginPage.login()`'s ~105s worst case — narrowing, not confirming, the "far less likely now" read §33 shipped with. Recorded as evidence only; the item's *start when* threshold (it costs an actual diagnosis) is unchanged.
+
+### Builder unbounded click — closed (commit `03aa765`)
+
+`builder/generate/TemplateGenerator.ts`'s generated `openOverlay()` clicked its trigger with no `timeout`, so an SPA-re-rendered-away trigger burned the full 150s test timeout instead of the generated `actUntil`'s own 20s deadline (findings §26, never fixed there). Added `{ timeout: 5_000 }`, matching the hand-written precedent everywhere else in the suite. Validated: unit assertion updated, a fresh `pnpm build-tests --top 5` draft carried the bound, `pnpm test:generated` ran it live — overlay opened/closed cleanly, 22.4s, no retry.
+
+### Analyzer vocabulary gap — half of it was a real gap (commit `368d334`)
+
+The backlog described two messages "falling through to `unknown`". Verified against `analyzer/failures/classify.ts` and its own pre-existing unit test: only the §28 drawer message (`ProductPage: the add-to-cart confirmation drawer never appeared`) actually did — added to the existing `environment-noise` pattern, alongside its two `ProductPage` siblings already there. The *other* message CLAUDE.md's own summary had paired with it (`add-to-cart.spec`'s tightened `toBe(1)` mismatch) was **already** correctly classified `assertion` — `expect(received).toBe(expected)` matches that rule's pattern regardless of the specific numbers. Deliberately left as `assertion`, not folded into `environment-noise`: the message text (`Expected: 1, Received: N`) is identical whether the cause is drawer-retry noise or a genuine cart-add regression, so no signature could tell them apart without risking `heal` missing a real bug. A regression test locks the decision in.
+
+### Desktop PLP filter/sort gap — TWO fixes were needed, not one (commits `c8b5544`, then `01dd927`)
+
+**First fix (`c8b5544`), correct but insufficient alone.** Live-probed the actual desktop toolbar: "Filtrar" is a normal, on-screen, non-off-canvas button — clicking it (the crawler's own `force:true, timeout:5_000` shape) succeeded cleanly (~1.9s) and revealed `role=complementary "Filtros"`, **not** `dialog`/`menu`. `newOverlayNodes()`'s `OVERLAY_ROLES` only recognized the latter two, so a successful click was never registered as a reveal — the crawler had the knowledge on screen and threw it away. Added `complementary` to `OVERLAY_ROLES`; `discoverInteractions()` end-to-end against a live PLP returned `outcome: "overlay"` with all 7 target labels. Two unit tests lock in the confirmed `Filtros` shape. **This is where the investigation paused and the fix was reported as closing the backlog item** — a mistake, corrected below.
+
+**Jorge directed a re-crawl to prove it in the map, not just in isolation.** Two live seeded re-crawls followed:
+1. First attempt used the bare `pnpm explore --update` (no env overrides) — completed but used the small default budget: 85 pages, **0 Checkout pages** (a real regression against the committed 139-page map — reported and NOT committed).
+2. Second attempt used the full documented recipe (`EXPLORER_TIME_BUDGET_MS=1200000 EXPLORER_MAX_PAGES=150 EXPLORER_SEED_CHECKOUT=on`), launched **detached** via PowerShell `Start-Process` per the 2026-07-30 harness-kill lesson — completed cleanly, 192 pages (better breadth than the historical 139), but **still 0 Checkout pages**, and — read directly from the written map, not the log — **0 `complementary` elements anywhere**, despite "Filtrar" apparently succeeding mid-crawl in the log tail. Grepping the full log found the real picture: **"Filtrar" was attempted 8 times across 8 different pages, and all 8 failed** with `TimeoutError: locator.click: Timeout 5000ms exceeded — waiting for getByRole(...)` — the locator never resolved at all, not an off-canvas/actionability failure.
+
+**Second fix (`01dd927`), the actual root cause.** A dedicated timing probe (real `waitForSettle(DEFAULT_SETTLE)` + a live `getByRole` poll, no manual extra wait) measured it directly: `waitForSettle` returned at t+10.7s (a slow but ordinary DES window), yet "Filtrar" did not even exist in the accessibility tree until **t+16.1s**, and a click attempt right then still timed out (2s bound) — the toolbar hydrates on a materially later, separate cycle than the product grid `waitForSettle` is keyed on. This is precisely the "element visible before its Vue handler attaches" class CLAUDE.md's Interaction-reliability rule exists for — except `discoverInteractions()`'s own `MAX_CLICK_ATTEMPTS` retry loop never applied to a **throwing** click: the exception escaped the loop after one try, straight to the outer per-candidate `catch`, so a genuinely slow-hydrating element got exactly one shot instead of three. Fixed: a throwing click now pauses (`INTERACT_SETTLE.pollIntervalMs`) and retries in place, same as a click that succeeded without visible effect; if every attempt still throws, the candidate now gets a recorded `outcome: 'none'` instead of vanishing from the map with no trace at all (§28's "a diagnostic must say what it saw," applied one level up, to the crawler itself). **Live-validated at real crawler timing** (settle → `discoverInteractions` immediately, no added wait): settle returned at t+7.4s, `discoverInteractions` retried ~8.5s and returned `outcome: "overlay"` with all 7 labels — the exact case that failed 8/8 in the live crawl, now succeeding. Two existing unit tests whose expectations encoded the old "abandon on any throw" behaviour were rewritten; a new test locks in the retry-then-succeed shape.
+
+**Rule earned, worth promoting alongside §29's:** *retry doctrine must cover a THROWING act, not just an act that succeeded and changed nothing* — a hand-rolled retry loop that only re-tries the "no-op" branch quietly halves what act→verify→retry was supposed to protect, and the gap is invisible until something's hydration is slow enough to hit it reliably.
+
+### `primeCart` — the checkout seed's silent failure, root-caused (commit `9a9aade`)
+
+Both live crawls above logged `primeCart failed — skipping the checkout seed this crawl` with **zero** diagnostic detail — `explorer/crawl/primeCart.ts`'s catch block was a bare `catch { return 'failed'; }`, exactly the risk the §32 session-close audit had already flagged and left unfixed. First fix: log the caught error (`console.warn`, matching the crawler's own diagnostic convention) — still never throws.
+
+**Reproducing it live surfaced a second, more interesting bug: there was no caught error at all.** `primeCart`'s own recipe (`addOneItem()`, the same "camiseta" search → PDP → size → add path used throughout this doc) completed with **no exception**, yet the post-add `cartCount()` check still read 0, landing on the `(await driver.cartCount()) > 0 ? 'primed' : 'failed'` branch's `'failed'` side — a genuine add, misreported as a failure, no error anywhere to log. A follow-up probe pinned the mechanism exactly: `cartCount()` navigates via `goToCart()` and reads `CartTab.itemCount()` **once**, with no retry — measured directly, that single read returned `0` at t+4055ms and the *correct* count 500ms later. Every other `itemCount()` call site in the suite wraps it in `expect.poll(...)`; `primeCart`'s driver was the one place that read it bare. Fixed: `cartCount()` now polls via `actUntil` (`deadlineMs: 6_000`), the same fix shape as every other cart-hydration race already documented in this file (§29/§31/§33's own family — "0 ≠ genuinely empty" is "not found ≠ seen-and-false" wearing a different disguise). Live-validated: re-ran `primeCart` against DES with the fix — correctly reports `already-primed` (the shared account carries 9 leftover items) instead of racing the same read that misreported `'failed'` moments earlier.
+
+### Net state at the end of this entry
+
+Both explorer fixes (`01dd927`, `9a9aade`) are validated **in isolation**, live, against DES — but **postdate** both live re-crawls above, so neither crawled map (85-page and 192-page, both uncommitted) demonstrates them together in a real full crawl. The committed map is still the pre-existing 139-page one (2026-07-30). **Standing next action, Jorge-directed:** run one more seeded re-crawl with all fixes in place before anything else — full recipe, detached launch. Until that lands, "the map has the PLP-filter panel and checkout back" is an expectation, not a verified fact. **(✅ RUN 2026-08-17 — see §35. Two of the three fixes proved out; `c8b5544` did not.)**
+
+---
+
+## 35. The standing re-crawl, run — two fixes proven in a real crawl, the third still unproven, and the crawl found a defect in one of the fixes (2026-08-17)
+
+**Context.** §34's standing next action, executed. Full recipe (`EXPLORER_TIME_BUDGET_MS=1200000`, `EXPLORER_MAX_PAGES=150`, `EXPLORER_SEED_CHECKOUT=on`), launched **detached** via PowerShell `Start-Process` per the 2026-07-30 harness-kill lesson. DES probed HTTP 200 before launch; working tree clean at `65bca07`. Completed cleanly: **exit 0, 140 pages (58 anon + 82 auth), 1 auth error**, ~55 min wall-clock. Map committed as `0144363`.
+
+⚠ **Method note, earned twice in ten minutes: a gate that "fails" in a verification script you have never checked against the real schema is worth nothing.** The first two passes over the written JSON reported `elements: 0` and `must-capture: 0` — both were my script's wrong assumptions, not map defects. Elements and interactions are **top-level collections** (`m.elements`, `m.interactions`, joined by `pageId`/`triggerElementId`), not nested under `pages[]`; and an element's name field is **`label`**, not `name`. Read one sample object before trusting any aggregate over it. B17's "verify against the JSON, not the log prose" needs this corollary or it produces confident nonsense.
+
+### Gates, verified directly against the written JSON
+
+| Gate | Result |
+|---|---|
+| schema / pages / flows | 1.7 / 140 / 140 |
+| unique element ids (B17) | **3896 / 3896**, zero duplicates |
+| Checkout | 1 page, 1 flow, `pageType: Checkout` |
+| must-capture "Añadir a la cesta" | **1 → `overlay`**, 7 revealed |
+| desktop fingerprint (mobile drawer) | 0 — correct |
+| **`complementary` elements** | **0 — FAILED** |
+
+### Against the committed 2026-07-30 map — the only honest way to read the numbers
+
+| | committed (139p) | this crawl (140p) |
+|---|---|---|
+| elements | 3781 | 3896 |
+| interactions | 66 | **119** |
+| outcomes | 19 overlay / 46 none / 1 nav | 22 overlay / 95 none / 2 nav |
+| **filter/sort interactions** | **0** | **19** |
+| `revealedBy` elements | 70 | 86 |
+| PDP / PLP | 50 / 33 | 43 / 36 |
+
+**`9a9aade` (primeCart's cart-count hydration race) — PROVEN in a real crawl.** No `primeCart failed` line anywhere, and `/es/checkout.html` was the auth session's **first** visited page. Both of §34's re-crawls failed at exactly this point; this is the first crawl since the fix and it seeded on the first try.
+
+**`01dd927` (retry a THROWING click) — PROVEN, and visible as a number.** The 19 filter/sort candidates ("Filtrar" ×3, "Precio ascendente"/"descendente" ×4 each, "Color" ×4, "Talla", "Con descuento", "Novedad", "Limpiar") **exist in the map at all** for the first time — the committed map holds zero. Total interactions 66 → 119. They no longer vanish without a record, which is exactly what the fix set out to change.
+
+**`c8b5544` (`complementary` as an overlay role) — NOT proven, still open.** Zero `complementary` elements anywhere, and all 19 filter/sort interactions recorded `outcome: 'none'` with 0 revealed elements. It remains correct in isolation (§34's probe) and unproven in a crawl. **Do not close it on isolated evidence a second time** — that is precisely the mistake §34 had to walk back.
+
+### The crawl's own finding: `01dd927` traded a logged failure for a silent one
+
+§34's diagnosis came from grepping **8 `TimeoutError` lines** out of the previous crawl's log. **This crawl's log contains not one line about "Filtrar"** — no timeout, no "interaction skipped". The reason is inside the fix itself: the new click-retry `catch` (`interact.ts:194`) was written bare — `catch { await wait; continue; }` — so from the map alone `outcome: 'none'` cannot distinguish
+
+- every attempt **threw** (locator never resolved — §34's hydration-lag shape), from
+- a click that **landed** and revealed nothing the crawler recognizes (what a still-missing overlay role looks like).
+
+Those two demand opposite next moves, and the crawl commissioned to settle the question could not answer it. The fix's own comment cites §28 ("a diagnostic must say what it saw") to justify *recording* the `none` — it kept the **what** and dropped the **why**.
+
+**Fixed the same session (`d5f9595`).** The last unresolved click error is retained and logged when attempts are exhausted, and **cleared the moment any attempt lands**, so a later genuine no-op is never blamed on an earlier throw. Two unit tests lock both directions (warn when every attempt throws; **no** warn when a later attempt clicked cleanly). The next crawl's log will name which branch the filter toolbar is actually in.
+
+**Rule earned — a corollary to §28:** *when a fix converts a crash into a recorded outcome, check that the REASON survives the conversion.* Swallowing an exception to keep going is right; swallowing it without a trace turns a diagnosable failure into an ambiguous one, and the loss stays invisible until the next investigation needs exactly that line.
+
+### Honest limits
+
+- **Why the filter clicks yield `none` is unknown, not narrowed.** One plausible-but-unmeasured mechanism: 3 attempts × (5s click bound + 0.5s pause) ≈ 16.5s against §34's measured ~16.1s hydration leaves ~0.4s of margin — a coin flip, not a budget. Not probed; the new log line is the cheap instrument that settles it next crawl, before anyone spends a probe on it.
+- **The 1 auth error's detail is unrecoverable.** The crawler pushes it to an in-memory `errors[]` that neither the log nor the map persists. Ordinary variability (2026-07-30's seeded crawl logged 2), but worth knowing it cannot be read after the fact.
+- **PDP 50 → 43** is a real drop against the committed map, within documented crawl-to-crawl variability, not investigated.
+- **The suite was not re-run** — nothing in this session touches `tests/` or `src/`. *(Superseded hours later — §36 ran it twice.)*
+
+---
+
+## 37. The addToCart re-click: one spec add landed 8 units — root-caused, bounded with a click cap (2026-08-18)
+
+**Context.** The queued coverage pair ran first thing in a healthy window (`pnpm test` **26/26, 0 flaky, 13.0m** — the cleanest run in weeks — then `pnpm plan --update`, coverage 38/139 → **16/140**, commit `1fd9c41`). The same day's `pnpm qa-cycle` hit a slower window (19.2m) and went 24/26 with **both cart specs flaky**; Jorge directed the investigation. All evidence was read before any conclusion (`error-context.md`s, `reports/results.json` per-attempt timings/stdout) and preserved in the scratchpad (`evidence-2026-08-18-qacycle/`) before any re-run.
+
+**The failing snapshot** (`cart-lifecycle` attempt 0, failed `lineItemCount toBe(1)`): `tab "Cesta (9)"`, two lines — **"Camiseta cuello perkins encaje manga volantes", talla L, qty 8** (8 × 25,99 = 207,92 €) and **"Jeans barrel tiro alto lazos", talla 32, qty 1** (35,99 €). This after `cleanCart` had verified a content-identified empty state (its `isEmpty()` reads the `/cesta vacía/i` copy, not a bare zero count) and the spec had performed exactly ONE `addToCart()` — which **returned success**.
+
+### Root cause — the act's destructive click repeats while its only confirmation lags
+
+`ProductPage.addToCart()`'s desktop branch is an `actUntil` loop at ~1-1.5s cadence: click "Añadir a la cesta" → sleep 500ms → check the confirmation drawer (content-identified, §28). **Every non-throwing click is a REAL server-side add; the drawer is the only observable, and in degraded windows it renders several cycles late.** The anti-double-add guard (`if (await confirmed()) return`) reads that same lagging drawer, so it cannot see the adds it is supposed to prevent — it only stops clicking once the drawer is finally detectable. Eight cycles before the drawer appeared → 8 clicks → 8 units, merged into ONE line by §32's same-product+size merge (which is also what proves they came from one loop, not eight events). The sibling flake (`add-to-cart` attempt 0) is the unbounded worst case: the drawer **never** appeared within the 20s deadline → ~15-25 clicks fired at a degraded add service; the residue only stayed within `cleanCart`'s 15-removal drain bound by luck.
+
+**This mechanism was already documented, not new:** `removeFirstItem`'s own deadline comment (§32) records a line observed live at **quantity 13 "via §28's confirmation-drawer noise re-triggering the add"** on 2026-08-13. What is new is that it graduated from "dirties the shared account" to "breaks a spec's exact-count assertion" — twice in one window. The structural statement, for the standing-rules list: **an act→verify→retry loop whose act is DESTRUCTIVE and whose only observable is laggy re-fires the destructive act once per cycle of lag.** "Click lost (must retry, §7)" and "click landed, confirmation late (must NOT retry)" are indistinguishable through a single lagging observable.
+
+### The fix — a cap on real clicks (Jorge's call: option 2 of 3)
+
+`MAX_ADD_CLICKS = 3` (the crawler's `MAX_CLICK_ATTEMPTS` precedent, §34): past the cap the act degrades to pure polling for the rest of the deadline. A **throwing** click is deliberately not counted (it never resolved a target — §34's retry-on-throw distinction, applied in reverse). Worst-case shared-account residue drops from ~15-25 units to 3 on both paths (drawer-late AND drawer-never). The timeout diagnostic now reports the click count, and — §35's `d5f9595` lesson, applied BEFORE the loss this time — a **late success** logs `addToCart needed N clicks`, so a later exact-quantity failure can be told apart from §32's Sumar-unidad overshoot (the two need opposite fixes).
+
+**Validation.** Offline: typecheck/lint clean, unit 434/434. Live (targeted, 3 specs sharing `addToCart`): **3 passed / 1 flaky, 5.6m** — the flaky read from its own snapshot before classifying: ONE line, qty 3 (77,97 €), failed `lineQuantity toBe(2)` *after* `increaseQuantity`, i.e. either §32's overshoot class or a 2-unit add under the cap — **indistinguishable from this evidence** — stated plainly: that run carried the cap but PREDATES the log line (which landed right after it, prompted by exactly this ambiguity), so the next occurrence, not this one, will name its branch. NOT a regression: the cap can only stop clicks earlier, never create units. Honest limit: the cap **bounds** the class, it does not eliminate it — `cart-lifecycle`'s exact-quantity assertions remain exposed to 2-3-unit adds in degraded windows.
+
+### Open, recorded honestly
+
+- **The jeans line is UNEXPLAINED.** No spec adds jeans; every cart-affecting locator is scope+name-anchored (`removeFirstItem` clicks only "Eliminar producto"/"Restar unidad" inside the first `.product-list-card`; `addBtn` is panel-scoped with an exact name) — none can resolve to a recommendation quick-add ("Añadir a la cesta {producto}", §18's name shape). The product (`c0p226930445`) IS in the cart page's own recommendations carousel, which suggests a spurious add on that surface, but nothing discriminates our code vs. another actor on the shared account vs. DES itself. If a foreign line appears again in a failure snapshot, that recurrence is the evidence this needs.
+- **Option 1 (a second, faster observable for the guard: the header cart badge — a `9+` generic was visible next to "Ver cesta" in the failing snapshot) is filed, not built.** It is the only fix that would eliminate the class, and it needs a live probe first: does the badge update reactively without navigation, and what does it render at 0? *Start when:* a `[ProductPage] addToCart needed N clicks` log line co-occurs with a broken exact-quantity assertion — that pairing proves the cap's residue is what breaks specs, and the badge probe earns its cost.
+
+---
+
