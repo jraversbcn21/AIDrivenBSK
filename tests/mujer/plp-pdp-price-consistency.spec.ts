@@ -20,24 +20,31 @@ test('mujer > pantalones capri: the first card\'s PLP price matches its PDP pric
   await target.open();
   await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
 
-  // §43: the §26 SPA bounce can leave the page on home between isLoaded() and the
-  // reads below — re-anchor first (returns immediately when already on the PLP).
-  await target.ensureOnPlp();
-
   // First card WITH a readable price (a promo/banner tile parses to null, §7's
   // firstProduct lesson — skip those rather than fail on them).
+  // §47 (run #15): the §26 bounce can strike DURING the scan, not only before it — this
+  // spec died both attempts reading the home page. Recovery lives INSIDE the scan loop
+  // (§43's rule one loop deeper); an empty innerText means the card detached (bounce
+  // symptom — a banner tile has text, it just parses to null), so bail to a re-anchor
+  // rather than burn 5s per remaining dead card.
   const cards = page.locator('li', { has: page.locator('a[href*="-c0p"]') });
-  await expect.poll(() => cards.count(), { timeout: HYDRATION_TIMEOUT_MS }).toBeGreaterThan(0);
   let cardPrice: number | null = null;
   let cardText = '';
   let href: string | null = null;
-  const n = Math.min(await cards.count(), 8);
-  for (let i = 0; i < n && cardPrice === null; i++) {
-    cardText = (await cards.nth(i).innerText({ timeout: 5_000 }).catch(() => '')).replace(/\s+/g, ' ').trim();
-    cardPrice = parseEuroAmount(cardText);
-    if (cardPrice !== null) href = await cards.nth(i).locator('a[href*="-c0p"]').first().getAttribute('href', { timeout: 5_000 }).catch(() => null);
+  let n = 0;
+  for (let scan = 0; scan < 3 && cardPrice === null; scan++) {
+    await target.ensureOnPlp().catch(() => undefined);
+    await expect.poll(() => cards.count(), { timeout: 10_000 }).toBeGreaterThan(0)
+      .then(() => undefined, () => undefined); // soft — a bounced page yields 0; the rescan recovers
+    n = Math.min(await cards.count(), 8);
+    for (let i = 0; i < n && cardPrice === null; i++) {
+      cardText = (await cards.nth(i).innerText({ timeout: 5_000 }).catch(() => '')).replace(/\s+/g, ' ').trim();
+      if (cardText === '') break; // detached/bounced — re-anchor and rescan
+      cardPrice = parseEuroAmount(cardText);
+      if (cardPrice !== null) href = await cards.nth(i).locator('a[href*="-c0p"]').first().getAttribute('href', { timeout: 5_000 }).catch(() => null);
+    }
   }
-  if (cardPrice === null || !href) throw new Error(`no card with a readable price in the first ${n} cards`);
+  if (cardPrice === null || !href) throw new Error(`no card with a readable price in the first ${n} cards after 3 scans`);
   const c0pId = href.match(/-c0p(\d+)\.html/)?.[1];
   if (!c0pId) throw new Error(`card href has no -c0p id: ${href}`);
 

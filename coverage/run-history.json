@@ -569,6 +569,73 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-21T14:32:22.315Z",
+      "failureReportGeneratedAt": "2026-08-21T14:32:18.544Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-08-18T08:55:12.737Z",
+      "totals": {
+        "tests": 33,
+        "passed": 27,
+        "failed": 3,
+        "flaky": 2,
+        "skipped": 1
+      },
+      "failures": [
+        {
+          "spec": "cart/add-to-cart.spec.ts",
+          "title": "adding a product updates the mini cart",
+          "outcome": "flaky",
+          "category": "environment-noise",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_92ffb23be7fd",
+            "flow_5eeb09a253b5",
+            "flow_5c335c37c325",
+            "flow_87ac71b1346f"
+          ]
+        },
+        {
+          "spec": "checkout/checkout-structure.spec.ts",
+          "title": "checkout: inner structure renders (shipping + payment signals)",
+          "outcome": "flaky",
+          "category": "environment-noise",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_e7b11142f5d8",
+            "flow_5eeb09a253b5",
+            "flow_0ec514c30f73",
+            "flow_5c335c37c325"
+          ]
+        },
+        {
+          "spec": "hombre/plp-colores-card-vs-pdp.spec.ts",
+          "title": "hombre > combo wins: the first multicolor card's \"N COLORES\" matches its PDP color count",
+          "outcome": "failed",
+          "category": "assertion",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/plp-pdp-price-consistency.spec.ts",
+          "title": "mujer > pantalones capri: the first card's PLP price matches its PDP price",
+          "outcome": "failed",
+          "category": "unknown",
+          "flowsAffected": []
+        },
+        {
+          "spec": "mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+          "title": "mujer > combo wins: navigate home -> combo wins PLP -> sudadera capucha cremallera felpa PDP",
+          "outcome": "failed",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_ac68d2d91941",
+            "flow_5eeb09a253b5"
+          ]
+        }
+      ]
     }
   ]
 }
