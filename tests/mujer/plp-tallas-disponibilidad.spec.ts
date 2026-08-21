@@ -19,7 +19,7 @@ interface SizeTuple { size: string; disabled: boolean; }
 const fmt = (t: SizeTuple[]) => t.map((x) => `${x.size}${x.disabled ? '(agotada)' : ''}`).join('|');
 
 test('mujer > pantalones capri: overlay and PDP agree on which sizes are out of stock', async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(360_000); // worst case: scan (6x~40s) + PDP + oracle exceeds 300s in a degraded window
   const target = new PantalonesCapriPlpPage(page);
   await target.open();
   await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
@@ -33,12 +33,13 @@ test('mujer > pantalones capri: overlay and PDP agree on which sizes are out of 
   // Scan up to 6 cards for the discriminating state: >=1 disabled size in the overlay.
   let overlayTuples: SizeTuple[] | null = null;
   let c0pId: string | null = null;
+  let overlaysRead = 0; // overlays that actually opened AND parsed >=1 tuple — distinguishes healthy stock from a degraded scan
   const n = Math.min(await cards.count(), MAX_CARDS_SCANNED);
   for (let i = 0; i < n && overlayTuples === null; i++) {
     const card = cards.nth(i);
     const href = await card.locator('a[href*="-c0p"]').first().getAttribute('href', { timeout: 5_000 }).catch(() => null);
     const id = href?.match(/-c0p(\d+)\.html/)?.[1];
-    if (!id) continue; // banner tile (§7) — skip it
+    if (!id) continue; // transient getAttribute failure — skip the card
     // Open THIS card's overlay (act→verify→retry, §42's exact shape).
     const opened = await expect.poll(async () => {
       if (await overlayDialog.isVisible().catch(() => false)) return true;
@@ -46,19 +47,28 @@ test('mujer > pantalones capri: overlay and PDP agree on which sizes are out of 
       await card.locator('[data-qa-anchor="addToCartSizeBtn"]').first().click({ timeout: 5_000 }).catch(() => undefined);
       return overlayDialog.isVisible().catch(() => false);
     }, { timeout: 25_000 }).toBe(true).then(() => true).catch(() => false);
-    if (!opened) continue; // degraded card — the scan, not the oracle, absorbs it
+    if (!opened) {
+      // best-effort close: a late-rendering dialog (past the 25s poll) would otherwise stay open into
+      // the next iteration, which wouldn't click and would read the PREVIOUS product's sizes against
+      // the current card's id — a false bug. No verify — the card is discarded either way.
+      await page.keyboard.press('Escape').catch(() => undefined);
+      continue; // degraded card — the scan, not the oracle, absorbs it
+    }
 
-    // §46(b): disabled marker is a literal `[disabled]` suffix on the ariaSnapshot line.
+    // §46(b): disabled marker is a `[disabled]` attribute on the ariaSnapshot line, tolerant of other
+    // attributes appearing before it (§46 measured `[disabled]` as the only one live, but the snapshot
+    // format doesn't guarantee it stays immediately adjacent to the name).
     const snap = await overlayDialog.ariaSnapshot({ timeout: 5_000 }).catch(() => '');
-    const tuples = [...snap.matchAll(/button "Talla ([^"]+)"( \[disabled\])?/gi)]
-      .map((m) => ({ size: m[1].trim(), disabled: m[2] !== undefined }));
+    const tuples = [...snap.matchAll(/button "Talla ([^"]+)"([^\n]*)/gi)]
+      .map((m) => ({ size: m[1].trim(), disabled: /\[disabled\]/.test(m[2]) }));
     await page.keyboard.press('Escape');
     await expect.poll(() => overlayDialog.isVisible().catch(() => false), { timeout: 10_000 }).toBe(false);
+    if (tuples.length > 0) overlaysRead++;
     if (tuples.some((t) => t.disabled)) { overlayTuples = tuples; c0pId = id; }
   }
 
   test.skip(overlayTuples === null,
-    `no partially out-of-stock product in the first ${n} cards today — nothing to compare (opportunistic oracle, design 2026-08-21)`);
+    `no partially out-of-stock product among the ${overlaysRead}/${n} cards whose overlay opened and parsed — nothing to compare (opportunistic oracle, design 2026-08-21)`);
   if (overlayTuples === null || c0pId === null) return; // narrowing for TS; skip already fired
 
   // Open the SAME product's PDP, anchored to its -c0p id (§41/§45 pattern).
