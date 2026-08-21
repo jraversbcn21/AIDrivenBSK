@@ -543,6 +543,32 @@
           ]
         }
       ]
+    },
+    {
+      "recordedAt": "2026-08-21T08:56:07.738Z",
+      "failureReportGeneratedAt": "2026-08-21T08:56:02.342Z",
+      "resultsPath": "reports/results.json",
+      "mapGeneratedAt": "2026-08-18T08:55:12.737Z",
+      "totals": {
+        "tests": 31,
+        "passed": 30,
+        "failed": 1,
+        "flaky": 0,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "spec": "mujer/sudadera-capucha-cremallera-felpa.spec.ts",
+          "title": "mujer > combo wins: navigate home -> combo wins PLP -> sudadera capucha cremallera felpa PDP",
+          "outcome": "failed",
+          "category": "assertion",
+          "flowsAffected": [
+            "flow_65b6de4fdcde",
+            "flow_ac68d2d91941",
+            "flow_5eeb09a253b5"
+          ]
+        }
+      ]
     }
   ]
 }
