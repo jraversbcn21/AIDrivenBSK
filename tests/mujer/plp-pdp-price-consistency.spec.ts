@@ -5,14 +5,18 @@
 // container is `div.product-detail-info` (1 match), and on both surfaces the CURRENT
 // price is the first € amount in the text (discounted-PDP ordering unprobed — the
 // known ceiling; the failure message is the diagnostic).
+// Retargeted 2026-08-21 (findings §43, pending item 1): moved off the shared vestidos PLP —
+// this one now runs against Pantalones Capri (mujer), a route none of the other PLP
+// oracles touch. `div.product-detail-info` is the site-wide PDP price container (not
+// vestidos-specific), so the PDP-side read is unchanged.
 import { test, expect } from '../../src/fixtures/test';
-import { VestidosTallasOverlayPage } from './pages/VestidosTallasOverlayPage';
+import { PantalonesCapriPlpPage } from './pages/PantalonesCapriPlpPage';
 import { parseEuroAmount } from '../../src/support/price';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
 
-test('mujer > vestidos: the first card\'s PLP price matches its PDP price', async ({ page }) => {
-  const target = new VestidosTallasOverlayPage(page);
+test('mujer > pantalones capri: the first card\'s PLP price matches its PDP price', async ({ page }) => {
+  const target = new PantalonesCapriPlpPage(page);
   await target.open();
   await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
 

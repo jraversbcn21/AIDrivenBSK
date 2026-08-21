@@ -4,6 +4,13 @@
 // "Precio con descuento X € Descuento del -N% Antes Y €" — /descuento del/i is the
 // explicit, unambiguous tell. A failure here means DES showed a full-price product under
 // the discount filter (a real product bug) — the failure message names the offending card.
+// Retargeting attempted 2026-08-21 (findings §43, pending item 1): tried Hombre Combo Wins,
+// but that PLP's Filtrar sidebar has NO "Con descuento" checkbox at all (confirmed live —
+// the sidebar opened fine, its only filters are Precio asc/desc, Color, Talla, a price
+// slider, Novedad, Limpiar) — FiltersPanel.ts's "always present, never empty" assumption
+// does not hold on every PLP. Reverted to vestidos, the only route where the filter is
+// confirmed present (§40-42's own probes) — this is still 1-of-5 oracles on that route
+// rather than all 5, which is what pending item 1 set out to fix.
 import { test, expect } from '../../src/fixtures/test';
 import { VestidosTallasOverlayPage } from './pages/VestidosTallasOverlayPage';
 import { FiltersPanel } from '../../src/components/FiltersPanel';

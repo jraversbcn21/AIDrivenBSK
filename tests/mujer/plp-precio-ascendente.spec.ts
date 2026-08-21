@@ -3,15 +3,18 @@
 // A failure here means the PRODUCT is wrong, or the failure message's own price list
 // shows a readout artifact (see the known ceiling below). Read that list before blaming
 // the framework.
+// Retargeted 2026-08-21 (findings §43, pending item 1): moved off the shared vestidos PLP
+// that serialized all five PLP oracles into one SPA-bounce failure — this one now runs
+// against Hombre Camisas, a route none of the other PLP oracles touch.
 import { test, expect } from '../../src/fixtures/test';
-import { VestidosTallasOverlayPage } from './pages/VestidosTallasOverlayPage';
+import { HombreCamisasPage } from '../hombre/pages/HombreCamisasPage';
 import { FiltersPanel } from '../../src/components/FiltersPanel';
 import { parseEuroAmount } from '../../src/support/price';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
 
-test('mujer > vestidos: "Precio ascendente" actually sorts the grid by price', async ({ page }) => {
-  const target = new VestidosTallasOverlayPage(page);
+test('hombre > camisas: "Precio ascendente" actually sorts the grid by price', async ({ page }) => {
+  const target = new HombreCamisasPage(page);
   await target.open();
   await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
   // Guaranteed starting state (§29): the sort verify below is a TRANSITION to ?sort=1,

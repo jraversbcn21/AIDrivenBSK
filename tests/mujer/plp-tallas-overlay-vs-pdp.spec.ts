@@ -7,14 +7,18 @@
 // customer is offered sizes on one surface that the other denies — a real product bug.
 // Known ceiling: availability (disabled state) is NOT compared — only the size LIST;
 // the probed product had no disabled sizes, so that shape is unprobed.
+// Retargeted 2026-08-21 (findings §43, pending item 1): moved off the shared vestidos PLP —
+// this one now runs against Pantalones Combo Wins (mujer), a route none of the other PLP
+// oracles touch. The quick-add trigger (`data-qa-anchor="addToCartSizeBtn"`) and the
+// overlay/PDP size shapes are site-wide, not vestidos-specific.
 import { test, expect } from '../../src/fixtures/test';
-import { VestidosTallasOverlayPage } from './pages/VestidosTallasOverlayPage';
+import { PantalonesComboWinsPlpPage } from './pages/PantalonesComboWinsPlpPage';
 
 const HYDRATION_TIMEOUT_MS = 20_000;
 
-test('mujer > vestidos: the quick-add overlay offers the same sizes as the PDP', async ({ page }) => {
+test('mujer > pantalones combo wins: the quick-add overlay offers the same sizes as the PDP', async ({ page }) => {
   test.setTimeout(180_000);
-  const target = new VestidosTallasOverlayPage(page);
+  const target = new PantalonesComboWinsPlpPage(page);
   await target.open();
   await expect.poll(() => target.isLoaded(), { timeout: HYDRATION_TIMEOUT_MS }).toBe(true);
 
